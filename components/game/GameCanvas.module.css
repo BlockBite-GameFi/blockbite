@@ -1,0 +1,99 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 500px;
+  padding: 10px 16px;
+  background: rgba(18, 18, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+}
+
+.hudStat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hudLabel {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: #55557A;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hudValue {
+  font-family: 'Orbitron', monospace;
+  font-size: 22px;
+  font-weight: 800;
+  color: #00FF88;
+  text-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+  line-height: 1;
+}
+
+.hudCenter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.levelBadge {
+  font-family: 'Orbitron', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #00F5FF;
+  background: rgba(0, 245, 255, 0.08);
+  border: 1px solid rgba(0, 245, 255, 0.2);
+  padding: 4px 12px;
+  border-radius: 99px;
+}
+
+.chainBadge {
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #FFD700;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.7);
+  animation: neonFlicker 3s infinite;
+}
+
+.canvas {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 40px rgba(0, 245, 255, 0.05), 0 20px 60px rgba(0, 0, 0, 0.5);
+  /* Scale canvas to fit screen */
+  max-width: min(500px, 100vw - 48px);
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.hint {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 11px;
+  color: #33337A;
+  text-align: center;
+}
+
+.gameOverActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  animation: slideInUp 0.4s ease-out;
+  margin-top: 8px;
+}

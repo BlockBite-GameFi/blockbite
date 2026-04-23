@@ -1,0 +1,386 @@
+// ═══════════════════════════════════════════════════════════════
+// BLOCKBLAST — GAME ENGINE (State Machine + useReducer)
+// Board logic: placement, line detection, obstacle, game over
+// ═══════════════════════════════════════════════════════════════
+
+import { useReducer, useCallback } from 'react';
+import {
+  BOARD_ROWS,
+  BOARD_COLS,
+  Cell,
+  BlockColor,
+  OBSTACLE_SPAWN_LEVEL,
+  OBSTACLE_COUNT_BY_LEVEL,
+  CURSED_MODE_LEVEL,
+  CURSED_PLACEMENT_TRIGGER,
+} from './constants';
+import { Piece, generateInitialTray, generateRandomPiece, getPieceCells } from './pieces';
+import { calculateScore, isBoardEmpty } from './scoring';
+
+// ── State Definition ─────────────────────────────────────────────
+
+export interface ClearAnimation {
+  rows: number[];
+  cols: number[];
+  startTime: number;
+}
+
+export interface ScorePopAnimation {
+  id: number;
+  label: string;
+  points: number;
+  x: number;
+  y: number;
+  startTime: number;
+}
+
+export interface GameState {
+  board: Cell[][];
+  /** The 3 pieces in the tray. null means that slot was used and needs refresh. */
+  tray: [Piece | null, Piece | null, Piece | null];
+  score: number;
+  bestScore: number;
+  level: number;
+  chain: number;
+  /** Count of placements without a clear (for cursed mode) */
+  noClears: number;
+  isGameOver: boolean;
+  isPaused: boolean;
+  /** Perfect board bonus multiplier for NEXT placement */
+  nextMultiplierOverride?: number;
+  /** Pending animation data for line clear */
+  clearAnimation: ClearAnimation | null;
+  /** Floating score pop data */
+  scorePops: ScorePopAnimation[];
+  /** Session ID (mock for Phase 0) */
+  sessionId: string;
+  /** Total placements in this session */
+  placements: number;
+}
+
+// ── Actions ──────────────────────────────────────────────────────
+
+type Action =
+  | { type: 'PLACE_PIECE'; trayIndex: 0 | 1 | 2; row: number; col: number }
+  | { type: 'CLEAR_ANIMATION_DONE' }
+  | { type: 'REMOVE_SCORE_POP'; id: number }
+  | { type: 'TOGGLE_PAUSE' }
+  | { type: 'NEW_GAME' }
+  | { type: 'NEXT_LEVEL' };
+
+// ── Helpers ──────────────────────────────────────────────────────
+
+function createEmptyBoard(): Cell[][] {
+  return Array.from({ length: BOARD_ROWS }, () =>
+    Array.from({ length: BOARD_COLS }, () => ({ type: 'empty' as const }))
+  );
+}
+
+function createBoardWithObstacles(level: number): Cell[][] {
+  const board = createEmptyBoard();
+  const count = OBSTACLE_COUNT_BY_LEVEL[level] ?? 15;
+  let placed = 0;
+  // Place randomly, avoid clusters at edges
+  while (placed < count) {
+    const r = Math.floor(Math.random() * BOARD_ROWS);
+    const c = Math.floor(Math.random() * BOARD_COLS);
+    if (board[r][c].type === 'empty') {
+      board[r][c] = { type: 'obstacle', color: 'void' as BlockColor };
+      placed++;
+    }
+  }
+  return board;
+}
+
+/** Check if a piece can be placed at (row, col) on the board */
+export function canPlace(board: Cell[][], shape: number[][], row: number, col: number): boolean {
+  for (let r = 0; r < shape.length; r++) {
+    for (let c = 0; c < shape[r].length; c++) {
+      if (shape[r][c] === 1) {
+        const br = row + r;
+        const bc = col + c;
+        if (br < 0 || br >= BOARD_ROWS || bc < 0 || bc >= BOARD_COLS) return false;
+        if (board[br][bc].type !== 'empty') return false;
+      }
+    }
+  }
+  return true;
+}
+
+/** Check if a piece can be placed ANYWHERE on the board */
+export function canPlaceAnywhere(board: Cell[][], shape: number[][]): boolean {
+  for (let r = 0; r <= BOARD_ROWS - shape.length; r++) {
+    for (let c = 0; c <= BOARD_COLS - shape[0].length; c++) {
+      if (canPlace(board, shape, r, c)) return true;
+    }
+  }
+  return false;
+}
+
+/** Check if any of the 3 tray pieces can still be placed */
+function hasAnyLegalMove(board: Cell[][], tray: (Piece | null)[]): boolean {
+  return tray.some(piece => piece !== null && canPlaceAnywhere(board, piece.shape));
+}
+
+/** Find which rows are completely filled */
+function findFullRows(board: Cell[][]): number[] {
+  const full: number[] = [];
+  for (let r = 0; r < BOARD_ROWS; r++) {
+    if (board[r].every(cell => cell.type !== 'empty')) {
+      full.push(r);
+    }
+  }
+  return full;
+}
+
+/** Find which columns are completely filled */
+function findFullCols(board: Cell[][]): number[] {
+  const full: number[] = [];
+  for (let c = 0; c < BOARD_COLS; c++) {
+    if (board.every(row => row[c].type !== 'empty')) {
+      full.push(c);
+    }
+  }
+  return full;
+}
+
+/** Clear specified rows and columns, return new board */
+function clearLinesFromBoard(board: Cell[][], rows: number[], cols: number[]): Cell[][] {
+  const newBoard = board.map(row => [...row]);
+  for (const r of rows) {
+    for (let c = 0; c < BOARD_COLS; c++) {
+      newBoard[r][c] = { type: 'empty' };
+    }
+  }
+  for (const c of cols) {
+    for (let r = 0; r < BOARD_ROWS; r++) {
+      newBoard[r][c] = { type: 'empty' };
+    }
+  }
+  return newBoard;
+}
+
+/** Add a cursed obstacle row */
+function addCursedRow(board: Cell[][]): Cell[][] {
+  const newBoard = board.map(row => [...row]);
+  const randomRow = Math.floor(Math.random() * BOARD_ROWS);
+  // Only fill empty cells
+  for (let c = 0; c < BOARD_COLS; c++) {
+    if (newBoard[randomRow][c].type === 'empty') {
+      newBoard[randomRow][c] = { type: 'obstacle', color: 'shadow' as BlockColor };
+    }
+  }
+  return newBoard;
+}
+
+let scorePosId = 0;
+
+// ── Reducer ──────────────────────────────────────────────────────
+
+function reducer(state: GameState, action: Action): GameState {
+  switch (action.type) {
+    case 'PLACE_PIECE': {
+      const { trayIndex, row, col } = action;
+      const piece = state.tray[trayIndex];
+      if (!piece || state.isGameOver || state.isPaused) return state;
+
+      // Validate placement
+      if (!canPlace(state.board, piece.shape, row, col)) return state;
+
+      // Place piece onto board
+      let newBoard = state.board.map(r => [...r]);
+      const cells = getPieceCells(piece.shape, row, col);
+      for (const [br, bc] of cells) {
+        newBoard[br][bc] = { type: 'block', color: piece.color };
+      }
+
+      // Detect lines
+      const fullRows = findFullRows(newBoard);
+      const fullCols = findFullCols(newBoard);
+      const totalLines = fullRows.length + fullCols.length;
+
+      // Clear lines
+      if (totalLines > 0) {
+        newBoard = clearLinesFromBoard(newBoard, fullRows, fullCols);
+      }
+
+      // Check perfect board
+      const perfect = isBoardEmpty(newBoard);
+
+      // Score
+      const scoreResult = calculateScore(
+        totalLines,
+        piece.size,
+        state.chain,
+        perfect,
+        state.nextMultiplierOverride,
+      );
+
+      const newScore = state.score + scoreResult.pointsEarned;
+      const newBestScore = Math.max(state.bestScore, newScore);
+
+      // Cursed mode
+      let noClears = totalLines > 0 ? 0 : state.noClears + 1;
+      if (state.level >= CURSED_MODE_LEVEL && noClears >= CURSED_PLACEMENT_TRIGGER) {
+        newBoard = addCursedRow(newBoard);
+        noClears = 0;
+      }
+
+      // Update tray — replace used slot
+      const newTray: [Piece | null, Piece | null, Piece | null] = [...state.tray] as [Piece | null, Piece | null, Piece | null];
+      newTray[trayIndex] = generateRandomPiece();
+
+      // Check game over
+      const isGameOver = !hasAnyLegalMove(newBoard, newTray);
+
+      // Score pop animation
+      const newPops: ScorePopAnimation[] = [...state.scorePops];
+      if (scoreResult.pointsEarned > 0 && scoreResult.label) {
+        newPops.push({
+          id: ++scorePosId,
+          label: scoreResult.label,
+          points: scoreResult.pointsEarned,
+          x: 0.5, // center (relative)
+          y: 0.4,
+          startTime: Date.now(),
+        });
+      }
+
+      return {
+        ...state,
+        board: newBoard,
+        tray: newTray,
+        score: newScore,
+        bestScore: newBestScore,
+        chain: scoreResult.newChain,
+        noClears,
+        isGameOver,
+        nextMultiplierOverride: perfect ? 10 : undefined,
+        clearAnimation: totalLines > 0
+          ? { rows: fullRows, cols: fullCols, startTime: Date.now() }
+          : null,
+        scorePops: newPops,
+        placements: state.placements + 1,
+      };
+    }
+
+    case 'CLEAR_ANIMATION_DONE': {
+      return { ...state, clearAnimation: null };
+    }
+
+    case 'REMOVE_SCORE_POP': {
+      return { ...state, scorePops: state.scorePops.filter(p => p.id !== action.id) };
+    }
+
+    case 'TOGGLE_PAUSE': {
+      return { ...state, isPaused: !state.isPaused };
+    }
+
+    case 'NEW_GAME': {
+      const level = 1;
+      const board = level >= OBSTACLE_SPAWN_LEVEL
+        ? createBoardWithObstacles(level)
+        : createEmptyBoard();
+      return {
+        board,
+        tray: generateInitialTray(),
+        score: 0,
+        bestScore: state.bestScore, // persist best score
+        level,
+        chain: 0,
+        noClears: 0,
+        isGameOver: false,
+        isPaused: false,
+        nextMultiplierOverride: undefined,
+        clearAnimation: null,
+        scorePops: [],
+        sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        placements: 0,
+      };
+    }
+
+    case 'NEXT_LEVEL': {
+      const level = state.level + 1;
+      const board = level >= OBSTACLE_SPAWN_LEVEL
+        ? createBoardWithObstacles(level)
+        : createEmptyBoard();
+      return {
+        ...state,
+        board,
+        tray: generateInitialTray(),
+        level,
+        chain: 0,
+        noClears: 0,
+        isGameOver: false,
+        clearAnimation: null,
+        scorePops: [],
+      };
+    }
+
+    default:
+      return state;
+  }
+}
+
+// ── Initial State ────────────────────────────────────────────────
+
+function createInitialState(): GameState {
+  return {
+    board: createEmptyBoard(),
+    tray: generateInitialTray(),
+    score: 0,
+    bestScore: 0,
+    level: 1,
+    chain: 0,
+    noClears: 0,
+    isGameOver: false,
+    isPaused: false,
+    nextMultiplierOverride: undefined,
+    clearAnimation: null,
+    scorePops: [],
+    sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    placements: 0,
+  };
+}
+
+// ── Hook ─────────────────────────────────────────────────────────
+
+export function useGameEngine() {
+  const [state, dispatch] = useReducer(reducer, undefined, createInitialState);
+
+  const placePiece = useCallback((trayIndex: 0 | 1 | 2, row: number, col: number) => {
+    dispatch({ type: 'PLACE_PIECE', trayIndex, row, col });
+  }, []);
+
+  const clearAnimationDone = useCallback(() => {
+    dispatch({ type: 'CLEAR_ANIMATION_DONE' });
+  }, []);
+
+  const removeScorePop = useCallback((id: number) => {
+    dispatch({ type: 'REMOVE_SCORE_POP', id });
+  }, []);
+
+  const togglePause = useCallback(() => {
+    dispatch({ type: 'TOGGLE_PAUSE' });
+  }, []);
+
+  const newGame = useCallback(() => {
+    dispatch({ type: 'NEW_GAME' });
+  }, []);
+
+  const nextLevel = useCallback(() => {
+    dispatch({ type: 'NEXT_LEVEL' });
+  }, []);
+
+  return {
+    state,
+    placePiece,
+    clearAnimationDone,
+    removeScorePop,
+    togglePause,
+    newGame,
+    nextLevel,
+    canPlace,
+    canPlaceAnywhere,
+  };
+}

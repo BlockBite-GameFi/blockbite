@@ -1,0 +1,213 @@
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(10, 10, 26, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+/* ── Logo ── */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logoBlocks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  width: 24px;
+  height: 24px;
+}
+
+.logoBlocks span {
+  border-radius: 2px;
+  display: block;
+}
+
+.logoText {
+  font-family: 'Orbitron', monospace;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.logoAccent {
+  color: #00F5FF;
+}
+
+.logoBadge {
+  font-family: 'Orbitron', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #FF00FF, #AA0066);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 99px;
+  letter-spacing: 0.08em;
+}
+
+/* ── Links ── */
+.links {
+  display: flex;
+  list-style: none;
+  gap: 4px;
+  flex: 1;
+}
+
+.link {
+  display: block;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #8888BB;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.link.active {
+  color: #00F5FF;
+  background: rgba(0, 245, 255, 0.08);
+}
+
+.playLink {
+  color: #00FF88 !important;
+  font-weight: 700;
+  font-family: 'Orbitron', monospace;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+
+.playLink:hover {
+  background: rgba(0, 255, 136, 0.1) !important;
+}
+
+/* ── Right side ── */
+.right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.prizeChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 99px;
+  padding: 4px 12px;
+}
+
+.prizeIcon {
+  font-size: 14px;
+}
+
+.prizeLabel {
+  font-size: 11px;
+  color: #8888BB;
+  font-weight: 500;
+}
+
+.prizeValue {
+  font-family: 'Orbitron', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #FFD700;
+}
+
+.walletBtn {
+  white-space: nowrap;
+}
+
+/* ── Mobile toggle ── */
+.menuToggle {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.menuToggle span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: #8888BB;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.menuToggle span.menuOpen {
+  background: #00F5FF;
+}
+
+/* ── Mobile menu ── */
+.mobileMenu {
+  display: none;
+  flex-direction: column;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 8px 0 16px;
+  animation: slideInDown 0.2s ease-out;
+}
+
+.mobileLink {
+  display: block;
+  padding: 12px 24px;
+  color: #8888BB;
+  text-decoration: none;
+  font-size: 15px;
+  transition: color 0.15s;
+}
+
+.mobileLink:hover,
+.mobileLink.active {
+  color: #00F5FF;
+}
+
+@media (max-width: 768px) {
+  .links {
+    display: none;
+  }
+
+  .prizeChip {
+    display: none;
+  }
+
+  .menuToggle {
+    display: flex;
+  }
+
+  .mobileMenu {
+    display: flex;
+  }
+}

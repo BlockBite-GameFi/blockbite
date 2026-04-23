@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// BLOCKBLAST — CANVAS RENDERER
+// BLOCKBLAST — CANVAS RENDERER (HDR ULTRA EDITION)
 // All drawing routines: blocks, board, animations, particles
 // ═══════════════════════════════════════════════════════════════
 
@@ -27,18 +27,21 @@ export function drawBlock(
   const offset = (size - s) / 2;
   const px = x + offset;
   const py = y + offset;
-  const r = Math.max(4, size * 0.08); // border radius
+  const r = Math.max(6, size * 0.12); // border radius (increased for modern look)
 
   ctx.save();
   ctx.globalAlpha = alpha;
 
-  // Drop shadow
+  // Premium colored drop shadow (HDR effect)
   ctx.shadowColor = palette.glow;
-  ctx.shadowBlur = glowing ? 20 : 10;
+  ctx.shadowBlur = glowing ? 30 : 15;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 2;
 
-  // Main gradient fill
+  // Main gradient fill (3-stop feel)
   const grad = ctx.createLinearGradient(px, py, px + s, py + s);
   grad.addColorStop(0, palette.gradStart);
+  grad.addColorStop(0.5, palette.gradEnd);
   grad.addColorStop(1, palette.gradEnd);
 
   ctx.beginPath();
@@ -46,23 +49,31 @@ export function drawBlock(
   ctx.fillStyle = grad;
   ctx.fill();
 
-  // Inner highlight (top-left glossy sheen)
+  // Inner highlight (top-left glossy sheen - HDR Ultra style)
   ctx.shadowBlur = 0;
-  const hlGrad = ctx.createLinearGradient(px, py, px + s * 0.6, py + s * 0.6);
-  hlGrad.addColorStop(0, palette.highlight);
+  ctx.shadowOffsetY = 0;
+  const hlGrad = ctx.createLinearGradient(px, py, px + s * 0.7, py + s * 0.7);
+  hlGrad.addColorStop(0, 'rgba(255,255,255,0.4)');
+  hlGrad.addColorStop(0.4, 'rgba(255,255,255,0.1)');
   hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
 
   ctx.beginPath();
-  roundRect(ctx, px + 2, py + 2, s - 4, s - 4, r - 1);
+  roundRect(ctx, px + 3, py + 3, s - 6, s - 6, r - 1);
   ctx.fillStyle = hlGrad;
   ctx.fill();
 
-  // Outer glow for selected/hover
+  // Outer stroke (subtle neon border)
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Extra bloom for selected/hover
   if (glowing) {
-    ctx.shadowColor = palette.glow;
-    ctx.shadowBlur = 30;
+    ctx.globalCompositeOperation = 'lighter';
     ctx.strokeStyle = palette.gradStart;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = palette.gradStart;
+    ctx.shadowBlur = 20;
     ctx.beginPath();
     roundRect(ctx, px, py, s, s, r);
     ctx.stroke();
@@ -84,24 +95,34 @@ export function drawObstacle(
   ctx.save();
   ctx.globalAlpha = alpha;
 
-  const r = Math.max(3, size * 0.07);
+  const r = Math.max(4, size * 0.1);
   const grad = ctx.createLinearGradient(x, y, x + size, y + size);
-  grad.addColorStop(0, '#555577');
-  grad.addColorStop(1, '#333355');
+  grad.addColorStop(0, '#444466');
+  grad.addColorStop(1, '#1A1A2E');
 
   ctx.beginPath();
   roundRect(ctx, x, y, size, size, r);
   ctx.fillStyle = grad;
   ctx.fill();
 
-  // Cross pattern
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-  ctx.lineWidth = 1.5;
+  // Brushed metal effect
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let i = 4; i < size; i += 6) {
+    ctx.beginPath();
+    ctx.moveTo(x + i, y + 2);
+    ctx.lineTo(x + i, y + size - 2);
+    ctx.stroke();
+  }
+
+  // Cross pattern (reinforced)
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(x + 4, y + 4);
-  ctx.lineTo(x + size - 4, y + size - 4);
-  ctx.moveTo(x + size - 4, y + 4);
-  ctx.lineTo(x + 4, y + size - 4);
+  ctx.moveTo(x + 6, y + 6);
+  ctx.lineTo(x + size - 6, y + size - 6);
+  ctx.moveTo(x + size - 6, y + 6);
+  ctx.lineTo(x + 6, y + size - 6);
   ctx.stroke();
 
   ctx.restore();
@@ -126,13 +147,15 @@ export function drawGrid(
       const isAlt = (r + c) % 2 === 0;
 
       ctx.beginPath();
-      roundRect(ctx, x, y, CELL_SIZE, CELL_SIZE, 4);
+      roundRect(ctx, x, y, CELL_SIZE, CELL_SIZE, 6);
       ctx.fillStyle = isAlt
-        ? 'rgba(255,255,255,0.025)'
-        : 'rgba(255,255,255,0.015)';
+        ? 'rgba(255,255,255,0.03)'
+        : 'rgba(255,255,255,0.02)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-      ctx.lineWidth = 0.5;
+      
+      // Subtle inner shadow for cells
+      ctx.strokeStyle = 'rgba(0, 245, 255, 0.05)';
+      ctx.lineWidth = 1;
       ctx.stroke();
     }
   }
@@ -167,13 +190,16 @@ export function drawBoard(
         drawObstacle(ctx, x, y, CELL_SIZE);
       }
 
-      // Flash overlay for clearing lines
+      // HDR Flash overlay for clearing lines
       if ((highlightRows.includes(r) || highlightCols.includes(c)) && flashAlpha > 0) {
         ctx.save();
-        ctx.globalAlpha = Math.min(1, flashAlpha * 1.5);
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = Math.min(1, flashAlpha * 2);
+        ctx.fillStyle = 'rgba(255,255,255,1)';
+        ctx.shadowColor = '#00F5FF';
+        ctx.shadowBlur = 40;
         ctx.beginPath();
-        roundRect(ctx, x, y, CELL_SIZE, CELL_SIZE, 4);
+        roundRect(ctx, x, y, CELL_SIZE, CELL_SIZE, 6);
         ctx.fill();
         ctx.restore();
       }
@@ -203,16 +229,16 @@ export function drawGhostPiece(
         const y = originY + (row + r) * cellTotal;
 
         ctx.save();
-        ctx.globalAlpha = valid ? 0.4 : 0.15;
+        ctx.globalAlpha = valid ? 0.45 : 0.2;
         ctx.beginPath();
-        roundRect(ctx, x, y, CELL_SIZE, CELL_SIZE, 5);
+        roundRect(ctx, x, y, CELL_SIZE, CELL_SIZE, 8);
         ctx.fillStyle = valid ? palette.gradStart : '#FF3366';
         ctx.fill();
 
         if (valid) {
           ctx.strokeStyle = palette.gradStart;
           ctx.lineWidth = 2;
-          ctx.setLineDash([4, 4]);
+          ctx.setLineDash([6, 4]);
           ctx.stroke();
           ctx.setLineDash([]);
         }
@@ -235,33 +261,33 @@ export function drawScorePop(
 ): void {
   const alpha = progress < 0.2
     ? progress / 0.2
-    : progress > 0.7
-      ? 1 - (progress - 0.7) / 0.3
+    : progress > 0.8
+      ? 1 - (progress - 0.8) / 0.2
       : 1;
-  const yOffset = progress * -80;
-  const scale = progress < 0.2 ? 0.8 + progress * 1.0 : 1.0;
+  const yOffset = progress * -100;
+  const scale = progress < 0.2 ? 0.7 + progress * 1.5 : 1.0;
 
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(cx, cy + yOffset);
   ctx.scale(scale, scale);
 
-  // Points text
-  ctx.font = `bold 28px 'Orbitron', monospace`;
+  // Points text (High visibility)
+  ctx.font = `bold 36px 'Orbitron', monospace`;
   ctx.fillStyle = '#00FF88';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(0,255,136,0.8)';
-  ctx.shadowBlur = 15;
+  ctx.shadowColor = 'rgba(0,255,136,1)';
+  ctx.shadowBlur = 25;
   ctx.fillText(`+${points.toLocaleString()}`, 0, 0);
 
   // Label below points
   if (label) {
-    ctx.font = `600 14px 'Plus Jakarta Sans', sans-serif`;
+    ctx.font = `bold 16px 'Orbitron', sans-serif`;
     ctx.fillStyle = '#00F5FF';
     ctx.shadowColor = 'rgba(0,245,255,0.8)';
     ctx.shadowBlur = 10;
-    ctx.fillText(label, 0, 28);
+    ctx.fillText(label.toUpperCase(), 0, 36);
   }
 
   ctx.restore();
@@ -278,6 +304,14 @@ export interface Particle {
   size: number;
   life: number; // 0→1 remaining life
   decay: number;
+  glow: boolean;
+}
+
+export interface Shockwave {
+  x: number;
+  y: number;
+  r: number;
+  life: number;
 }
 
 export function createParticlesForClear(
@@ -295,7 +329,7 @@ export function createParticlesForClear(
       positions.push({
         x: originX + c * cellTotal + CELL_SIZE / 2,
         y: originY + r * cellTotal + CELL_SIZE / 2,
-        color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+        color: `hsl(${180 + Math.random() * 60}, 100%, 70%)`, // Cyan-themed particles
       });
     }
   }
@@ -305,26 +339,27 @@ export function createParticlesForClear(
         positions.push({
           x: originX + col * cellTotal + CELL_SIZE / 2,
           y: originY + r * cellTotal + CELL_SIZE / 2,
-          color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+          color: `hsl(${300 + Math.random() * 60}, 100%, 70%)`, // Magenta-themed particles
         });
       }
     }
   }
 
   for (const pos of positions) {
-    const count = 4 + Math.floor(Math.random() * 4);
+    const count = 10 + Math.floor(Math.random() * 8); // Increased density
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 1.5 + Math.random() * 3.5;
+      const speed = 2 + Math.random() * 6;
       particles.push({
         x: pos.x,
         y: pos.y,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 2,
+        vy: Math.sin(angle) * speed - 1,
         color: pos.color,
-        size: 2 + Math.random() * 4,
+        size: 3 + Math.random() * 5,
         life: 1.0,
-        decay: 0.018 + Math.random() * 0.012,
+        decay: 0.015 + Math.random() * 0.01,
+        glow: Math.random() > 0.3,
       });
     }
   }
@@ -337,25 +372,45 @@ export function updateParticles(particles: Particle[]): Particle[] {
       ...p,
       x: p.x + p.vx,
       y: p.y + p.vy,
-      vy: p.vy + 0.12, // gravity
-      vx: p.vx * 0.98, // drag
+      vy: p.vy + 0.15, // gravity
+      vx: p.vx * 0.97, // drag
       life: p.life - p.decay,
     }))
     .filter(p => p.life > 0);
 }
 
 export function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle[]): void {
+  ctx.save();
   for (const p of particles) {
-    ctx.save();
     ctx.globalAlpha = p.life;
     ctx.fillStyle = p.color;
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur = 6;
+    
+    if (p.glow) {
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 12;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
   }
+  ctx.restore();
+}
+
+export function drawShockwave(ctx: CanvasRenderingContext2D, wave: Shockwave): void {
+  ctx.save();
+  ctx.globalAlpha = wave.life;
+  ctx.strokeStyle = '#00F5FF';
+  ctx.lineWidth = 4 * wave.life;
+  ctx.shadowColor = '#00F5FF';
+  ctx.shadowBlur = 20;
+  
+  ctx.beginPath();
+  ctx.arc(wave.x, wave.y, wave.r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
 }
 
 // ── Idle Background (parallax floating blocks) ───────────────────
@@ -373,16 +428,16 @@ interface IdleBlock {
 
 const COLORS: BlockColor[] = ['fire', 'ice', 'nature', 'thunder', 'shadow', 'crystal', 'void'];
 
-export function createIdleBlocks(width: number, height: number, count = 18): IdleBlock[] {
+export function createIdleBlocks(width: number, height: number, count = 22): IdleBlock[] {
   return Array.from({ length: count }, () => ({
     x: Math.random() * width,
     y: Math.random() * height,
-    size: 20 + Math.random() * 40,
+    size: 30 + Math.random() * 50,
     color: COLORS[Math.floor(Math.random() * COLORS.length)],
-    speed: 0.3 + Math.random() * 0.5,
+    speed: 0.2 + Math.random() * 0.4,
     phase: Math.random() * Math.PI * 2,
     rotation: Math.random() * Math.PI * 2,
-    rotSpeed: (Math.random() - 0.5) * 0.01,
+    rotSpeed: (Math.random() - 0.5) * 0.005,
   }));
 }
 
@@ -394,8 +449,8 @@ export function drawIdleBackground(
   height: number,
 ): void {
   for (const b of blocks) {
-    const yOff = Math.sin(time * b.speed * 0.001 + b.phase) * 12;
-    const alpha = 0.08 + Math.abs(Math.sin(time * 0.0004 + b.phase)) * 0.07;
+    const yOff = Math.sin(time * b.speed * 0.001 + b.phase) * 15;
+    const alpha = 0.05 + Math.abs(Math.sin(time * 0.0003 + b.phase)) * 0.05;
 
     ctx.save();
     ctx.translate(b.x, b.y + yOff);
@@ -408,17 +463,17 @@ export function drawIdleBackground(
     grad.addColorStop(1, palette.gradEnd);
 
     ctx.beginPath();
-    roundRect(ctx, -b.size / 2, -b.size / 2, b.size, b.size, 5);
+    roundRect(ctx, -b.size / 2, -b.size / 2, b.size, b.size, 10);
     ctx.fillStyle = grad;
     ctx.shadowColor = palette.glow;
-    ctx.shadowBlur = 15;
+    ctx.shadowBlur = 20;
     ctx.fill();
     ctx.restore();
 
     // Slowly move block upward, reset when offscreen
-    b.y -= b.speed * 0.4;
-    if (b.y + b.size < 0) {
-      b.y = height + b.size;
+    b.y -= b.speed * 0.3;
+    if (b.y + b.size < -50) {
+      b.y = height + b.size + 50;
       b.x = Math.random() * width;
     }
   }

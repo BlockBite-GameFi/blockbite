@@ -113,10 +113,32 @@ export const ANIMATION_SCORE_POP_MS = 1500;
 export const GAME_LOOP_TARGET_FPS = 60;
 
 // ── Prize Pool (mocked for Phase 0) ──────────────────────────────
-export const MOCK_PRIZE_POOL_USDC = 3248.75;
+// Production Game Constants
+export const GRID_SIZE = 8;
+export const BOARD_WIDTH = 8;
+export const BOARD_HEIGHT = 8;
+
+export const TICKET_COST_USDC = 1.0;
+export const PRIZE_POOL_PERCENTAGE = 0.70;
+export const TEAM_REVENUE_PERCENTAGE = 0.15;
+export const DEV_FUND_PERCENTAGE = 0.10;
+export const REFERRAL_PERCENTAGE = 0.05;
+
+export const PRIZE_DISTRIBUTION = [
+  { rank: 1, pct: 20 },
+  { rank: 2, pct: 12 },
+  { rank: 3, pct: 8 },
+  { rank: 5, pct: 5 },
+  { rank: 10, pct: 3 },
+  { rank: 20, pct: 1.5 },
+  { rank: 50, pct: 0.5 },
+  { rank: 100, pct: 0.1 },
+];
+
+export const MOCK_PRIZE_POOL_USDC = 3248.50;
 export const MOCK_TICKETS_SOLD = 4641;
-export const MOCK_PLAYERS = 1283;
-export const MOCK_USDC_DISTRIBUTED = 18420.0;
+export const MOCK_PLAYERS = 1205;
+export const MOCK_USDC_DISTRIBUTED = 45250;
 
 // ── Weekly Period Duration ────────────────────────────────────────
 export const PERIOD_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -133,18 +155,6 @@ function nextSundayMidnight(): Date {
 }
 
 export const MOCK_PERIOD_END = nextSundayMidnight();
-
-// ── Distribution Tiers ────────────────────────────────────────────
-export const PRIZE_DISTRIBUTION = [
-  { rank: '1', pct: 20 },
-  { rank: '2', pct: 12 },
-  { rank: '3', pct: 8 },
-  { rank: '4–5', pct: 5 },     // each
-  { rank: '6–10', pct: 3 },    // each
-  { rank: '11–20', pct: 1.5 }, // each
-  { rank: '21–50', pct: 0.5 }, // each
-  { rank: '51–100', pct: 0.1 }, // each
-];
 
 // ── Shop Packages ─────────────────────────────────────────────────
 export const TICKET_PACKAGES = [

@@ -1,89 +1,88 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import dynamic from 'next/dynamic';
+import { Menu, X, Rocket, Trophy, ShoppingBag, Info } from 'lucide-react';
 import styles from './Navbar.module.css';
 
-const NAV_LINKS = [
-  { href: '/', label: 'Home' },
-  { href: '/game', label: '▶ Play' },
-  { href: '/shop', label: 'Shop' },
-  { href: '/leaderboard', label: 'Leaderboard' },
-  { href: '/how-to-play', label: 'How to Play' },
-];
+// Wallet button is dynamically imported to avoid hydration errors
+const CustomWalletButton = dynamic(
+  () => import('./CustomWalletButton'),
+  { ssr: false, loading: () => <div className={styles.walletPlaceholder} /> }
+);
 
 export default function Navbar() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const navLinks = [
+    { name: 'HOME', href: '/', icon: null },
+    { name: 'GAME', href: '/game', icon: <Rocket size={16} /> },
+    { name: 'PRIZES', href: '/leaderboard', icon: <Trophy size={16} /> },
+    { name: 'SHOP', href: '/shop', icon: <ShoppingBag size={16} /> },
+    { name: 'GUIDE', href: '/how-to-play', icon: <Info size={16} /> },
+  ];
 
   return (
-    <nav className={styles.nav}>
-      <div className={styles.inner}>
+    <nav className={`${styles.nav} ${scrolled ? styles.scrolled : ''}`}>
+      <div className={styles.navContainer}>
         {/* Logo */}
         <Link href="/" className={styles.logo}>
-          <span className={styles.logoBlocks}>
-            <span style={{ background: 'linear-gradient(135deg, #00F5FF, #0088FF)' }} />
-            <span style={{ background: 'linear-gradient(135deg, #FF00FF, #AA0066)' }} />
-            <span style={{ background: 'linear-gradient(135deg, #FFD700, #FF8C00)' }} />
-            <span style={{ background: 'linear-gradient(135deg, #00FF88, #00AA44)' }} />
-          </span>
-          <span className={styles.logoText}>Block<span className={styles.logoAccent}>Blast</span></span>
-          <span className={styles.logoBadge}>WEB3</span>
+          <div className={styles.logoIcon}>B</div>
+          <div className={styles.logoText}>
+            BLOCK<span className="neon-cyan">BLAST</span>
+            <span className={styles.logoBadge}>WEB3</span>
+          </div>
         </Link>
 
-        {/* Desktop Links */}
-        <ul className={styles.links}>
-          {NAV_LINKS.map(link => (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                className={`${styles.link} ${pathname === link.href ? styles.active : ''} ${link.label.startsWith('▶') ? styles.playLink : ''}`}
-              >
-                {link.label}
-              </Link>
-            </li>
+        {/* Desktop Nav */}
+        <div className={styles.desktopLinks}>
+          {navLinks.map((link) => (
+            <Link 
+              key={link.name} 
+              href={link.href} 
+              className={`${styles.navLink} ${pathname === link.href ? styles.active : ''}`}
+            >
+              {link.icon && <span className={styles.navIcon}>{link.icon}</span>}
+              {link.name}
+            </Link>
           ))}
-        </ul>
-
-        {/* Wallet Button */}
-        <div className={styles.right}>
-          <div className={styles.prizeChip}>
-            <span className={styles.prizeIcon}>🏆</span>
-            <span className={styles.prizeLabel}>Pool</span>
-            <span className={styles.prizeValue}>3,248 USDC</span>
-          </div>
-          <button className={`btn btn-primary btn-sm ${styles.walletBtn}`} id="navbar-connect-wallet">
-            Connect Wallet
-          </button>
-          <button
-            className={styles.menuToggle}
-            onClick={() => setMobileOpen(o => !o)}
-            aria-label="Toggle menu"
-          >
-            <span className={mobileOpen ? styles.menuOpen : ''} />
-            <span className={mobileOpen ? styles.menuOpen : ''} />
-            <span className={mobileOpen ? styles.menuOpen : ''} />
-          </button>
+          <div className={styles.divider} />
+          <CustomWalletButton />
         </div>
+
+        {/* Mobile Toggle */}
+        <button className={styles.mobileToggle} onClick={() => setIsOpen(!isOpen)}>
+          {isOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
       </div>
 
       {/* Mobile Menu */}
-      {mobileOpen && (
+      {isOpen && (
         <div className={styles.mobileMenu}>
-          {NAV_LINKS.map(link => (
-            <Link
-              key={link.href}
-              href={link.href}
+          {navLinks.map((link) => (
+            <Link 
+              key={link.name} 
+              href={link.href} 
               className={`${styles.mobileLink} ${pathname === link.href ? styles.active : ''}`}
-              onClick={() => setMobileOpen(false)}
+              onClick={() => setIsOpen(false)}
             >
-              {link.label}
+              {link.icon}
+              {link.name}
             </Link>
           ))}
-          <button className="btn btn-primary" style={{ margin: '8px 16px' }}>
-            Connect Wallet
-          </button>
+          <div className={styles.mobileWalletWrap}>
+            <CustomWalletButton />
+          </div>
         </div>
       )}
     </nav>

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import '../styles/globals.css';
+import AppWalletProvider from "@/components/AppWalletProvider";
 
 export const metadata: Metadata = {
   title: 'BlockBlast Web3 — Skill-Based Arcade on Solana',
@@ -24,7 +25,9 @@ export default function RootLayout({
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230A0A1A'/><rect x='4' y='4' width='10' height='10' rx='2' fill='%2300F5FF'/><rect x='18' y='4' width='10' height='10' rx='2' fill='%23FF00FF'/><rect x='4' y='18' width='10' height='10' rx='2' fill='%23FFD700'/><rect x='18' y='18' width='10' height='10' rx='2' fill='%2300FF88'/></svg>" />
       </head>
       <body>
-        {children}
+        <AppWalletProvider>
+          {children}
+        </AppWalletProvider>
       </body>
     </html>
   );

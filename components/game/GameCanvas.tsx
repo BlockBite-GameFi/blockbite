@@ -448,6 +448,12 @@ export default function GameCanvas() {
         </div>
         <div className={styles.hudCenter}>
           <span className={styles.levelBadge}>LVL {state.level}</span>
+          <div className={styles.levelProgressBar}>
+            <div 
+              className={styles.progressBarFill} 
+              style={{ width: `${Math.min(100, (state.score / (state.level === 9540 ? state.score : 8000)) * 100)}%` }} 
+            />
+          </div>
           {state.chain > 1 && (
             <div className={styles.chainBadge}>
               <span className={styles.chainIcon}>⚡</span>

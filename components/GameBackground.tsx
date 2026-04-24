@@ -37,15 +37,39 @@ export default function GameBackground() {
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: -1,
-        pointerEvents: 'none',
-        opacity: 0.8,
-      }}
-    />
+    <>
+      <div 
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: -2,
+          backgroundImage: 'url("/assets/bg.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.4,
+        }}
+      />
+      <div 
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: -1,
+          backgroundImage: 'url("/assets/grid.png")',
+          backgroundSize: '100px 100px',
+          opacity: 0.1,
+          pointerEvents: 'none',
+        }}
+      />
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: -1,
+          pointerEvents: 'none',
+          opacity: 0.6,
+        }}
+      />
+    </>
   );
 }

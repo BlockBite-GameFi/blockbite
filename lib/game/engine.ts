@@ -78,7 +78,7 @@ function createEmptyBoard(): Cell[][] {
 
 function createBoardWithObstacles(level: number): Cell[][] {
   const board = createEmptyBoard();
-  const count = OBSTACLE_COUNT_BY_LEVEL[level] ?? 15;
+  const count = getObstacleCountForLevel(level);
   let placed = 0;
   // Place randomly, avoid clusters at edges
   while (placed < count) {
@@ -246,12 +246,28 @@ function reducer(state: GameState, action: Action): GameState {
         });
       }
 
+      // Check for level up (9540 levels total)
+      let newLevel = state.level;
+      if (newScore >= getLevelThreshold(state.level) && state.level < MAX_GAME_LEVEL) {
+        newLevel = state.level + 1;
+        // Level up effects could be added here (e.g. specialized pop)
+        newPops.push({
+          id: ++scorePosId,
+          label: `LEVEL UP: ${newLevel}`,
+          points: 0,
+          x: 0.5,
+          y: 0.3,
+          startTime: Date.now(),
+        });
+      }
+
       return {
         ...state,
         board: newBoard,
         tray: newTray,
         score: newScore,
         bestScore: newBestScore,
+        level: newLevel,
         chain: scoreResult.newChain,
         noClears,
         isGameOver,

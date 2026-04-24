@@ -138,6 +138,34 @@
   animation: slideInUp 1s ease-out;
 }
 
+.avatarGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 16px;
+}
+
+.avatarOption {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-repeat: no-repeat;
+}
+
+.avatarOption:hover {
+  transform: scale(1.05);
+  border-color: rgba(0, 245, 255, 0.4);
+}
+
+.avatarOption.active {
+  border-color: #00F5FF;
+  box-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+  transform: scale(1.1);
+}
+
 .settingItem {
   display: flex;
   justify-content: space-between;

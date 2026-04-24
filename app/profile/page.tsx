@@ -9,28 +9,26 @@ import styles from './profile.module.css';
 
 const GameBackground = dynamic(() => import('@/components/GameBackground'), { ssr: false });
 
-export default function ProfilePage() {
-  const { publicKey, connected } = useWallet();
-  const [username, setUsername] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [savedUsername, setSavedUsername] = useState('');
+  const [selectedAvatar, setSelectedAvatar] = useState(0);
 
   useEffect(() => {
-    // Load from local storage for MVP persistence
-    const stored = localStorage.getItem('bb_username');
-    if (stored) {
-      setUsername(stored);
-      setSavedUsername(stored);
-    }
+    const storedAvatar = localStorage.getItem('bb_avatar');
+    if (storedAvatar) setSelectedAvatar(parseInt(storedAvatar));
   }, []);
 
-  const handleSave = () => {
-    localStorage.setItem('bb_username', username);
-    setSavedUsername(username);
-    setIsEditing(false);
+  const handleAvatarSelect = (idx: number) => {
+    setSelectedAvatar(idx);
+    localStorage.setItem('bb_avatar', idx.toString());
   };
 
   const walletAddr = publicKey?.toBase58() || '0x0000...0000';
+
+  // Avatar slicing logic (assuming all.png is a grid)
+  const getAvatarStyle = (idx: number) => ({
+    backgroundImage: 'url("/assets/avatars/all.png")',
+    backgroundSize: '300% 300%',
+    backgroundPosition: `${(idx % 3) * 50}% ${Math.floor(idx / 3) * 50}%`,
+  });
 
   return (
     <main className={styles.main}>
@@ -42,9 +40,8 @@ export default function ProfilePage() {
         <div className={styles.profileHeader}>
           <div className={styles.avatarWrap}>
             <div className={styles.avatarGlow} />
-            <div className={styles.avatar}>
-              {/* Fallback to first char of username or wallet */}
-              {(savedUsername || walletAddr).slice(0, 1).toUpperCase()}
+            <div className={styles.avatar} style={getAvatarStyle(selectedAvatar)}>
+              {!selectedAvatar && (savedUsername || walletAddr).slice(0, 1).toUpperCase()}
             </div>
           </div>
           
@@ -75,6 +72,20 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        <section className="glass-panel" style={{ padding: '32px', marginBottom: '32px' }}>
+          <h3 className="orbitron neon-cyan" style={{ marginBottom: '24px', fontSize: '18px' }}>SELECT AVATAR</h3>
+          <div className={styles.avatarGrid}>
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
+              <div 
+                key={idx}
+                className={`${styles.avatarOption} ${selectedAvatar === idx ? styles.active : ''}`}
+                style={getAvatarStyle(idx)}
+                onClick={() => handleAvatarSelect(idx)}
+              />
+            ))}
+          </div>
+        </section>
 
         <div className={styles.statsGrid}>
           <div className="glass-panel" style={{ padding: '24px' }}>

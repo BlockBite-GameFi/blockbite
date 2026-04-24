@@ -97,14 +97,35 @@ export const CHAIN_BONUSES: { threshold: number; multiplier: number }[] = [
   { threshold: 2, multiplier: 1.2 },
 ];
 
-// ── Level System ─────────────────────────────────────────────────
-export const OBSTACLE_SPAWN_LEVEL = 6;  // Obstacles start at level 6
-export const OBSTACLE_COUNT_BY_LEVEL: Record<number, number> = {
-  6: 10, 7: 12, 8: 13, 9: 14, 10: 15,
-};
+// ── Level System (MOU COMPLIANCE: 9540 LEVELS) ────────────────────
+export const MAX_GAME_LEVEL = 9540;
+export const OBSTACLE_SPAWN_LEVEL = 6;
+export const CURSED_MODE_LEVEL = 21;
+export const CURSED_PLACEMENT_TRIGGER = 5;
 
-export const CURSED_MODE_LEVEL = 21;        // Cursed mode starts level 21
-export const CURSED_PLACEMENT_TRIGGER = 5;  // Every 5 placements without clear
+/** Dynamic score threshold for each level up to 9540 */
+export function getLevelThreshold(level: number): number {
+  if (level <= 1) return 500;
+  if (level <= 5) return 3000;
+  if (level <= 10) return 8000;
+  if (level <= 20) return 25000;
+  
+  // Beyond level 20, scale logarithmically to reach level 9540
+  // Level 9540 target: ~10,000,000 points
+  const base = 25000;
+  const factor = (level - 20) * 1200; 
+  return base + factor;
+}
+
+/** Dynamic obstacle count based on level */
+export function getObstacleCountForLevel(level: number): number {
+  if (level < OBSTACLE_SPAWN_LEVEL) return 0;
+  if (level <= 10) return 10 + (level - 6);
+  if (level <= 100) return 15 + Math.floor((level - 10) / 10);
+  
+  // Cap obstacles to 24 (out of 64 cells) to keep game playable
+  return Math.min(24, 24 + Math.floor((level - 100) / 500));
+}
 
 // ── Game Timing ──────────────────────────────────────────────────
 export const ANIMATION_PLACE_MS = 120;

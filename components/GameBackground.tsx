@@ -42,21 +42,17 @@ export default function GameBackground() {
         style={{
           position: 'fixed',
           inset: 0,
-          zIndex: -2,
-          backgroundImage: 'url("/assets/bg.png")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          opacity: 0.4,
+          zIndex: -3,
+          background: 'var(--bg-deep)',
         }}
       />
       <div 
+        className="grid-overlay"
         style={{
           position: 'fixed',
           inset: 0,
-          zIndex: -1,
-          backgroundImage: 'url("/assets/grid.png")',
-          backgroundSize: '100px 100px',
-          opacity: 0.1,
+          zIndex: -2,
+          opacity: 0.5,
           pointerEvents: 'none',
         }}
       />
@@ -67,9 +63,11 @@ export default function GameBackground() {
           inset: 0,
           zIndex: -1,
           pointerEvents: 'none',
-          opacity: 0.6,
+          opacity: 0.4,
+          filter: 'blur(1px)', // Slight depth of field for background blocks
         }}
       />
     </>
   );
 }
+

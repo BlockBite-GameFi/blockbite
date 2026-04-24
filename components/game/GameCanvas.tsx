@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useGameEngine, canPlace } from '@/lib/game/engine';
-import { BOARD_ROWS, BOARD_COLS, CELL_SIZE, CELL_GAP, BLOCK_COLORS, TICKET_COST_USDC } from '@/lib/game/constants';
+import { BOARD_ROWS, BOARD_COLS, CELL_SIZE, CELL_GAP, BLOCK_COLORS, TICKET_COST_USDC, MAX_GAME_LEVEL, getLevelThreshold, getLevelTier } from '@/lib/game/constants';
 import {
   drawBoard, drawGhostPiece, drawScorePop, drawParticles,
   createParticlesForClear, updateParticles, Particle, roundRect,
@@ -446,12 +446,15 @@ export default function GameCanvas() {
           <span className={styles.hudValue}>{formatScore(state.score)}</span>
         </div>
         <div className={styles.hudCenter}>
-          <span className={styles.levelBadge}>LVL {state.level}</span>
+          <span className={styles.levelBadge} title={getLevelTier(state.level)}>LVL {state.level}</span>
           <div className={styles.levelProgressBar}>
-            <div 
-              className={styles.progressBarFill} 
-              style={{ width: `${Math.min(100, (state.score / (state.level === 9540 ? state.score : 8000)) * 100)}%` }} 
-            />
+            {(() => {
+              const prev = state.level <= 1 ? 0 : getLevelThreshold(state.level - 1);
+              const next = state.level >= MAX_GAME_LEVEL ? state.score : getLevelThreshold(state.level);
+              const span = Math.max(1, next - prev);
+              const pct = Math.min(100, Math.max(0, ((state.score - prev) / span) * 100));
+              return <div className={styles.progressBarFill} style={{ width: `${pct}%` }} />;
+            })()}
           </div>
           {state.chain > 1 && (
             <div className={styles.chainBadge}>

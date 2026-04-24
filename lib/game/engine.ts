@@ -248,7 +248,7 @@ function reducer(state: GameState, action: Action): GameState {
         });
       }
 
-      // Check for level up (9540 levels total) - Handle multi-level jumps for high combos
+      // Check for level up (40000 levels total) — handle multi-level jumps on high combos
       let newLevel = state.level;
       while (newLevel < MAX_GAME_LEVEL && newScore >= getLevelThreshold(newLevel)) {
         newLevel++;

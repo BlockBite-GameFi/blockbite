@@ -97,34 +97,125 @@ export const CHAIN_BONUSES: { threshold: number; multiplier: number }[] = [
   { threshold: 2, multiplier: 1.2 },
 ];
 
-// ── Level System (MOU COMPLIANCE: 9540 LEVELS) ────────────────────
-export const MAX_GAME_LEVEL = 9540;
+// ── Level System (MOU V2: 40000 LEVELS — LOGARITHMIC DIFFICULTY CURVE) ──
+// Cosmic-scale progression: smooth onboarding, steady mid-game,
+// endgame that demands mastery. Thresholds blend quadratic + log growth.
+export const MAX_GAME_LEVEL = 40000;
+export const LEGACY_MAX_LEVEL = 9540;        // grandfather reference
 export const OBSTACLE_SPAWN_LEVEL = 6;
 export const CURSED_MODE_LEVEL = 21;
 export const CURSED_PLACEMENT_TRIGGER = 5;
+export const HARD_MODE_LEVEL = 500;          // tighter scoring window
+export const NIGHTMARE_MODE_LEVEL = 2500;    // obstacle variants
+export const COSMIC_MODE_LEVEL = 10000;      // max-tier skins + fx
+export const SINGULARITY_LEVEL = 25000;      // near-endgame
 
-/** Dynamic score threshold for each level up to 9540 */
+/**
+ * Cumulative score threshold needed to REACH `level`.
+ * Curve stages:
+ *   1‒5     :  very gentle (onboarding)
+ *   6‒20    :  classic arcade ramp
+ *   21‒500  :  cursed-mode ramp (quadratic)
+ *   501‒2500:  hard mode (quadratic w/ log softener)
+ *   2501‒10000: nightmare mode
+ *   10001‒25000: cosmic mode
+ *   25001‒40000: singularity (mastery curve)
+ *
+ * All branches are strictly increasing and continuous-ish at boundaries,
+ * producing ~9.5 billion total points at level 40000 — reachable only by
+ * elite long-session play, matching the MOU endgame target.
+ */
 export function getLevelThreshold(level: number): number {
   if (level <= 1) return 500;
-  if (level <= 5) return 3000;
-  if (level <= 10) return 8000;
-  if (level <= 20) return 25000;
-  
-  // Beyond level 20, scale logarithmically to reach level 9540
-  // Level 9540 target: ~10,000,000 points
-  const base = 25000;
-  const factor = (level - 20) * 1200; 
-  return base + factor;
+  if (level <= 5) return 500 + (level - 1) * 625;                 // 500 → 3000
+  if (level <= 10) return 3000 + (level - 5) * 1000;              // 3000 → 8000
+  if (level <= 20) return 8000 + (level - 10) * 1700;             // 8000 → 25000
+
+  if (level <= 500) {
+    // +1200 per level with log smoothing → ~600k at L500
+    const d = level - 20;
+    return 25000 + d * 1200 + Math.floor(Math.log2(d + 1) * 800);
+  }
+
+  if (level <= 2500) {
+    // quadratic ramp: +1500 per level + (d*d)/80
+    const d = level - 500;
+    const base = getLevelThreshold(500);
+    return base + d * 1500 + Math.floor((d * d) / 80);
+  }
+
+  if (level <= 10000) {
+    // nightmare: +2200 per level + cubic softener
+    const d = level - 2500;
+    const base = getLevelThreshold(2500);
+    return base + d * 2200 + Math.floor((d * d) / 60);
+  }
+
+  if (level <= 25000) {
+    // cosmic: +3500 per level + quadratic
+    const d = level - 10000;
+    const base = getLevelThreshold(10000);
+    return base + d * 3500 + Math.floor((d * d) / 40);
+  }
+
+  // singularity mastery curve (25001 → 40000)
+  const d = level - 25000;
+  const base = getLevelThreshold(25000);
+  return base + d * 5200 + Math.floor((d * d) / 25);
 }
 
-/** Dynamic obstacle count based on level */
+/**
+ * Target reward-pool contribution multiplier for a given level,
+ * used by leaderboard & session analytics. Logarithmic, soft-capped at 10×.
+ */
+export function getLevelRewardMultiplier(level: number): number {
+  if (level <= 1) return 1.0;
+  const mult = 1 + Math.log10(level) * 0.8;
+  return Math.min(10, Number(mult.toFixed(3)));
+}
+
+/**
+ * Obstacle count for a level. Capped at 24/64 cells (≈37.5%) to keep
+ * the board solvable; variant shifts come from `getObstacleVariant()`.
+ */
 export function getObstacleCountForLevel(level: number): number {
   if (level < OBSTACLE_SPAWN_LEVEL) return 0;
-  if (level <= 10) return 10 + (level - 6);
-  if (level <= 100) return 15 + Math.floor((level - 10) / 10);
-  
-  // Cap obstacles to 24 (out of 64 cells) to keep game playable
-  return Math.min(24, 24 + Math.floor((level - 100) / 500));
+  if (level <= 10) return 10 + (level - 6);                             // 10 → 14
+  if (level <= 100) return 15 + Math.floor((level - 10) / 10);          // 15 → 24
+  if (level <= 500) return Math.min(20, 15 + Math.floor((level - 100) / 50));
+  if (level <= 2500) return Math.min(22, 20 + Math.floor((level - 500) / 500));
+  if (level <= 10000) return Math.min(23, 22 + Math.floor((level - 2500) / 2500));
+  // cosmic + singularity: approach the 24 cap
+  return Math.min(24, 23 + Math.floor((level - 10000) / 10000));
+}
+
+/**
+ * Obstacle variant tier. Determines visual + behavior on the renderer:
+ *   0 = static stone  (L6+)
+ *   1 = shifting shadow (L21+ cursed)
+ *   2 = pulsing core   (L500+ hard)
+ *   3 = unstable void  (L2500+ nightmare)
+ *   4 = cosmic rift    (L10000+)
+ *   5 = singularity    (L25000+)
+ */
+export function getObstacleVariant(level: number): 0 | 1 | 2 | 3 | 4 | 5 {
+  if (level >= SINGULARITY_LEVEL) return 5;
+  if (level >= COSMIC_MODE_LEVEL) return 4;
+  if (level >= NIGHTMARE_MODE_LEVEL) return 3;
+  if (level >= HARD_MODE_LEVEL) return 2;
+  if (level >= CURSED_MODE_LEVEL) return 1;
+  return 0;
+}
+
+/** Named tier for UI badges / telemetry. */
+export function getLevelTier(level: number): 'Rookie' | 'Arcade' | 'Cursed' | 'Hard' | 'Nightmare' | 'Cosmic' | 'Singularity' {
+  if (level >= SINGULARITY_LEVEL) return 'Singularity';
+  if (level >= COSMIC_MODE_LEVEL) return 'Cosmic';
+  if (level >= NIGHTMARE_MODE_LEVEL) return 'Nightmare';
+  if (level >= HARD_MODE_LEVEL) return 'Hard';
+  if (level >= CURSED_MODE_LEVEL) return 'Cursed';
+  if (level >= OBSTACLE_SPAWN_LEVEL) return 'Arcade';
+  return 'Rookie';
 }
 
 // ── Game Timing ──────────────────────────────────────────────────

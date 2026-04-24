@@ -32,7 +32,7 @@ Unlike speculative GameFi projects, BlockBlast Web3 uses **stablecoins only** (n
 | Feature | Details |
 |---|---|
 | 🎮 **Game Engine** | 8×8 Block Blast — canvas-rendered at 60fps with HDR Ultra visuals |
-| 🏆 **9,540 Levels** | Balanced progression from casual to Cursed Mode |
+| 🏆 **40,000 Levels** | Logarithmic difficulty curve — Rookie → Arcade → Cursed → Hard → Nightmare → Cosmic → Singularity |
 | 💰 **USDC Prize Pools** | Weekly — top 100 players win real stablecoins |
 | 🔗 **Solana Native** | SPL-USDC transactions, on-chain score snapshots |
 | 🔑 **Multi-Wallet** | Phantom, Solflare, Coinbase, Trust, Ledger, Torus + more |
@@ -116,7 +116,7 @@ blockblast/
 │   └── game/GameCanvas.tsx     # Main game component
 ├── lib/
 │   ├── game/
-│   │   ├── constants.ts   # 9540 levels, scoring, tokenomics
+│   │   ├── constants.ts   # 40000 levels, scoring, tokenomics
 │   │   ├── engine.ts      # useReducer game state machine
 │   │   ├── pieces.ts      # 24 piece shapes with weighted RNG
 │   │   ├── renderer.ts    # Canvas drawBlock, particles, shockwaves
@@ -154,7 +154,7 @@ For Solana Devnet testing, get free test USDC from the [Solana Devnet faucet](ht
 ## Roadmap
 
 ```
-✅ Phase 0 — Core game engine, HDR Ultra renderer, 9540-level system
+✅ Phase 0 — Core game engine, HDR Ultra renderer, 40000-level logarithmic system
 ✅ Phase 1 — Wallet integration, multi-wallet support, ticket UI
 🔄 Phase 2 — Solana Devnet smart contract (Anchor), on-chain tickets
 ⬜ Phase 3 — Weekly prize distribution (trustless, on-chain)

@@ -17,10 +17,40 @@ export default function Home() {
       <div className="grid-overlay"></div>
       <div className="scanline-overlay"></div>
       
-      {/* Dynamic Floating Background */}
-      <GameBackground />
+      {/* Hero Background with generated asset */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100vh',
+        zIndex: -2,
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundImage: 'url("/assets/hero_bg.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: 'brightness(0.6) contrast(1.1)',
+          transform: 'scale(1.05)',
+        }} />
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'radial-gradient(circle at 50% 50%, transparent 0%, var(--bg-deep) 90%)',
+        }} />
+      </div>
 
       <section className={styles.hero}>
+
         <div className={styles.heroContent}>
           <div className="badge badge-cyan" style={{ marginBottom: '24px', animation: 'float 3s ease-in-out infinite' }}>
             SOLANA MAINNET READY

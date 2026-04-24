@@ -53,6 +53,27 @@ export default function CustomWalletButton() {
     }
   };
 
+  const [username, setUsername] = useState<string | null>(null);
+  const [avatarIdx, setAvatarIdx] = useState<number>(0);
+
+  // Sync with localStorage
+  useEffect(() => {
+    const storedUsername = localStorage.getItem('bb_username');
+    const storedAvatar = localStorage.getItem('bb_avatar');
+    if (storedUsername) setUsername(storedUsername);
+    if (storedAvatar) setAvatarIdx(parseInt(storedAvatar));
+
+    // Listen for storage changes (if user changes name on profile page)
+    const handleStorageChange = () => {
+      const u = localStorage.getItem('bb_username');
+      const a = localStorage.getItem('bb_avatar');
+      if (u) setUsername(u);
+      if (a) setAvatarIdx(parseInt(a));
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   if (!connected || !publicKey) {
     return (
       <button 
@@ -90,6 +111,12 @@ export default function CustomWalletButton() {
   const base58 = publicKey.toBase58();
   const avatarGrad = generateAvatarGradient(base58);
 
+  const getAvatarStyle = (idx: number) => ({
+    backgroundImage: 'url("/assets/avatars/all.png")',
+    backgroundSize: '300% 300%',
+    backgroundPosition: `${(idx % 3) * 50}% ${Math.floor(idx / 3) * 50}%`,
+  });
+
   return (
     <div style={{ position: 'relative' }} ref={dropdownRef}>
       {/* Connected Button */}
@@ -114,13 +141,19 @@ export default function CustomWalletButton() {
           width: '28px',
           height: '28px',
           borderRadius: '50%',
-          background: avatarGrad,
+          background: avatarIdx === 0 ? avatarGrad : 'none',
+          ...(avatarIdx > 0 ? getAvatarStyle(avatarIdx) : {}),
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.2)',
           position: 'relative',
         }}>
+          {avatarIdx === 0 && !wallet?.adapter.icon && (
+            <span style={{ fontSize: '10px', color: '#fff', fontWeight: 'bold' }}>
+              {(username || base58).slice(0, 1).toUpperCase()}
+            </span>
+          )}
           {wallet?.adapter.icon && (
             // eslint-disable-next-line @next/next/no-img-element
             <img 
@@ -151,7 +184,7 @@ export default function CustomWalletButton() {
             color: '#FFFFFF',
             lineHeight: 1
           }}>
-            {shortenAddress(base58)}
+            {username || shortenAddress(base58)}
           </span>
           <span style={{
             fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -174,6 +207,7 @@ export default function CustomWalletButton() {
           <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
       </button>
+
 
       {/* Dropdown Menu */}
       {dropdownOpen && (

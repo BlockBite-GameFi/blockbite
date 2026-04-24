@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { useGameEngine, canPlace } from '@/lib/game/engine';
-import { BOARD_ROWS, BOARD_COLS, CELL_SIZE, CELL_GAP, BLOCK_COLORS } from '@/lib/game/constants';
+import { BOARD_ROWS, BOARD_COLS, CELL_SIZE, CELL_GAP, BLOCK_COLORS, TICKET_COST_USDC } from '@/lib/game/constants';
 import {
   drawBoard, drawGhostPiece, drawScorePop, drawParticles,
   createParticlesForClear, updateParticles, Particle, roundRect,
@@ -93,6 +94,10 @@ function drawTrayPiece(
 }
 
 export default function GameCanvas() {
+  const { connected, publicKey } = useWallet();
+  const [ticketBalance, setTicketBalance] = useState<number | null>(null);
+  const [isCheckingTicket, setIsCheckingTicket] = useState(false);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
   const particlesRef = useRef<Particle[]>([]);
@@ -116,6 +121,25 @@ export default function GameCanvas() {
   const TRAY_Y = originY + BOARD_PY + 40;
   const CANVAS_W = BOARD_PX + 24;
   const CANVAS_H = TRAY_Y + 130;
+
+  useEffect(() => {
+    if (connected && publicKey) {
+      setIsCheckingTicket(true);
+      const saved = localStorage.getItem(`tickets_${publicKey.toBase58()}`);
+      setTicketBalance(saved ? parseInt(saved) : 0);
+      setIsCheckingTicket(false);
+    }
+  }, [connected, publicKey]);
+
+  const handleStartGame = () => {
+    if (!connected || !publicKey) return;
+    if (ticketBalance && ticketBalance > 0) {
+      const newBal = ticketBalance - 1;
+      setTicketBalance(newBal);
+      localStorage.setItem(`tickets_${publicKey.toBase58()}`, newBal.toString());
+      newGame();
+    }
+  };
 
   // Initialize idle blocks
   useEffect(() => {
@@ -240,7 +264,6 @@ export default function GameCanvas() {
       const { rows, cols } = state.clearAnimation;
       particlesRef.current = [...particlesRef.current, ...createParticlesForClear(rows, cols, originX, originY)];
       
-      // Trigger shockwaves at center of clear
       rows.forEach(r => shockwavesRef.current.push({ x: originX + BOARD_PX / 2, y: originY + r * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2, r: 20, life: 1.0 }));
       cols.forEach(c => shockwavesRef.current.push({ x: originX + c * (CELL_SIZE + CELL_GAP) + CELL_SIZE / 2, y: originY + BOARD_PY / 2, r: 20, life: 1.0 }));
 
@@ -265,13 +288,9 @@ export default function GameCanvas() {
     function render(time: number) {
       const dt = time - lastTime;
       lastTime = time;
-
       ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-
-      // 1. Draw Background
       drawIdleBackground(ctx, idleBlocksRef.current, time, CANVAS_W, CANVAS_H);
 
-      // 2. Shake effect
       let shakeX = 0, shakeY = 0;
       if (shakeRef.current > 0) {
         shakeX = (Math.random() - 0.5) * shakeRef.current;
@@ -281,12 +300,9 @@ export default function GameCanvas() {
 
       ctx.save();
       ctx.translate(shakeX, shakeY);
-
-      // 3. Update & Draw Shockwaves
       shockwavesRef.current = shockwavesRef.current.map(s => ({ ...s, r: s.r + dt * 0.5, life: s.life - dt * 0.002 })).filter(s => s.life > 0);
       shockwavesRef.current.forEach(s => drawShockwave(ctx, s));
 
-      // 4. Update & Draw Flash
       let flashAlpha = 0, flashRows: number[] = [], flashCols: number[] = [];
       if (clearFlashRef.current) {
         clearFlashRef.current.progress = Math.min(1, clearFlashRef.current.progress + dt / 400);
@@ -295,10 +311,8 @@ export default function GameCanvas() {
         flashCols = clearFlashRef.current.cols;
       }
 
-      // 5. Draw Board
       drawBoard(ctx, state.board, originX, originY, flashRows, flashCols, flashAlpha);
 
-      // 6. Draw Ghost
       if (selectedTray !== null && ghostPos) {
         const piece = state.tray[selectedTray];
         if (piece) {
@@ -307,11 +321,9 @@ export default function GameCanvas() {
         }
       }
 
-      // 7. Update & Draw Particles
       particlesRef.current = updateParticles(particlesRef.current);
       drawParticles(ctx, particlesRef.current);
 
-      // 8. Draw Tray Area
       ctx.save();
       ctx.fillStyle = 'rgba(6, 6, 20, 0.85)';
       ctx.backdropFilter = 'blur(10px)';
@@ -350,7 +362,6 @@ export default function GameCanvas() {
         ctx.fillText(`${i + 1}`, cx, TRAY_Y + 110);
       }
 
-      // 9. Score Pops
       const now = Date.now();
       state.scorePops.forEach(pop => {
         const progress = Math.min((now - pop.startTime) / 1500, 1);
@@ -358,7 +369,6 @@ export default function GameCanvas() {
         if (progress >= 1) removeScorePop(pop.id);
       });
 
-      // 10. Game Over
       if (state.isGameOver) {
         ctx.fillStyle = 'rgba(0,0,0,0.8)';
         ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
@@ -396,6 +406,39 @@ export default function GameCanvas() {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [handleEsc]);
 
+  // UI Overlays
+  if (!connected) {
+    return (
+      <div className={styles.overlay}>
+        <h2 className="orbitron neon-cyan">WALLET REQUIRED</h2>
+        <p style={{ color: '#8888BB', marginBottom: '24px' }}>Please connect your Solana wallet to enter the arena.</p>
+        <Link href="/" className="btn btn-primary">BACK TO HOME</Link>
+      </div>
+    );
+  }
+
+  if (isCheckingTicket) {
+    return (
+      <div className={styles.overlay}>
+        <div className="spinner" />
+        <p className="orbitron" style={{ marginTop: '20px' }}>VERIFYING TICKETS...</p>
+      </div>
+    );
+  }
+
+  if (state.score === 0 && !state.isGameOver && (ticketBalance === 0 || ticketBalance === null)) {
+    return (
+      <div className={styles.overlay}>
+        <div className={styles.noTickets}>
+          <h2 className="orbitron neon-magenta" style={{ marginBottom: '8px' }}>NO TICKETS FOUND</h2>
+          <p style={{ color: '#8888BB', marginBottom: '24px' }}>Tickets are required to play and earn rewards.</p>
+          <div className={styles.priceTag}>1 TICKET = {TICKET_COST_USDC} USDC</div>
+          <Link href="/shop" className="btn btn-primary btn-lg" style={{ marginTop: '20px' }}>BUY TICKETS</Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.wrapper}>
       <div className={styles.hud}>
@@ -413,7 +456,7 @@ export default function GameCanvas() {
           )}
         </div>
         <div className={styles.hudStat} style={{ textAlign: 'right' }}>
-          <span className={styles.hudLabel}>TOP SKOR</span>
+          <span className={styles.hudLabel}>BEST SKOR</span>
           <span className={styles.hudValue}>{formatScore(state.bestScore)}</span>
         </div>
       </div>
@@ -434,10 +477,10 @@ export default function GameCanvas() {
         <span className={styles.hintKey}>1-3</span> PILIH PIECE · <span className={styles.hintKey}>CLICK</span> BOARD UNTUK PASANG
       </div>
 
-      {state.isGameOver && (
+      {(state.isGameOver || (state.score === 0 && ticketBalance! > 0)) && (
         <div className={styles.gameOverActions}>
-          <button className="btn btn-primary btn-lg" onClick={newGame}>
-             PLAY AGAIN
+          <button className="btn btn-primary btn-lg" onClick={handleStartGame}>
+             {state.isGameOver ? 'PLAY AGAIN (1 TICKET)' : 'START GAME (1 TICKET)'}
           </button>
           <Link href="/leaderboard" className="btn btn-secondary">
             LEADERBOARD

@@ -2,98 +2,152 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  position: relative;
   width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
 }
 
 .hud {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   width: 100%;
-  max-width: 500px;
-  padding: 10px 16px;
-  background: rgba(18, 18, 42, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  backdrop-filter: blur(12px);
+  margin-bottom: 20px;
+  padding: 16px;
+  background: rgba(18, 18, 42, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
 }
 
 .hudStat {
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .hudLabel {
-  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10px;
-  font-weight: 600;
-  color: #55557A;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  color: #8888BB;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
 }
 
 .hudValue {
-  font-family: 'Orbitron', monospace;
-  font-size: 22px;
-  font-weight: 800;
-  color: #00FF88;
-  text-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
-  line-height: 1;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: #FFFFFF;
 }
 
 .hudCenter {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
 
 .levelBadge {
-  font-family: 'Orbitron', monospace;
-  font-size: 13px;
-  font-weight: 700;
+  background: rgba(0, 245, 255, 0.1);
   color: #00F5FF;
-  background: rgba(0, 245, 255, 0.08);
-  border: 1px solid rgba(0, 245, 255, 0.2);
   padding: 4px 12px;
   border-radius: 99px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(0, 245, 255, 0.3);
 }
 
 .chainBadge {
-  font-family: 'Orbitron', monospace;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #FFD700;
+  font-family: 'Orbitron', sans-serif;
   font-size: 11px;
   font-weight: 700;
-  color: #FFD700;
-  text-shadow: 0 0 12px rgba(255, 215, 0, 0.7);
-  animation: neonFlicker 3s infinite;
+  animation: pulse 1s infinite alternate;
 }
 
 .canvas {
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 0 40px rgba(0, 245, 255, 0.05), 0 20px 60px rgba(0, 0, 0, 0.5);
-  /* Scale canvas to fit screen */
-  max-width: min(500px, 100vw - 48px);
+  background: #060614;
+  border-radius: 20px;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 245, 255, 0.05);
+  touch-action: none;
   width: 100%;
   height: auto;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
 }
 
 .hint {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 11px;
-  color: #33337A;
+  margin-top: 20px;
+  font-size: 12px;
+  color: #444466;
+  letter-spacing: 1px;
+}
+
+.hintKey {
+  color: #8888BB;
+  font-weight: 700;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 10, 26, 0.9);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
+  padding: 40px;
+  border-radius: 20px;
+  z-index: 100;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.noTickets {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.priceTag {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 24px;
+  border-radius: 12px;
+  color: #00FF88;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  margin: 20px 0;
+  border: 1px solid rgba(0, 255, 136, 0.2);
 }
 
 .gameOverActions {
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: center;
-  animation: slideInUp 0.4s ease-out;
-  margin-top: 8px;
+  flex-direction: column;
+  gap: 16px;
+  width: 260px;
+  z-index: 110;
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pulse {
+  from { opacity: 0.6; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translate(-50%, -40%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+@media (max-width: 480px) {
+  .hudValue { font-size: 16px; }
+  .hudLabel { font-size: 8px; }
 }

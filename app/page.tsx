@@ -66,11 +66,11 @@ export default function Home() {
 
           <div className={styles.prizeCard}>
             <div className={styles.prizeLabel}>WEEKLY PRIZE POOL</div>
-            <PrizePoolCounter initialValue={3248.50} />
+            <PrizePoolCounter />
             <div className={styles.prizeDivider}></div>
             <div className={styles.timerWrap}>
               <span>ENDS IN:</span>
-              <Countdown targetDate={new Date(Date.now() + 1000 * 60 * 60 * 24 * 3 + 1000 * 60 * 60 * 5)} />
+              <Countdown />
             </div>
           </div>
 

@@ -10,9 +10,11 @@ import {
   Cell,
   BlockColor,
   OBSTACLE_SPAWN_LEVEL,
-  OBSTACLE_COUNT_BY_LEVEL,
   CURSED_MODE_LEVEL,
   CURSED_PLACEMENT_TRIGGER,
+  MAX_GAME_LEVEL,
+  getLevelThreshold,
+  getObstacleCountForLevel,
 } from './constants';
 import { Piece, generateInitialTray, generateRandomPiece, getPieceCells } from './pieces';
 import { calculateScore, isBoardEmpty } from './scoring';

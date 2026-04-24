@@ -1,26 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import Link from 'next/link';
-
-// Simple fun function to generate a neon gradient for an avatar based on wallet address
-function generateAvatarGradient(address: string) {
-  if (!address) return 'linear-gradient(135deg, #333355, #12122A)';
-  const colors = [
-    '#00F5FF', '#FF00FF', '#00FF88', '#FFD700', '#FF3366', '#AA00FF', '#00C3FF'
-  ];
-  
-  // Use char codes to pick two colors deterministically
-  const sum1 = address.charCodeAt(0) + address.charCodeAt(address.length - 1);
-  const sum2 = address.charCodeAt(1) + address.charCodeAt(address.length - 2);
-  
-  const color1 = colors[sum1 % colors.length];
-  const color2 = colors[sum2 % colors.length];
-  
-  return `linear-gradient(135deg, ${color1}, ${color2})`;
-}
+import { CssAvatar, AVATAR_CONFIGS, AvatarPicker } from './CssAvatars';
+import styles from './CustomWalletButton.module.css';
 
 function shortenAddress(address: string) {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -29,20 +14,44 @@ function shortenAddress(address: string) {
 export default function CustomWalletButton() {
   const { wallet, publicKey, disconnect, connecting, connected } = useWallet();
   const { setVisible } = useWalletModal();
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [subPanel, setSubPanel] = useState<'none' | 'avatar'>('none');
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
   const [copied, setCopied] = useState(false);
 
-  // Close dropdown on click outside
+  const [username, setUsername] = useState('');
+  const [avatarIdx, setAvatarIdx] = useState(0);
+
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    setUsername(localStorage.getItem('bb_username') || '');
+    setAvatarIdx(parseInt(localStorage.getItem('bb_avatar') || '0'));
+  }, []);
+
+  useEffect(() => {
+    const sync = () => {
+      setUsername(localStorage.getItem('bb_username') || '');
+      setAvatarIdx(parseInt(localStorage.getItem('bb_avatar') || '0'));
+    };
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
+  }, []);
+
+  const handleAvatarSelect = useCallback((id: number) => {
+    setAvatarIdx(id);
+    localStorage.setItem('bb_avatar', id.toString());
+    window.dispatchEvent(new Event('storage'));
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
+        setSubPanel('none');
       }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const handleCopy = () => {
@@ -53,308 +62,152 @@ export default function CustomWalletButton() {
     }
   };
 
-  const [username, setUsername] = useState<string | null>(null);
-  const [avatarIdx, setAvatarIdx] = useState<number>(0);
-
-  // Sync with localStorage
-  useEffect(() => {
-    const storedUsername = localStorage.getItem('bb_username');
-    const storedAvatar = localStorage.getItem('bb_avatar');
-    if (storedUsername) setUsername(storedUsername);
-    if (storedAvatar) setAvatarIdx(parseInt(storedAvatar));
-
-    // Listen for storage changes (if user changes name on profile page)
-    const handleStorageChange = () => {
-      const u = localStorage.getItem('bb_username');
-      const a = localStorage.getItem('bb_avatar');
-      if (u) setUsername(u);
-      if (a) setAvatarIdx(parseInt(a));
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
+  // ── Disconnected ──────────────────────────────────────────────
   if (!connected || !publicKey) {
     return (
-      <button 
-        className="btn btn-primary" 
+      <button
+        type="button"
+        className="btn btn-primary"
         onClick={() => setVisible(true)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '8px 20px',
-          fontSize: '14px',
-          fontWeight: 700,
-          whiteSpace: 'nowrap'
-        }}
+        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 20px', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}
       >
         {connecting ? (
-          <>
-            <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }}></span>
-            Connecting...
-          </>
+          <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />Connecting...</>
         ) : (
-          <>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
-              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
-              <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
-            </svg>
-            Connect Wallet
-          </>
+          <><WalletIcon />Connect Wallet</>
         )}
       </button>
     );
   }
 
+  // ── Connected ─────────────────────────────────────────────────
   const base58 = publicKey.toBase58();
-  const avatarGrad = generateAvatarGradient(base58);
-
-  const getAvatarStyle = (idx: number) => ({
-    backgroundImage: 'url("/assets/avatars/all.png")',
-    backgroundSize: '300% 300%',
-    backgroundPosition: `${(idx % 3) * 50}% ${Math.floor(idx / 3) * 50}%`,
-  });
+  const avatarCfg = AVATAR_CONFIGS[avatarIdx] ?? AVATAR_CONFIGS[0];
 
   return (
     <div style={{ position: 'relative' }} ref={dropdownRef}>
-      {/* Connected Button */}
-      <button 
-        onClick={() => setDropdownOpen(!dropdownOpen)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          background: 'rgba(18, 18, 42, 0.8)',
-          border: '1px solid rgba(0, 245, 255, 0.3)',
-          borderRadius: '99px',
-          padding: '6px 16px 6px 6px',
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-          boxShadow: dropdownOpen ? '0 0 15px rgba(0, 245, 255, 0.2)' : 'none',
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.borderColor = 'rgba(0, 245, 255, 0.6)'}
-        onMouseLeave={(e) => e.currentTarget.style.borderColor = dropdownOpen ? 'rgba(0, 245, 255, 0.6)' : 'rgba(0, 245, 255, 0.3)'}
+      <button
+        type="button"
+        className={`${styles.triggerPill} ${dropdownOpen ? styles.open : ''}`}
+        style={dropdownOpen ? { borderColor: avatarCfg.glowColor, boxShadow: `0 0 18px ${avatarCfg.glowColor}40` } : {}}
+        onClick={() => { setDropdownOpen(!dropdownOpen); setSubPanel('none'); }}
       >
-        <div style={{
-          width: '28px',
-          height: '28px',
-          borderRadius: '50%',
-          background: avatarIdx === 0 ? avatarGrad : 'none',
-          ...(avatarIdx > 0 ? getAvatarStyle(avatarIdx) : {}),
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.2)',
-          position: 'relative',
-        }}>
-          {avatarIdx === 0 && !wallet?.adapter.icon && (
-            <span style={{ fontSize: '10px', color: '#fff', fontWeight: 'bold' }}>
-              {(username || base58).slice(0, 1).toUpperCase()}
-            </span>
-          )}
-          {wallet?.adapter.icon && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img 
-              src={wallet.adapter.icon} 
-              alt={wallet.adapter.name} 
-              style={{
-                width: '14px',
-                height: '14px',
-                position: 'absolute',
-                bottom: '-2px',
-                right: '-2px',
-                background: '#12122A',
-                borderRadius: '50%',
-                padding: '1px'
-              }}
-            />
-          )}
+        <CssAvatar config={avatarCfg} size={28} />
+        <div className={styles.triggerInfo}>
+          <span className={styles.triggerName}>{username || shortenAddress(base58)}</span>
+          <span className={styles.triggerStatus}>CONNECTED</span>
         </div>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start'
-        }}>
-          <span style={{
-            fontFamily: "'Orbitron', monospace",
-            fontSize: '12px',
-            fontWeight: 700,
-            color: '#FFFFFF',
-            lineHeight: 1
-          }}>
-            {username || shortenAddress(base58)}
-          </span>
-          <span style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: '9px',
-            color: '#00FF88',
-            fontWeight: 600,
-            letterSpacing: '0.05em'
-          }}>
-            CONNECTED
-          </span>
-        </div>
-        <svg 
-          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8888BB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          style={{ 
-            transform: dropdownOpen ? 'rotate(180deg)' : 'none', 
-            transition: 'transform 0.2s',
-            marginLeft: '4px' 
-          }}
+        <svg
+          width="11" height="11" viewBox="0 0 24 24"
+          fill="none" stroke="#8888BB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          className={`${styles.chevron} ${dropdownOpen ? styles.rotated : ''}`}
         >
-          <polyline points="6 9 12 15 18 9"></polyline>
+          <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
 
-
-      {/* Dropdown Menu */}
       {dropdownOpen && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(100% + 12px)',
-          right: 0,
-          width: '260px',
-          background: 'rgba(18, 18, 42, 0.95)',
-          backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '16px',
-          padding: '16px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-          animation: 'slideInDown 0.2s ease-out',
-          zIndex: 1000,
-        }}>
-          {/* Header */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '16px',
-            paddingBottom: '16px',
-            borderBottom: '1px solid rgba(255,255,255,0.06)'
-          }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              background: avatarGrad,
-              boxShadow: '0 0 15px rgba(0,245,255,0.2)'
-            }} />
-            <div>
-              <div style={{
-                fontFamily: "'Orbitron', monospace",
-                fontSize: '14px',
-                fontWeight: 700,
-                color: '#fff'
-              }}>
-                {shortenAddress(base58)}
+        <div className={`${styles.dropdown} ${subPanel === 'avatar' ? styles.widePanel : ''}`}>
+          {subPanel === 'none' && (
+            <>
+              <div className={styles.profileHeader}>
+                <div className={styles.avatarWrap}>
+                  <CssAvatar config={avatarCfg} size={44} />
+                  <button
+                    type="button"
+                    className={styles.avatarEditBtn}
+                    style={{ background: avatarCfg.glowColor }}
+                    onClick={() => setSubPanel('avatar')}
+                    title="Change Avatar"
+                  >✎</button>
+                </div>
+                <div className={styles.profileMeta}>
+                  <div className={styles.profileUsername}>{username || shortenAddress(base58)}</div>
+                  <button
+                    type="button"
+                    className={`${styles.copyBtn} ${copied ? styles.copied : ''}`}
+                    onClick={handleCopy}
+                  >
+                    {copied ? '✓ Copied!' : `📋 ${shortenAddress(base58)}`}
+                  </button>
+                  {wallet?.adapter.name && (
+                    <div className={styles.walletBadge}>
+                      {wallet.adapter.icon && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={wallet.adapter.icon} alt="" className={styles.walletBadgeIcon} />
+                      )}
+                      {wallet.adapter.name}
+                    </div>
+                  )}
+                </div>
               </div>
-              <button 
-                onClick={handleCopy}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: copied ? '#00FF88' : '#8888BB',
-                  fontSize: '11px',
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  cursor: 'pointer',
-                  padding: 0,
-                  marginTop: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
+
+              <nav className={styles.navLinks}>
+                {([
+                  { href: '/profile',     icon: '👤', label: 'My Profile' },
+                  { href: '/shop',        icon: '🎟', label: 'Buy Tickets' },
+                  { href: '/leaderboard', icon: '🏆', label: 'Leaderboard' },
+                ] as const).map(({ href, icon, label }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={styles.navLink}
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    <span>{icon}</span>{label}
+                  </Link>
+                ))}
+                <button
+                  type="button"
+                  className={styles.navLink}
+                  onClick={() => setSubPanel('avatar')}
+                >
+                  <span>🎨</span>Change Avatar
+                </button>
+              </nav>
+
+              <button
+                type="button"
+                className={styles.disconnectBtn}
+                onClick={() => { disconnect(); setDropdownOpen(false); }}
               >
-                {copied ? '✓ Copied!' : '📋 Copy Address'}
+                <DisconnectIcon />Disconnect
               </button>
-            </div>
-          </div>
+            </>
+          )}
 
-          {/* Links */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <Link 
-              href="/profile" 
-              onClick={() => setDropdownOpen(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '10px 12px',
-                color: '#FFFFFF',
-                textDecoration: 'none',
-                borderRadius: '8px',
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: '14px',
-                transition: 'background 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-            >
-              👤 My Profile
-            </Link>
-            <Link 
-              href="/shop" 
-              onClick={() => setDropdownOpen(false)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '10px 12px',
-                color: '#FFFFFF',
-                textDecoration: 'none',
-                borderRadius: '8px',
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: '14px',
-                transition: 'background 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-            >
-              🎟 Buy Tickets
-            </Link>
-          </div>
-
-          {/* Disconnect */}
-          <button 
-            onClick={() => {
-              disconnect();
-              setDropdownOpen(false);
-            }}
-            style={{
-              width: '100%',
-              marginTop: '16px',
-              padding: '10px',
-              background: 'rgba(255, 51, 102, 0.1)',
-              border: '1px solid rgba(255, 51, 102, 0.2)',
-              borderRadius: '8px',
-              color: '#FF3366',
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 51, 102, 0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 51, 102, 0.1)';
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-              <polyline points="16 17 21 12 16 7"></polyline>
-              <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-            Disconnect
-          </button>
+          {subPanel === 'avatar' && (
+            <>
+              <div className={styles.subPanelHeader}>
+                <button type="button" className={styles.backBtn} onClick={() => setSubPanel('none')}>←</button>
+                <span className={styles.subPanelTitle}>CHOOSE AVATAR</span>
+              </div>
+              <AvatarPicker selected={avatarIdx} onSelect={handleAvatarSelect} size={46} />
+              <p className={styles.avatarPickerHint}>
+                Avatar: <span style={{ color: avatarCfg.glowColor }}>{avatarCfg.name}</span>
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+function WalletIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+      <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+    </svg>
+  );
+}
+
+function DisconnectIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
   );
 }

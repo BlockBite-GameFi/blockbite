@@ -125,6 +125,9 @@ h1, h2, h3, .orbitron {
   left: 100%;
 }
 
+.btn-sm { padding: 8px 16px; font-size: 12px; border-radius: 8px; }
+.btn-lg { padding: 16px 40px; font-size: 16px; }
+
 .btn-primary {
   background: linear-gradient(135deg, var(--neon-cyan), #0088FF);
   color: #000000;

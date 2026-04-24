@@ -325,8 +325,7 @@ export default function GameCanvas() {
       drawParticles(ctx, particlesRef.current);
 
       ctx.save();
-      ctx.fillStyle = 'rgba(6, 6, 20, 0.85)';
-      ctx.backdropFilter = 'blur(10px)';
+      ctx.fillStyle = 'rgba(6, 6, 20, 0.88)';
       ctx.beginPath();
       roundRect(ctx, 0, TRAY_Y - 20, CANVAS_W, 150, 20);
       ctx.fill();

@@ -52,11 +52,11 @@ export default function LeaderboardPage() {
         <div className={styles.statsGrid}>
           <div className="glass-panel" style={{ padding: '40px', textAlign: 'center' }}>
             <div style={{ color: '#55557A', fontSize: '12px', letterSpacing: '2px', marginBottom: '10px' }}>CURRENT POOL</div>
-            <PrizePoolCounter initialValue={MOCK_PRIZE_POOL_USDC} size="lg" />
+            <PrizePoolCounter size="lg" />
           </div>
           <div className="glass-panel" style={{ padding: '40px', textAlign: 'center' }}>
             <div style={{ color: '#55557A', fontSize: '12px', letterSpacing: '2px', marginBottom: '10px' }}>POOL ENDS IN</div>
-            <Countdown targetDate={new Date(Date.now() + 1000 * 60 * 60 * 24 * 3)} size="lg" />
+            <Countdown size="lg" />
           </div>
         </div>
 

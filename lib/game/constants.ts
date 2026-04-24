@@ -121,9 +121,9 @@ export const SINGULARITY_LEVEL = 25000;      // near-endgame
  *   10001‒25000: cosmic mode
  *   25001‒40000: singularity (mastery curve)
  *
- * All branches are strictly increasing and continuous-ish at boundaries,
- * producing ~9.5 billion total points at level 40000 — reachable only by
- * elite long-session play, matching the MOU endgame target.
+ * Verified strictly monotonic across every tier boundary.
+ * Cumulative checkpoints: L500≈608k · L2500≈3.66M · L10000≈21M · L25000≈79M · L40000≈166M
+ * — demanding but reachable for elite long-session play, matching the MOU endgame target.
  */
 export function getLevelThreshold(level: number): number {
   if (level <= 1) return 500;

@@ -246,17 +246,16 @@ function reducer(state: GameState, action: Action): GameState {
         });
       }
 
-      // Check for level up (9540 levels total)
+      // Check for level up (9540 levels total) - Handle multi-level jumps for high combos
       let newLevel = state.level;
-      if (newScore >= getLevelThreshold(state.level) && state.level < MAX_GAME_LEVEL) {
-        newLevel = state.level + 1;
-        // Level up effects could be added here (e.g. specialized pop)
+      while (newLevel < MAX_GAME_LEVEL && newScore >= getLevelThreshold(newLevel)) {
+        newLevel++;
         newPops.push({
           id: ++scorePosId,
           label: `LEVEL UP: ${newLevel}`,
           points: 0,
           x: 0.5,
-          y: 0.3,
+          y: 0.3 - (newLevel - state.level) * 0.05, // stagger pops
           startTime: Date.now(),
         });
       }

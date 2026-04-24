@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import PrizePoolCounter from '@/components/PrizePoolCounter';
 import Countdown from '@/components/Countdown';
 import { TICKET_PACKAGES } from '@/lib/game/constants';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 const TIER_COLORS: Record<string, { from: string; to: string; glow: string }> = {
   starter:   { from: '#444466', to: '#333355', glow: 'rgba(100,100,200,0.3)' },
@@ -24,14 +25,31 @@ const TIER_ICONS: Record<string, string> = {
 export default function ShopPage() {
   const [hoveredPkg, setHoveredPkg] = useState<string | null>(null);
   const [buying, setBuying] = useState<string | null>(null);
+  const { publicKey, connected } = useWallet();
+  const [ticketBalance, setTicketBalance] = useState<number>(0);
+
+  useEffect(() => {
+    if (publicKey) {
+      const saved = localStorage.getItem(`tickets_${publicKey.toBase58()}`);
+      if (saved) setTicketBalance(parseInt(saved));
+    }
+  }, [publicKey]);
 
   const handleBuy = (pkg: typeof TICKET_PACKAGES[0]) => {
+    if (!connected) {
+      alert('Please connect your wallet first!');
+      return;
+    }
     setBuying(pkg.id);
-    // Phase 0: simulate purchase
+    // Phase 1: Simulate Solana transaction success
     setTimeout(() => {
+      const newBal = ticketBalance + pkg.tickets;
+      setTicketBalance(newBal);
+      if (publicKey) {
+        localStorage.setItem(`tickets_${publicKey.toBase58()}`, newBal.toString());
+      }
       setBuying(null);
-      alert(`🎟 In Phase 1, buying ${pkg.tickets} ticket(s) for ${pkg.price} USDC will trigger a Solana wallet transaction!\n\nThis is the Phase 0 preview — wallet integration coming soon.`);
-    }, 1200);
+    }, 1500);
   };
 
   return (

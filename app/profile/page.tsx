@@ -9,12 +9,29 @@ import styles from './profile.module.css';
 
 const GameBackground = dynamic(() => import('@/components/GameBackground'), { ssr: false });
 
+export default function ProfilePage() {
+  const { publicKey } = useWallet();
+  const [username, setUsername] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [savedUsername, setSavedUsername] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(0);
 
   useEffect(() => {
+    // Load from local storage for MVP persistence
+    const stored = localStorage.getItem('bb_username');
+    if (stored) {
+      setUsername(stored);
+      setSavedUsername(stored);
+    }
     const storedAvatar = localStorage.getItem('bb_avatar');
     if (storedAvatar) setSelectedAvatar(parseInt(storedAvatar));
   }, []);
+
+  const handleSave = () => {
+    localStorage.setItem('bb_username', username);
+    setSavedUsername(username);
+    setIsEditing(false);
+  };
 
   const handleAvatarSelect = (idx: number) => {
     setSelectedAvatar(idx);

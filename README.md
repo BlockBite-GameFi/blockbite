@@ -89,6 +89,28 @@ npm run build
 
 ---
 
+## 📈 VC Pitch Readiness (Unit Economics)
+
+BlockBlast Web3 is engineered for hyper-scalability with a sustainable revenue model:
+
+- **Unit Economics (per 1 USDC Ticket)**:
+  - 💸 **$0.70** → Prize Pool (User Engagement)
+  - 🏦 **$0.15** → Team Revenue (Direct Monetization)
+  - 🏗️ **$0.10** → Development Fund (Infrastructure)
+  - 📣 **$0.05** → Referral Pool (Viral Growth)
+
+- **Growth Projections (Conservative)**:
+  - **Month 3 (Mainnet)**: 5,000 tickets/week → $3,000/month Revenue.
+  - **Month 6**: 20,000 tickets/week → $12,000/month Revenue.
+  - **Year 1**: 100,000 tickets/week → $60,000/month Revenue.
+
+- **Competitive Moat**:
+  - **Skill-Based Engine**: Avoids "Gambling" classification in most jurisdictions.
+  - **Stablecoin Native**: Zero volatility risk for players (USDC rewards).
+  - **Hyper-Visuals**: Procedural HDR Ultra rendering eliminates the need for expensive asset pipelines.
+
+---
+
 ## ⚖️ Legal & Compliance
 
 BlockBlast is designed as a **Skill-Based Game**. We use fixed mechanics where success is determined by player ability, not chance. Please check your local jurisdiction for Web3 gaming compliance.

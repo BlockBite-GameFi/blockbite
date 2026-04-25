@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
 import PrizePoolCounter from '@/components/PrizePoolCounter';
 import Countdown from '@/components/Countdown';
 import { TICKET_PACKAGES } from '@/lib/game/constants';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { purchaseTickets, getUsdcBalance, InsufficientFundsError, NoTokenAccountError } from '@/lib/solana/usdc';
+import { explorerTx, IS_DEVNET } from '@/lib/solana/config';
 
 const TIER_COLORS: Record<string, { from: string; to: string; glow: string }> = {
   starter:   { from: '#444466', to: '#333355', glow: 'rgba(100,100,200,0.3)' },
@@ -23,11 +25,16 @@ const TIER_ICONS: Record<string, string> = {
 };
 
 export default function ShopPage() {
-  const [hoveredPkg, setHoveredPkg] = useState<string | null>(null);
-  const [buying, setBuying] = useState<string | null>(null);
-  const { publicKey, connected } = useWallet();
+  const [hoveredPkg, setHoveredPkg]   = useState<string | null>(null);
+  const [buying, setBuying]           = useState<string | null>(null);
+  const [txSig, setTxSig]             = useState<string | null>(null);
+  const [txError, setTxError]         = useState<string | null>(null);
+  const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
+  const { publicKey, connected, sendTransaction } = useWallet();
+  const { connection } = useConnection();
   const [ticketBalance, setTicketBalance] = useState<number>(0);
 
+  // Load localStorage ticket balance
   useEffect(() => {
     if (publicKey) {
       const saved = localStorage.getItem(`tickets_${publicKey.toBase58()}`);
@@ -35,22 +42,52 @@ export default function ShopPage() {
     }
   }, [publicKey]);
 
-  const handleBuy = (pkg: typeof TICKET_PACKAGES[0]) => {
-    if (!connected) {
-      alert('Please connect your wallet first!');
+  // Fetch real on-chain USDC balance
+  useEffect(() => {
+    if (!publicKey || !connection) return;
+    getUsdcBalance(connection, publicKey).then(setUsdcBalance);
+  }, [publicKey, connection]);
+
+  const handleBuy = useCallback(async (pkg: typeof TICKET_PACKAGES[0]) => {
+    if (!connected || !publicKey) {
+      setTxError('Please connect your wallet first.');
       return;
     }
+    setTxError(null);
+    setTxSig(null);
     setBuying(pkg.id);
-    // Phase 1: Simulate Solana transaction success
-    setTimeout(() => {
+
+    try {
+      // Real on-chain USDC transfer → FEE_WALLET on devnet
+      const sig = await purchaseTickets({
+        connection,
+        payer: publicKey,
+        usdcAmount: pkg.price,
+        sendTransaction,
+      });
+
+      // Confirm success → credit tickets in localStorage
       const newBal = ticketBalance + pkg.tickets;
       setTicketBalance(newBal);
-      if (publicKey) {
-        localStorage.setItem(`tickets_${publicKey.toBase58()}`, newBal.toString());
+      localStorage.setItem(`tickets_${publicKey.toBase58()}`, newBal.toString());
+      setTxSig(sig);
+
+      // Refresh USDC balance
+      const newUsdc = await getUsdcBalance(connection, publicKey);
+      setUsdcBalance(newUsdc);
+    } catch (err) {
+      if (err instanceof InsufficientFundsError) {
+        setTxError(`Not enough USDC. You have ${err.have.toFixed(2)} USDC, need ${err.need.toFixed(2)} USDC.${IS_DEVNET ? ' Get devnet USDC from faucet.solana.com.' : ''}`);
+      } else if (err instanceof NoTokenAccountError) {
+        setTxError(`No USDC account found.${IS_DEVNET ? ' Airdrop devnet USDC first at faucet.solana.com.' : ''}`);
+      } else {
+        const msg = err instanceof Error ? err.message : String(err);
+        setTxError(`Transaction failed: ${msg}`);
       }
+    } finally {
       setBuying(null);
-    }, 1500);
-  };
+    }
+  }, [connected, publicKey, connection, sendTransaction, ticketBalance]);
 
   return (
     <>
@@ -89,6 +126,36 @@ export default function ShopPage() {
               </div>
             </div>
           </div>
+
+          {/* Wallet USDC balance + network badge */}
+          {connected && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+              <div style={{ background: 'rgba(0,245,255,0.07)', border: '1px solid rgba(0,245,255,0.2)', borderRadius: 10, padding: '8px 20px', fontSize: 13, color: '#8888BB' }}>
+                🎟 Tickets: <b style={{ color: '#00F5FF' }}>{ticketBalance}</b>
+              </div>
+              <div style={{ background: 'rgba(255,215,0,0.07)', border: '1px solid rgba(255,215,0,0.2)', borderRadius: 10, padding: '8px 20px', fontSize: 13, color: '#8888BB' }}>
+                💰 USDC Balance: <b style={{ color: '#FFD700' }}>{usdcBalance !== null ? usdcBalance.toFixed(2) : '...'}</b>
+              </div>
+              {IS_DEVNET && (
+                <div style={{ background: 'rgba(153,69,255,0.1)', border: '1px solid rgba(153,69,255,0.3)', borderRadius: 10, padding: '8px 20px', fontSize: 12, color: '#CC88FF' }}>
+                  🔬 DEVNET — <a href="https://faucet.solana.com" target="_blank" rel="noopener noreferrer" style={{ color: '#9945FF' }}>Get test USDC</a>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tx feedback */}
+          {txSig && (
+            <div style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.25)', borderRadius: 10, padding: '12px 20px', marginBottom: 20, textAlign: 'center', fontSize: 14, color: '#00FF88' }}>
+              ✅ Purchase confirmed! Tickets added.{' '}
+              <a href={explorerTx(txSig)} target="_blank" rel="noopener noreferrer" style={{ color: '#00F5FF', textDecoration: 'underline' }}>View on Solana Explorer →</a>
+            </div>
+          )}
+          {txError && (
+            <div style={{ background: 'rgba(255,34,68,0.08)', border: '1px solid rgba(255,34,68,0.25)', borderRadius: 10, padding: '12px 20px', marginBottom: 20, textAlign: 'center', fontSize: 14, color: '#FF5577' }}>
+              ❌ {txError}
+            </div>
+          )}
 
           {/* Flash sale banner */}
           <div style={{

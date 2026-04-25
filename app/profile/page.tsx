@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Award, History, Shield, Edit2, Check, Copy, ExternalLink } from 'lucide-react';
 import { CssAvatar, AvatarPicker, AVATAR_CONFIGS } from '@/components/CssAvatars';
+import { explorerAddr } from '@/lib/solana/config';
 import styles from './profile.module.css';
 
 const GameBackground = dynamic(() => import('@/components/GameBackground'), { ssr: false });
@@ -114,7 +115,7 @@ export default function ProfilePage() {
                     <Copy size={13} color={copied ? '#00FF88' : '#55557A'} />
                   </button>
                   <a
-                    href={`https://explorer.solana.com/address/${walletAddr}?cluster=devnet`}
+                    href={explorerAddr(walletAddr)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.iconBtn}

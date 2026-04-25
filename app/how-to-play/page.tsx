@@ -13,7 +13,7 @@ const FAQ = [
   },
   {
     q: 'How are prizes distributed?',
-    a: 'Every Sunday at 00:00 UTC, a Solana smart contract automatically distributes USDC to the top 100 players\' wallets. The process is fully transparent and visible on Solana Explorer.',
+    a: 'On the 1st of each month at 00:00 UTC, a Solana smart contract automatically distributes USDC to the top 10 players\' wallets. The process is fully transparent and visible on Solana Explorer.',
   },
   {
     q: 'What if I disconnect during a game?',
@@ -245,7 +245,7 @@ export default function HowToPlayPage() {
                 Every USDC spent on tickets is split automatically by the Solana smart contract:
               </div>
               {[
-                { pct: 70, label: 'Prize Pool → Distributed to Top 100 players every Sunday', color: '#00FF88', bar: 70 },
+                { pct: 70, label: 'Prize Pool → Distributed to Top 100 players on the 1st of each month', color: '#00FF88', bar: 70 },
                 { pct: 15, label: 'Team Revenue → Development & operations', color: '#00F5FF', bar: 15 },
                 { pct: 10, label: 'Dev Fund → Smart contract audits, marketing, infrastructure', color: '#FF00FF', bar: 10 },
                 { pct: 5,  label: 'Referral Pool → Rewarded to referrers', color: '#FFD700', bar: 5 },

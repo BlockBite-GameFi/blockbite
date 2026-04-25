@@ -2,7 +2,6 @@
 
 import React, { useMemo } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
-import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import {
   PhantomWalletAdapter,
   SolflareWalletAdapter,
@@ -12,13 +11,13 @@ import {
   CoinbaseWalletAdapter,
 } from '@solana/wallet-adapter-wallets';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { clusterApiUrl } from '@solana/web3.js';
+import { ACTIVE_NETWORK, RPC_URL } from '@/lib/solana/config';
 
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 export default function AppWalletProvider({ children }: { children: React.ReactNode }) {
-  const network = WalletAdapterNetwork.Devnet;
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  const network = ACTIVE_NETWORK;
+  const endpoint = useMemo(() => RPC_URL, []);
 
   const wallets = useMemo(
     () => [

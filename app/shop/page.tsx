@@ -369,6 +369,7 @@ export default function ShopPage() {
 
                   {/* Buy button */}
                   <button
+                    type="button"
                     onClick={() => handleBuy(pkg)}
                     disabled={!!buying}
                     style={{

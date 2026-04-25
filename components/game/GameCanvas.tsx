@@ -499,7 +499,7 @@ export default function GameCanvas() {
           )}
         </div>
         <div className={styles.hudStat} style={{ textAlign: 'right' }}>
-          <span className={styles.hudLabel}>BEST SKOR</span>
+          <span className={styles.hudLabel}>BEST SCORE</span>
           <span className={styles.hudValue}>{formatScore(state.bestScore)}</span>
         </div>
       </div>

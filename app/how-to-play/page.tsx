@@ -2,14 +2,14 @@ import Navbar from '@/components/Navbar';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'How to Play — BlockBlast Web3',
-  description: 'Learn how to play BlockBlast Web3, understand tokenomics, and maximize your chances of winning USDC prizes.',
+  title: 'How to Play — BlockBite Web3',
+  description: 'Learn how to play BlockBite Web3, understand tokenomics, and maximize your chances of winning USDC prizes.',
 };
 
 const FAQ = [
   {
     q: 'Is this gambling?',
-    a: 'No. BlockBlast is a skill-based game — your outcome depends entirely on your ability to play the game well, not random chance. The same legal framework applies as competitive esports tournaments.',
+    a: 'No. BlockBite is a skill-based game — your outcome depends entirely on your ability to play the game well, not random chance. The same legal framework applies as competitive esports tournaments.',
   },
   {
     q: 'How are prizes distributed?',
@@ -56,7 +56,7 @@ export default function HowToPlayPage() {
               maxWidth: 480,
               margin: '0 auto',
             }}>
-              Everything you need to know to play BlockBlast Web3 and start winning USDC.
+              Everything you need to know to play BlockBite Web3 and start winning USDC.
             </p>
           </div>
 

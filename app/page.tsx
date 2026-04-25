@@ -57,7 +57,7 @@ export default function Home() {
           </div>
           <h1 className={styles.title}>
             SKILL. STRATEGY.<br />
-            <span className="neon-cyan">BLOCKBLAST</span> <span className="neon-magenta">WEB3</span>
+            <span className="neon-cyan">BLOCKBITE</span> <span className="neon-magenta">WEB3</span>
           </h1>
           <p className={styles.subtitle}>
             The world's first 100% transparent, skill-based puzzle arena on Solana. 
@@ -65,7 +65,7 @@ export default function Home() {
           </p>
 
           <div className={styles.prizeCard}>
-            <div className={styles.prizeLabel}>WEEKLY PRIZE POOL</div>
+            <div className={styles.prizeLabel}>MONTHLY PRIZE POOL</div>
             <PrizePoolCounter />
             <div className={styles.prizeDivider}></div>
             <div className={styles.timerWrap}>
@@ -111,7 +111,7 @@ export default function Home() {
       </section>
 
       <footer className={styles.footer}>
-        <p>© 2026 BlockBlast Web3 · Built on Solana for the next generation of gamers.</p>
+        <p>© 2026 BlockBite Web3 · Built on Solana for the next generation of gamers.</p>
       </footer>
     </main>
   );

@@ -226,8 +226,11 @@ function reducer(state: GameState, action: Action): GameState {
         state.nextMultiplierOverride,
       );
 
-      const newScore = state.score + scoreResult.pointsEarned;
-      const newBestScore = Math.max(state.bestScore, newScore);
+      // Apply mystery-box multiplier FIRST so level-up loop uses the correct final score
+      const rawScore = state.score + scoreResult.pointsEarned;
+      const appliedScore = state.mysteryMultiplier > 1
+        ? state.score + Math.floor(scoreResult.pointsEarned * state.mysteryMultiplier)
+        : rawScore;
 
       // Cursed mode
       let noClears = totalLines > 0 ? 0 : state.noClears + 1;
@@ -250,32 +253,28 @@ function reducer(state: GameState, action: Action): GameState {
           id: ++scorePosId,
           label: scoreResult.label,
           points: scoreResult.pointsEarned,
-          x: 0.5, // center (relative)
+          x: 0.5,
           y: 0.4,
           startTime: Date.now(),
         });
       }
 
-      // Check for level up (40000 levels total) — handle multi-level jumps on high combos
+      // Level-up loop — uses appliedScore so the invariant (score < threshold[level])
+      // is maintained correctly even when a mystery-box multiplier boosted the score
       let newLevel = state.level;
       let triggeredMysteryBox = false;
-      while (newLevel < MAX_GAME_LEVEL && newScore >= getLevelThreshold(newLevel)) {
+      while (newLevel < MAX_GAME_LEVEL && appliedScore >= getLevelThreshold(newLevel)) {
         newLevel++;
         newPops.push({
           id: ++scorePosId,
           label: `LEVEL UP: ${newLevel}`,
           points: 0,
           x: 0.5,
-          y: 0.3 - (newLevel - state.level) * 0.05,
+          y: Math.max(0.05, 0.3 - (newLevel - state.level) * 0.05),
           startTime: Date.now(),
         });
         if (isMysteryBoxLevel(newLevel)) triggeredMysteryBox = true;
       }
-
-      // Apply mystery-box multiplier to score earned this turn
-      const appliedScore = state.mysteryMultiplier > 1
-        ? state.score + Math.floor(scoreResult.pointsEarned * state.mysteryMultiplier)
-        : newScore;
 
       return {
         ...state,
@@ -293,8 +292,8 @@ function reducer(state: GameState, action: Action): GameState {
           : null,
         scorePops: newPops,
         placements: state.placements + 1,
-        pendingMysteryBox: triggeredMysteryBox,
-        mysteryMultiplier: 1,   // consumed after one turn
+        pendingMysteryBox: state.pendingMysteryBox || triggeredMysteryBox,
+        mysteryMultiplier: 1,   // consumed after one placement
       };
     }
 

@@ -5,8 +5,8 @@ import Countdown from '@/components/Countdown';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Play BlockBlast Web3 — Compete for USDC Prizes',
-  description: 'Play Block Blast and compete for the weekly USDC prize pool on Solana. Skill-based arcade GameFi.',
+  title: 'Play BlockBite — Compete for USDC Prizes on Solana',
+  description: 'Play BlockBite and compete for the monthly USDC prize pool on Solana. Skill-based arcade GameFi. Top 10 win real prizes.',
 };
 
 export default function GamePage() {

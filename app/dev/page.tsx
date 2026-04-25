@@ -52,7 +52,7 @@ export default function DevDashboard() {
         <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '2px', color: '#FF2244' }}>
           🛠 DEV DASHBOARD
         </div>
-        <div style={{ fontSize: '12px', color: '#55557A' }}>BlockBlast Error Analytics · stored in localStorage</div>
+        <div style={{ fontSize: '12px', color: '#55557A' }}>BlockBite Error Analytics · stored in localStorage</div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
           <button onClick={load} style={btnStyle('#00F5FF')}>↻ Refresh</button>
           <button onClick={handleClear} style={btnStyle('#FF2244')}>🗑 Clear All</button>

@@ -44,7 +44,7 @@ export default function Navbar() {
             <span className={styles.logoBlockRed}    />
           </div>
           <div className={styles.logoText}>
-            BLOCK<span className={styles.logoAccent}>BLAST</span>
+            BLOCK<span className={styles.logoAccent}>BITE</span>
             <span className={styles.logoBadge}>WEB3</span>
           </div>
         </Link>

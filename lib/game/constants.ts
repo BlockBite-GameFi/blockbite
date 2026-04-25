@@ -236,59 +236,107 @@ export const TEAM_REVENUE_PERCENTAGE = 0.15;
 export const DEV_FUND_PERCENTAGE = 0.10;
 export const REFERRAL_PERCENTAGE = 0.05;
 
-export const PRIZE_DISTRIBUTION = [
-  { rank: 1, pct: 20 },
-  { rank: 2, pct: 12 },
-  { rank: 3, pct: 8 },
-  { rank: 5, pct: 5 },
-  { rank: 10, pct: 3 },
-  { rank: 20, pct: 1.5 },
-  { rank: 50, pct: 0.5 },
-  { rank: 100, pct: 0.1 },
+// ── Prize Distribution (MOU V3: Top-10 + Participation, smart-contract enforced) ──
+// Rationale: limiting payouts to 10 known ranks + a single participation bucket
+// drastically reduces smart-contract surface area and gas-per-distribution, and
+// eliminates the "long-tail sybil" exploit class (where attackers spam cheap
+// accounts to farm micro-rewards from rank 51-100 tiers).
+//
+// Total of the "prize pool" (= 70% of monthly ticket sales) is split:
+//   Rank 1        → 30%
+//   Rank 2        → 20%
+//   Rank 3        → 10%        (top-3 combined = 60%)
+//   Rank 4-10     → 25% pool,  split evenly across 7 seats
+//   Participation → 15%        split by ticket-weighted entries among ALL players
+export interface PrizeTier {
+  rank: number | [number, number];   // single rank or inclusive range
+  pct: number;                       // % of the total prize pool
+  split: 'single' | 'even' | 'ticket-weighted';
+  label: string;
+}
+
+export const PRIZE_DISTRIBUTION: PrizeTier[] = [
+  { rank: 1,        pct: 30, split: 'single',          label: 'Gold'         },
+  { rank: 2,        pct: 20, split: 'single',          label: 'Silver'       },
+  { rank: 3,        pct: 10, split: 'single',          label: 'Bronze'       },
+  { rank: [4, 10],  pct: 25, split: 'even',            label: 'Top 10'       },
+  { rank: [11, -1], pct: 15, split: 'ticket-weighted', label: 'Participation'},
 ];
+
+/** Total payout seats (excluding the participation bucket). */
+export const PAYOUT_SEATS = 10;
+
+// ── Prize Token Configuration ─────────────────────────────────────
+// Pool can be denominated in USDC (default, price stable) OR any configured
+// SPL token. Smart contract accepts a `prize_mint` argument at distribute time.
+export type PrizeToken = 'USDC' | 'USDT' | 'BONK' | 'JUP' | 'WIF' | 'SOL';
+export interface PrizeTokenConfig {
+  symbol: PrizeToken;
+  mint: string;          // SPL mint address (mainnet)
+  decimals: number;
+  stable: boolean;       // true = USD-pegged stablecoin
+}
+
+export const PRIZE_TOKENS: Record<PrizeToken, PrizeTokenConfig> = {
+  USDC: { symbol: 'USDC', mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6, stable: true  },
+  USDT: { symbol: 'USDT', mint: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', decimals: 6, stable: true  },
+  BONK: { symbol: 'BONK', mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', decimals: 5, stable: false },
+  JUP:  { symbol: 'JUP',  mint: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',  decimals: 6, stable: false },
+  WIF:  { symbol: 'WIF',  mint: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm', decimals: 6, stable: false },
+  SOL:  { symbol: 'SOL',  mint: 'So11111111111111111111111111111111111111112',  decimals: 9, stable: false },
+};
+
+/** Active prize token for the current period. Default USDC, admin-switchable. */
+export const DEFAULT_PRIZE_TOKEN: PrizeToken = 'USDC';
 
 export const MOCK_PRIZE_POOL_USDC = 3248.50;
 export const MOCK_TICKETS_SOLD = 4641;
 export const MOCK_PLAYERS = 1205;
 export const MOCK_USDC_DISTRIBUTED = 45250;
 
-// ── Weekly Period Duration ────────────────────────────────────────
-export const PERIOD_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+// ── Monthly Period Duration (V3: switched from weekly → monthly) ───
+// Why monthly: accumulates a meaningfully larger prize pool per cycle,
+// reduces on-chain distribution cost from 52→12 events/year, and matches
+// the cadence most Solana reward programs use (Drift, Kamino, etc).
+export const PERIOD_CADENCE: 'weekly' | 'monthly' = 'monthly';
+export const PERIOD_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // ~30 days
 
-// next Sunday midnight UTC as the mock end time
-function nextSundayMidnight(): Date {
+/** First day of next month, 00:00 UTC — the mock distribution tick. */
+function nextMonthStartUTC(): Date {
   const now = new Date();
-  const day = now.getUTCDay(); // 0 = Sunday
-  const daysUntilSunday = (7 - day) % 7 || 7;
-  const next = new Date(now);
-  next.setUTCDate(now.getUTCDate() + daysUntilSunday);
-  next.setUTCHours(0, 0, 0, 0);
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0));
   return next;
 }
 
-export const MOCK_PERIOD_END = nextSundayMidnight();
+export const MOCK_PERIOD_END = nextMonthStartUTC();
 
-// ── Shop Packages ─────────────────────────────────────────────────
+// ── Shop Packages ($1 = 5 tickets base rate) ─────────────────────
+// Base rate: $0.20 per ticket (5 tickets per $1 USDC).
+// Larger bundles offer deeper discounts + bonus perks.
+export const TICKET_COST_PER_TICKET_BASE = 0.20;   // $1 / 5 tickets
 export const TICKET_PACKAGES = [
-  { id: 'starter',   name: 'Starter',   tickets: 1,   price: 1.00,  pricePerTicket: 1.00,  discount: 0,  bonuses: [] },
-  { id: 'explorer',  name: 'Explorer',  tickets: 3,   price: 2.85,  pricePerTicket: 0.95,  discount: 5,  bonuses: ['Explorer badge'] },
-  { id: 'warrior',   name: 'Warrior',   tickets: 5,   price: 4.50,  pricePerTicket: 0.90,  discount: 10, bonuses: ['Warrior badge', 'Colored name'] },
-  { id: 'hunter',    name: 'Hunter',    tickets: 10,  price: 8.50,  pricePerTicket: 0.85,  discount: 15, bonuses: ['Hunter badge', 'Streak Shield ×1'] },
-  { id: 'champion',  name: 'Champion',  tickets: 25,  price: 20.00, pricePerTicket: 0.80,  discount: 20, bonuses: ['Champion badge', 'Early access'] },
-  { id: 'legendary', name: 'Legendary', tickets: 50,  price: 37.50, pricePerTicket: 0.75,  discount: 25, bonuses: ['Legendary badge', 'Hall of Fame'] },
-  { id: 'godmode',   name: 'GODMODE',   tickets: 100, price: 70.00, pricePerTicket: 0.70,  discount: 30, bonuses: ['GODMODE badge', 'Whale Room access'] },
+  { id: 'starter',   name: 'Starter',   tickets: 5,   price: 1.00,  pricePerTicket: 0.20,  discount: 0,  bonuses: [] },
+  { id: 'explorer',  name: 'Explorer',  tickets: 15,  price: 2.85,  pricePerTicket: 0.19,  discount: 5,  bonuses: ['Explorer badge'] },
+  { id: 'warrior',   name: 'Warrior',   tickets: 30,  price: 5.40,  pricePerTicket: 0.18,  discount: 10, bonuses: ['Warrior badge', 'Colored name'] },
+  { id: 'hunter',    name: 'Hunter',    tickets: 55,  price: 9.35,  pricePerTicket: 0.17,  discount: 15, bonuses: ['Hunter badge', 'Streak Shield ×1'] },
+  { id: 'champion',  name: 'Champion',  tickets: 125, price: 20.00, pricePerTicket: 0.16,  discount: 20, bonuses: ['Champion badge', 'Early access'] },
+  { id: 'legendary', name: 'Legendary', tickets: 275, price: 41.25, pricePerTicket: 0.15,  discount: 25, bonuses: ['Legendary badge', 'Hall of Fame'] },
+  { id: 'godmode',   name: 'GODMODE',   tickets: 600, price: 84.00, pricePerTicket: 0.14,  discount: 30, bonuses: ['GODMODE badge', 'Whale Room access'] },
 ];
 
 // ── Mock Leaderboard Data ─────────────────────────────────────────
+// Rewards computed against MOCK_PRIZE_POOL_USDC (3248.50) using V3 Option B:
+//   rank 1 → 30% = 974.55 · rank 2 → 20% = 649.70 · rank 3 → 10% = 324.85
+//   rank 4-10 → (25% / 7) ≈ 3.5714% each = 116.02 per seat
 export const MOCK_LEADERBOARD = [
-  { rank: 1, wallet: '7xK3...mN9p', username: 'CryptoAce', score: 48250, tickets: 32, badge: 'legendary', estimatedReward: 649.75 },
-  { rank: 2, wallet: 'Bx9F...qR2m', username: 'NeonBlaster', score: 43180, tickets: 28, badge: 'champion', estimatedReward: 389.85 },
-  { rank: 3, wallet: 'mKp7...xL5t', username: 'PixelKing', score: 41020, tickets: 45, badge: 'godmode', estimatedReward: 259.90 },
-  { rank: 4, wallet: 'Wr4X...nD8k', username: 'GridMaster', score: 38750, tickets: 21, badge: 'warrior', estimatedReward: 162.44 },
-  { rank: 5, wallet: 'Zq2P...vL6h', username: 'VoidHunter', score: 35900, tickets: 19, badge: 'hunter', estimatedReward: 162.44 },
-  { rank: 6, wallet: 'Lm5R...cT3j', username: 'BlockWizard', score: 31250, tickets: 15, badge: 'warrior', estimatedReward: 97.46 },
-  { rank: 7, wallet: 'Hq8N...wS2y', username: 'NovaSurge', score: 29800, tickets: 22, badge: 'champion', estimatedReward: 97.46 },
-  { rank: 8, wallet: 'Ux3K...bP7m', username: 'StarlightX', score: 27650, tickets: 11, badge: 'hunter', estimatedReward: 97.46 },
-  { rank: 9, wallet: 'Rf6T...oE4n', username: null, score: 25430, tickets: 8, badge: 'explorer', estimatedReward: 97.46 },
-  { rank: 10, wallet: 'Ck2J...pA9v', username: 'DragonFly', score: 23100, tickets: 17, badge: 'warrior', estimatedReward: 97.46 },
+  { rank: 1,  wallet: '7xK3...mN9p', username: 'CryptoAce',   score: 48250, tickets: 32, badge: 'legendary', estimatedReward: 974.55 },
+  { rank: 2,  wallet: 'Bx9F...qR2m', username: 'NeonBlaster', score: 43180, tickets: 28, badge: 'champion',  estimatedReward: 649.70 },
+  { rank: 3,  wallet: 'mKp7...xL5t', username: 'PixelKing',   score: 41020, tickets: 45, badge: 'godmode',   estimatedReward: 324.85 },
+  { rank: 4,  wallet: 'Wr4X...nD8k', username: 'GridMaster',  score: 38750, tickets: 21, badge: 'warrior',   estimatedReward: 116.02 },
+  { rank: 5,  wallet: 'Zq2P...vL6h', username: 'VoidHunter',  score: 35900, tickets: 19, badge: 'hunter',    estimatedReward: 116.02 },
+  { rank: 6,  wallet: 'Lm5R...cT3j', username: 'BlockWizard', score: 31250, tickets: 15, badge: 'warrior',   estimatedReward: 116.02 },
+  { rank: 7,  wallet: 'Hq8N...wS2y', username: 'NovaSurge',   score: 29800, tickets: 22, badge: 'champion',  estimatedReward: 116.02 },
+  { rank: 8,  wallet: 'Ux3K...bP7m', username: 'StarlightX',  score: 27650, tickets: 11, badge: 'hunter',    estimatedReward: 116.02 },
+  { rank: 9,  wallet: 'Rf6T...oE4n', username: null,          score: 25430, tickets: 8,  badge: 'explorer',  estimatedReward: 116.02 },
+  { rank: 10, wallet: 'Ck2J...pA9v', username: 'DragonFly',   score: 23100, tickets: 17, badge: 'warrior',   estimatedReward: 116.02 },
 ];

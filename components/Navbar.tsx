@@ -4,80 +4,98 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Menu, X, Rocket, Trophy, ShoppingBag, Info } from 'lucide-react';
+import { Rocket, Trophy, ShoppingBag, Info, User } from 'lucide-react';
 import styles from './Navbar.module.css';
 
-// Wallet button is dynamically imported to avoid hydration errors
 const CustomWalletButton = dynamic(
   () => import('./CustomWalletButton'),
   { ssr: false, loading: () => <div className={styles.walletPlaceholder} /> }
 );
 
+const NAV_LINKS = [
+  { name: 'PLAY',        href: '/game',        icon: <Rocket     size={15} />, play: true,  lb: false },
+  { name: 'PROFILE',     href: '/profile',     icon: <User       size={15} />, play: false, lb: false },
+  { name: 'LEADERBOARD', href: '/leaderboard', icon: <Trophy     size={15} />, play: false, lb: true  },
+  { name: 'SHOP',        href: '/shop',        icon: <ShoppingBag size={15} />, play: false, lb: false },
+  { name: 'GUIDE',       href: '/how-to-play', icon: <Info       size={15} />, play: false, lb: false },
+] as const;
+
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  const navLinks = [
-    { name: 'HOME', href: '/', icon: null },
-    { name: 'GAME', href: '/game', icon: <Rocket size={16} /> },
-    { name: 'PRIZES', href: '/leaderboard', icon: <Trophy size={16} /> },
-    { name: 'SHOP', href: '/shop', icon: <ShoppingBag size={16} /> },
-    { name: 'GUIDE', href: '/how-to-play', icon: <Info size={16} /> },
-  ];
 
   return (
     <nav className={`${styles.nav} ${scrolled ? styles.scrolled : ''}`}>
-      <div className={styles.navContainer}>
+      <div className={styles.inner}>
+
         {/* Logo */}
         <Link href="/" className={styles.logo}>
-          <div className={styles.logoIcon}>B</div>
+          <div className={styles.logoBlocks}>
+            <span className={styles.logoBlockPurple} />
+            <span className={styles.logoBlockCyan}   />
+            <span className={styles.logoBlockGold}   />
+            <span className={styles.logoBlockRed}    />
+          </div>
           <div className={styles.logoText}>
-            BLOCK<span className="neon-cyan">BLAST</span>
+            BLOCK<span className={styles.logoAccent}>BLAST</span>
             <span className={styles.logoBadge}>WEB3</span>
           </div>
         </Link>
 
-        {/* Desktop Nav */}
-        <div className={styles.desktopLinks}>
-          {navLinks.map((link) => (
-            <Link 
-              key={link.name} 
-              href={link.href} 
-              className={`${styles.navLink} ${pathname === link.href ? styles.active : ''}`}
-            >
-              {link.icon && <span className={styles.navIcon}>{link.icon}</span>}
-              {link.name}
-            </Link>
+        {/* Desktop links */}
+        <ul className={styles.links}>
+          {NAV_LINKS.map((link) => (
+            <li key={link.name}>
+              <Link
+                href={link.href}
+                className={`${styles.link} ${link.play ? styles.playLink : ''} ${pathname === link.href ? styles.active : ''}`}
+              >
+                {link.icon}
+                {link.name}
+                {link.lb && <span className={styles.lbMonthlyBadge}>📅</span>}
+              </Link>
+            </li>
           ))}
-          <div className={styles.divider} />
-          <CustomWalletButton />
-        </div>
+        </ul>
 
-        {/* Mobile Toggle */}
-        <button className={styles.mobileToggle} onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        {/* Right: wallet + hamburger */}
+        <div className={styles.right}>
+          <CustomWalletButton />
+          <button
+            type="button"
+            className={styles.menuToggle}
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label="Toggle menu"
+          >
+            <span className={menuOpen ? styles.menuOpen : ''} />
+            <span className={menuOpen ? styles.menuOpen : ''} />
+            <span className={menuOpen ? styles.menuOpen : ''} />
+          </button>
+        </div>
       </div>
 
-      {/* Mobile Menu */}
-      {isOpen && (
+      {/* Mobile drawer */}
+      {menuOpen && (
         <div className={styles.mobileMenu}>
-          {navLinks.map((link) => (
-            <Link 
-              key={link.name} 
-              href={link.href} 
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.name}
+              href={link.href}
               className={`${styles.mobileLink} ${pathname === link.href ? styles.active : ''}`}
-              onClick={() => setIsOpen(false)}
+              onClick={() => setMenuOpen(false)}
             >
-              {link.icon}
-              {link.name}
+              <span className={styles.mobileLinkInner}>
+                {link.icon}
+                {link.name}
+                {link.lb && <span className={styles.mobileLbBadge}>📅 MONTHLY</span>}
+              </span>
             </Link>
           ))}
           <div className={styles.mobileWalletWrap}>

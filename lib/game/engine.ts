@@ -16,6 +16,7 @@ import {
   getLevelThreshold,
   getObstacleCountForLevel,
 } from './constants';
+import { isMysteryBoxLevel } from './stages';
 import { Piece, generateInitialTray, generateRandomPiece, getPieceCells } from './pieces';
 import { calculateScore, isBoardEmpty } from './scoring';
 
@@ -58,6 +59,12 @@ export interface GameState {
   sessionId: string;
   /** Total placements in this session */
   placements: number;
+  /** Pending mystery-box event (level % 5 === 0) — cleared after player picks */
+  pendingMysteryBox: boolean;
+  /** How many mystery-box picks have been made this session */
+  mysteryBoxPicks: number;
+  /** Active multiplier from a mystery-box MULTIPLIER result */
+  mysteryMultiplier: number;
 }
 
 // ── Actions ──────────────────────────────────────────────────────
@@ -68,7 +75,8 @@ type Action =
   | { type: 'REMOVE_SCORE_POP'; id: number }
   | { type: 'TOGGLE_PAUSE' }
   | { type: 'NEW_GAME' }
-  | { type: 'NEXT_LEVEL' };
+  | { type: 'NEXT_LEVEL' }
+  | { type: 'MYSTERY_BOX_PICKED'; halvScore: boolean; pointsDelta: number; multiplier: number };
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -250,6 +258,7 @@ function reducer(state: GameState, action: Action): GameState {
 
       // Check for level up (40000 levels total) — handle multi-level jumps on high combos
       let newLevel = state.level;
+      let triggeredMysteryBox = false;
       while (newLevel < MAX_GAME_LEVEL && newScore >= getLevelThreshold(newLevel)) {
         newLevel++;
         newPops.push({
@@ -257,17 +266,23 @@ function reducer(state: GameState, action: Action): GameState {
           label: `LEVEL UP: ${newLevel}`,
           points: 0,
           x: 0.5,
-          y: 0.3 - (newLevel - state.level) * 0.05, // stagger pops
+          y: 0.3 - (newLevel - state.level) * 0.05,
           startTime: Date.now(),
         });
+        if (isMysteryBoxLevel(newLevel)) triggeredMysteryBox = true;
       }
+
+      // Apply mystery-box multiplier to score earned this turn
+      const appliedScore = state.mysteryMultiplier > 1
+        ? state.score + Math.floor(scoreResult.pointsEarned * state.mysteryMultiplier)
+        : newScore;
 
       return {
         ...state,
         board: newBoard,
         tray: newTray,
-        score: newScore,
-        bestScore: newBestScore,
+        score: appliedScore,
+        bestScore: Math.max(state.bestScore, appliedScore),
         level: newLevel,
         chain: scoreResult.newChain,
         noClears,
@@ -278,6 +293,22 @@ function reducer(state: GameState, action: Action): GameState {
           : null,
         scorePops: newPops,
         placements: state.placements + 1,
+        pendingMysteryBox: triggeredMysteryBox,
+        mysteryMultiplier: 1,   // consumed after one turn
+      };
+    }
+
+    case 'MYSTERY_BOX_PICKED': {
+      const { halvScore, pointsDelta, multiplier } = action;
+      const base = halvScore ? Math.floor(state.score / 2) : state.score;
+      const newScore = Math.max(0, base + pointsDelta);
+      return {
+        ...state,
+        score: newScore,
+        bestScore: Math.max(state.bestScore, newScore),
+        pendingMysteryBox: false,
+        mysteryBoxPicks: state.mysteryBoxPicks + 1,
+        mysteryMultiplier: multiplier,
       };
     }
 
@@ -302,7 +333,7 @@ function reducer(state: GameState, action: Action): GameState {
         board,
         tray: generateInitialTray(),
         score: 0,
-        bestScore: state.bestScore, // persist best score
+        bestScore: state.bestScore,
         level,
         chain: 0,
         noClears: 0,
@@ -313,6 +344,9 @@ function reducer(state: GameState, action: Action): GameState {
         scorePops: [],
         sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2)}`,
         placements: 0,
+        pendingMysteryBox: false,
+        mysteryBoxPicks: state.mysteryBoxPicks, // persist across games in session
+        mysteryMultiplier: 1,
       };
     }
 
@@ -357,6 +391,9 @@ function createInitialState(): GameState {
     scorePops: [],
     sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     placements: 0,
+    pendingMysteryBox: false,
+    mysteryBoxPicks: 0,
+    mysteryMultiplier: 1,
   };
 }
 
@@ -389,6 +426,10 @@ export function useGameEngine() {
     dispatch({ type: 'NEXT_LEVEL' });
   }, []);
 
+  const mysteryBoxPicked = useCallback((halvScore: boolean, pointsDelta: number, multiplier: number) => {
+    dispatch({ type: 'MYSTERY_BOX_PICKED', halvScore, pointsDelta, multiplier });
+  }, []);
+
   return {
     state,
     placePiece,
@@ -397,6 +438,7 @@ export function useGameEngine() {
     togglePause,
     newGame,
     nextLevel,
+    mysteryBoxPicked,
     canPlace,
     canPlaceAnywhere,
   };

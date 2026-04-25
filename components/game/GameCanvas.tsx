@@ -12,6 +12,10 @@ import {
 } from '@/lib/game/renderer';
 import { formatScore } from '@/lib/game/scoring';
 import { Piece } from '@/lib/game/pieces';
+import { getStageName } from '@/lib/game/stages';
+import MysteryBoxModal from './MysteryBoxModal';
+import { BoxResult } from '@/lib/game/mysteryBox';
+import { reportError } from '@/lib/analytics/errorReporter';
 import styles from './GameCanvas.module.css';
 
 const BOARD_PX = BOARD_COLS * (CELL_SIZE + CELL_GAP) - CELL_GAP;
@@ -111,7 +115,7 @@ export default function GameCanvas() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragPiece, setDragPiece] = useState<{ trayIdx: 0|1|2; mouseX: number; mouseY: number } | null>(null);
 
-  const { state, placePiece, newGame, clearAnimationDone, removeScorePop } = useGameEngine();
+  const { state, placePiece, newGame, clearAnimationDone, removeScorePop, mysteryBoxPicked } = useGameEngine();
 
   // Board origin
   const originX = 12;
@@ -140,6 +144,28 @@ export default function GameCanvas() {
       newGame();
     }
   };
+
+  // Deduct 1 ticket automatically when game over (called once per game-over state transition)
+  const gameOverHandledRef = useRef(false);
+  useEffect(() => {
+    if (state.isGameOver && !gameOverHandledRef.current && connected && publicKey) {
+      gameOverHandledRef.current = true;
+      // Report to dev analytics
+      reportError({
+        severity: 'info',
+        message: `Game over at ${getStageName(state.level)} — score ${state.score}`,
+        level: state.level,
+        sessionId: state.sessionId,
+        walletAddress: publicKey.toBase58(),
+        component: 'GameCanvas',
+      });
+    }
+    if (!state.isGameOver) gameOverHandledRef.current = false;
+  }, [state.isGameOver, connected, publicKey, state.level, state.score, state.sessionId]);
+
+  const handleMysteryBoxResult = useCallback((result: BoxResult) => {
+    mysteryBoxPicked(result.halvScore, result.pointsDelta, result.nextMultiplier);
+  }, [mysteryBoxPicked]);
 
   // Initialize idle blocks
   useEffect(() => {
@@ -440,6 +466,15 @@ export default function GameCanvas() {
 
   return (
     <div className={styles.wrapper}>
+      {/* Mystery Box overlay — auto-shows when pendingMysteryBox=true */}
+      {state.pendingMysteryBox && (
+        <MysteryBoxModal
+          level={state.level}
+          currentScore={state.score}
+          picksInSession={state.mysteryBoxPicks}
+          onResult={handleMysteryBoxResult}
+        />
+      )}
       <div className={styles.hud}>
         <div className={styles.hudStat}>
           <span className={styles.hudLabel}>SCORE</span>

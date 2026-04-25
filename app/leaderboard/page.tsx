@@ -10,24 +10,24 @@ import {
   MOCK_PRIZE_POOL_USDC,
   PRIZE_DISTRIBUTION,
 } from '@/lib/game/constants';
+import { calculateEstimatedReward } from '@/lib/solana/prizes';
 import styles from './leaderboard.module.css';
 
 const GameBackground = dynamic(() => import('@/components/GameBackground'), { ssr: false });
 
-const TABS = ['Weekly', 'All-Time', 'Daily', 'Whale Room'] as const;
+const TABS = ['Monthly', 'All-Time', 'Daily', 'Whale Room'] as const;
 type Tab = typeof TABS[number];
 
-export default function LeaderboardPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('Weekly');
+/** Format a prize tier's rank range as a readable string. */
+function rankLabel(rank: number | [number, number]): string {
+  if (typeof rank === 'number') return `RANK ${rank}`;
+  const [a, b] = rank;
+  if (b === -1) return `RANK ${a}+`;
+  return `RANK ${a}–${b}`;
+}
 
-  const prizeForRank = (rank: number): number => {
-    if (rank === 1) return MOCK_PRIZE_POOL_USDC * 0.20;
-    if (rank === 2) return MOCK_PRIZE_POOL_USDC * 0.12;
-    if (rank === 3) return MOCK_PRIZE_POOL_USDC * 0.08;
-    if (rank <= 5)  return MOCK_PRIZE_POOL_USDC * 0.05;
-    if (rank <= 10) return MOCK_PRIZE_POOL_USDC * 0.03;
-    return 0;
-  };
+export default function LeaderboardPage() {
+  const [activeTab, setActiveTab] = useState<Tab>('Monthly');
 
   return (
     <main className={styles.main}>
@@ -43,8 +43,8 @@ export default function LeaderboardPage() {
             HALL OF FAME
           </h1>
           <p style={{ color: '#8888BB', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
-            The elite arena where strategy meets rewards. Compete against the best players 
-            on Solana for your share of the weekly USDC prize pool.
+            The elite arena where strategy meets rewards. Top 10 take the pool every month —
+            smart-contract-enforced payouts, zero middlemen.
           </p>
         </header>
 
@@ -55,20 +55,26 @@ export default function LeaderboardPage() {
             <PrizePoolCounter size="lg" />
           </div>
           <div className="glass-panel" style={{ padding: '40px', textAlign: 'center' }}>
-            <div style={{ color: '#55557A', fontSize: '12px', letterSpacing: '2px', marginBottom: '10px' }}>POOL ENDS IN</div>
+            <div style={{ color: '#55557A', fontSize: '12px', letterSpacing: '2px', marginBottom: '10px' }}>MONTHLY RESET IN</div>
             <Countdown size="lg" />
           </div>
         </div>
 
         {/* Prize Tiers */}
         <div className="glass-panel" style={{ padding: '32px', marginBottom: '40px' }}>
-          <h3 className="orbitron neon-cyan" style={{ fontSize: '14px', marginBottom: '24px' }}>PRIZE DISTRIBUTION</h3>
+          <h3 className="orbitron neon-cyan" style={{ fontSize: '14px', marginBottom: '8px' }}>PRIZE DISTRIBUTION</h3>
+          <p style={{ color: '#8888BB', fontSize: '12px', marginBottom: '24px' }}>
+            Top-10 competitive payouts + ticket-weighted participation bucket.
+            All distributions settled on-chain via a single <code style={{ color: '#E0C5FF' }}>distribute_rewards</code> instruction.
+          </p>
           <div className={styles.prizeGrid}>
-            {PRIZE_DISTRIBUTION.map((tier) => (
-              <div key={tier.rank} className={styles.prizeCard}>
-                <span style={{ color: '#55557A' }}>RANK {tier.rank}</span>
+            {PRIZE_DISTRIBUTION.map((tier, i) => (
+              <div key={i} className={styles.prizeCard}>
+                <span style={{ color: '#55557A' }}>{rankLabel(tier.rank)}</span>
                 <span className="neon-green" style={{ fontWeight: '800' }}>{tier.pct}%</span>
-                <span style={{ fontSize: '11px', opacity: 0.6 }}>≈ {(MOCK_PRIZE_POOL_USDC * tier.pct / 100).toFixed(0)} USDC</span>
+                <span style={{ fontSize: '11px', opacity: 0.6 }}>
+                  ≈ {(MOCK_PRIZE_POOL_USDC * tier.pct / 100).toFixed(0)} USDC · {tier.label}
+                </span>
               </div>
             ))}
           </div>
@@ -82,7 +88,7 @@ export default function LeaderboardPage() {
               className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab}
+              {tab === 'Monthly' ? '📅 MONTHLY' : tab === 'All-Time' ? '🏆 ALL-TIME' : tab === 'Daily' ? '⚡ DAILY' : '🐋 WHALE ROOM'}
             </button>
           ))}
         </div>
@@ -98,7 +104,7 @@ export default function LeaderboardPage() {
 
           <div className={styles.tableBody}>
             {MOCK_LEADERBOARD.map((player) => {
-              const reward = player.estimatedReward ?? prizeForRank(player.rank);
+              const reward = calculateEstimatedReward(player.rank, MOCK_PRIZE_POOL_USDC);
               const isTop = player.rank <= 3;
               
               return (
@@ -124,7 +130,7 @@ export default function LeaderboardPage() {
           </div>
           
           <div className={styles.tableFooter}>
-            <p>Leaderboard updates every 5 minutes · Final snapshots taken every Sunday 00:00 UTC</p>
+            <p>Leaderboard updates every 5 minutes · Monthly snapshot taken on the 1st, 00:00 UTC · Distributed automatically via smart contract</p>
           </div>
         </div>
       </div>

@@ -95,6 +95,12 @@
   background: rgba(0, 245, 255, 0.08);
 }
 
+.link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .playLink {
   color: #00FF88 !important;
   font-weight: 700;
@@ -105,6 +111,49 @@
 
 .playLink:hover {
   background: rgba(0, 255, 136, 0.1) !important;
+}
+
+.lbMonthlyBadge {
+  font-size: 10px;
+  margin-left: 4px;
+  color: #FFD700;
+  opacity: 0.8;
+}
+
+/* logo block colours */
+.logoBlockPurple { background: #9945FF; }
+.logoBlockCyan   { background: #00F5FF; }
+.logoBlockGold   { background: #FFD700; }
+.logoBlockRed    { background: #FF2244; }
+
+/* scrolled shadow */
+.scrolled {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+/* mobile link inner row */
+.mobileLinkInner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobileLbBadge {
+  font-size: 11px;
+  color: #FFD700;
+  margin-left: 4px;
+}
+
+/* wallet placeholder skeleton */
+.walletPlaceholder {
+  width: 120px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+}
+
+.mobileWalletWrap {
+  padding: 12px 24px;
 }
 
 /* ── Right side ── */

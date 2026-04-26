@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { LEADERBOARD } from '../session/submit/route';
+import { LEADERBOARD } from '@/lib/leaderboard/store';
 import { MOCK_LEADERBOARD } from '@/lib/game/constants';
 
 export const dynamic = 'force-dynamic';

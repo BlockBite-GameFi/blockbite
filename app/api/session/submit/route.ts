@@ -22,21 +22,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
+import { LEADERBOARD } from '@/lib/leaderboard/store';
 
 const SESSION_SECRET = process.env.SESSION_SECRET ?? 'blockbite-dev-secret-changeme';
 // Generous upper-bound: perfect-board bonus (5000) + chain (×2) × 6-block piece (60) × 5 lines
 const MAX_SCORE_PER_MOVE = 5000 + 60 * 5 * 2;
-
-// In-memory leaderboard — shared at module level (survives warm instances)
-// Key: walletAddress, Value: best score entry
-export const LEADERBOARD = new Map<string, LeaderboardEntry>();
-
-export interface LeaderboardEntry {
-  walletAddress: string;
-  score: number;
-  level: number;
-  submittedAt: number;
-}
 
 function verifyToken(token: string): { walletAddress: string; expiresAt: number } | null {
   try {

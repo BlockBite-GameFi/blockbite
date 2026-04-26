@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Rocket, Trophy, ShoppingBag, Info, User } from 'lucide-react';
+import { Rocket, Trophy, ShoppingBag, Info, User, Map } from 'lucide-react';
 import styles from './Navbar.module.css';
 
 const CustomWalletButton = dynamic(
@@ -13,11 +13,12 @@ const CustomWalletButton = dynamic(
 );
 
 const NAV_LINKS = [
-  { name: 'PLAY',        href: '/game',        icon: <Rocket     size={15} />, play: true,  lb: false },
-  { name: 'PROFILE',     href: '/profile',     icon: <User       size={15} />, play: false, lb: false },
-  { name: 'LEADERBOARD', href: '/leaderboard', icon: <Trophy     size={15} />, play: false, lb: true  },
+  { name: 'PLAY',        href: '/game',        icon: <Rocket      size={15} />, play: true,  lb: false },
+  { name: 'MAP',         href: '/map',         icon: <Map         size={15} />, play: false, lb: false },
+  { name: 'PROFILE',     href: '/profile',     icon: <User        size={15} />, play: false, lb: false },
+  { name: 'LEADERBOARD', href: '/leaderboard', icon: <Trophy      size={15} />, play: false, lb: true  },
   { name: 'SHOP',        href: '/shop',        icon: <ShoppingBag size={15} />, play: false, lb: false },
-  { name: 'GUIDE',       href: '/how-to-play', icon: <Info       size={15} />, play: false, lb: false },
+  { name: 'GUIDE',       href: '/how-to-play', icon: <Info        size={15} />, play: false, lb: false },
 ] as const;
 
 export default function Navbar() {

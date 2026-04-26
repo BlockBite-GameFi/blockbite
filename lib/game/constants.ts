@@ -289,10 +289,11 @@ export const PRIZE_TOKENS: Record<PrizeToken, PrizeTokenConfig> = {
 /** Active prize token for the current period. Default USDC, admin-switchable. */
 export const DEFAULT_PRIZE_TOKEN: PrizeToken = 'USDC';
 
-export const MOCK_PRIZE_POOL_USDC = 3248.50;
-export const MOCK_TICKETS_SOLD = 4641;
-export const MOCK_PLAYERS = 1205;
-export const MOCK_USDC_DISTRIBUTED = 45250;
+// Phase 0 devnet — real pool starts at 0. No fabricated numbers.
+export const MOCK_PRIZE_POOL_USDC = 0;
+export const MOCK_TICKETS_SOLD = 0;
+export const MOCK_PLAYERS = 0;
+export const MOCK_USDC_DISTRIBUTED = 0;
 
 // ── Monthly Period Duration (V3: switched from weekly → monthly) ───
 // Why monthly: accumulates a meaningfully larger prize pool per cycle,
@@ -324,19 +325,8 @@ export const TICKET_PACKAGES = [
   { id: 'godmode',   name: 'GODMODE',   tickets: 600, price: 84.00, pricePerTicket: 0.14,  discount: 30, bonuses: ['GODMODE badge', 'Whale Room access'] },
 ];
 
-// ── Mock Leaderboard Data ─────────────────────────────────────────
-// Rewards computed against MOCK_PRIZE_POOL_USDC (3248.50) using V3 Option B:
-//   rank 1 → 30% = 974.55 · rank 2 → 20% = 649.70 · rank 3 → 10% = 324.85
-//   rank 4-10 → (25% / 7) ≈ 3.5714% each = 116.02 per seat
-export const MOCK_LEADERBOARD = [
-  { rank: 1,  wallet: '7xK3...mN9p', username: 'CryptoAce',   score: 48250, tickets: 32, badge: 'legendary', estimatedReward: 974.55 },
-  { rank: 2,  wallet: 'Bx9F...qR2m', username: 'NeonBlaster', score: 43180, tickets: 28, badge: 'champion',  estimatedReward: 649.70 },
-  { rank: 3,  wallet: 'mKp7...xL5t', username: 'PixelKing',   score: 41020, tickets: 45, badge: 'godmode',   estimatedReward: 324.85 },
-  { rank: 4,  wallet: 'Wr4X...nD8k', username: 'GridMaster',  score: 38750, tickets: 21, badge: 'warrior',   estimatedReward: 116.02 },
-  { rank: 5,  wallet: 'Zq2P...vL6h', username: 'VoidHunter',  score: 35900, tickets: 19, badge: 'hunter',    estimatedReward: 116.02 },
-  { rank: 6,  wallet: 'Lm5R...cT3j', username: 'BlockWizard', score: 31250, tickets: 15, badge: 'warrior',   estimatedReward: 116.02 },
-  { rank: 7,  wallet: 'Hq8N...wS2y', username: 'NovaSurge',   score: 29800, tickets: 22, badge: 'champion',  estimatedReward: 116.02 },
-  { rank: 8,  wallet: 'Ux3K...bP7m', username: 'StarlightX',  score: 27650, tickets: 11, badge: 'hunter',    estimatedReward: 116.02 },
-  { rank: 9,  wallet: 'Rf6T...oE4n', username: null,          score: 25430, tickets: 8,  badge: 'explorer',  estimatedReward: 116.02 },
-  { rank: 10, wallet: 'Ck2J...pA9v', username: 'DragonFly',   score: 23100, tickets: 17, badge: 'warrior',   estimatedReward: 116.02 },
-];
+// No mock leaderboard — real data only. Empty array = honest empty state on UI.
+export const MOCK_LEADERBOARD: {
+  rank: number; wallet: string; username: string | null;
+  score: number; tickets: number; badge: string; estimatedReward: number;
+}[] = [];

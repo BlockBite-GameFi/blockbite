@@ -486,10 +486,10 @@ export default function GameCanvas() {
   if (!connected) {
     return (
       <div className={styles.overlay}>
-        <h2 className={`orbitron neon-cyan ${styles.overlayTitle}`}>WALLET REQUIRED</h2>
+        <h2 className={`orbitron neon-cyan ${styles.overlayTitle}`}>CONNECT WALLET</h2>
         <p className={styles.overlayBody}>
-          Connect a <strong style={{ color: '#00F5FF' }}>Solana</strong> wallet to enter the arena.
-          <br />MetaMask is Ethereum — it won&apos;t work here.
+          Use the <strong style={{ color: '#00F5FF' }}>Connect Wallet</strong> button above to get started.
+          BlockBite runs on <strong style={{ color: '#00FF88' }}>Solana</strong> — supported wallets:
         </p>
         <div className={styles.walletIcons}>
           {[['👻', 'Phantom'], ['🔥', 'Solflare'], ['🎒', 'Backpack']].map(([icon, name]) => (
@@ -499,7 +499,7 @@ export default function GameCanvas() {
             </div>
           ))}
         </div>
-        <Link href="/" className="btn btn-primary" style={{ marginTop: 8 }}>BACK TO HOME</Link>
+        <Link href="/" className="btn btn-secondary" style={{ marginTop: 8 }}>BACK TO HOME</Link>
       </div>
     );
   }

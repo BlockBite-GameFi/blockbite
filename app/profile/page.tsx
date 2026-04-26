@@ -18,6 +18,10 @@ export default function ProfilePage() {
   const [editValue, setEditValue] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [referredWallets, setReferredWallets] = useState<string[]>([]);
+  const [refCopied, setRefCopied] = useState(false);
+  const [maxLevel, setMaxLevel] = useState(1);
+  const [gamesPlayed, setGamesPlayed] = useState(0);
 
   useEffect(() => {
     const u = localStorage.getItem('bb_username') || '';
@@ -25,6 +29,16 @@ export default function ProfilePage() {
     setUsername(u);
     setEditValue(u);
     setSelectedAvatar(a);
+    // Real stats from localStorage
+    const lvl = parseInt(localStorage.getItem('bb_max_level') || '1');
+    setMaxLevel(isNaN(lvl) ? 1 : lvl);
+    const gp = parseInt(localStorage.getItem('bb_games_played') || '0');
+    setGamesPlayed(isNaN(gp) ? 0 : gp);
+    // Real referrals
+    try {
+      const refs = JSON.parse(localStorage.getItem('bb_referrals') || '[]');
+      setReferredWallets(Array.isArray(refs) ? refs : []);
+    } catch { setReferredWallets([]); }
   }, []);
 
   const handleSave = () => {
@@ -154,14 +168,15 @@ export default function ProfilePage() {
           <div className="glass-panel" style={{ padding: 24 }}>
             <div className={styles.statLabel}><Award size={15} /> TOTAL EARNINGS</div>
             <div className={styles.statValue}>0.00 <span style={{ fontSize: 13, color: '#8888BB' }}>USDC</span></div>
+            <div style={{ fontSize: 11, color: '#444466', marginTop: 4 }}>Phase 0 · Devnet</div>
           </div>
           <div className="glass-panel" style={{ padding: 24 }}>
             <div className={styles.statLabel}><History size={15} /> GAMES PLAYED</div>
-            <div className={styles.statValue}>0</div>
+            <div className={styles.statValue}>{gamesPlayed}</div>
           </div>
           <div className="glass-panel" style={{ padding: 24 }}>
-            <div className={styles.statLabel}><Shield size={15} /> BEST SCORE</div>
-            <div className={styles.statValue}>0</div>
+            <div className={styles.statLabel}><Shield size={15} /> MAX LEVEL</div>
+            <div className={styles.statValue}>{maxLevel}</div>
           </div>
         </div>
 
@@ -185,15 +200,17 @@ export default function ProfilePage() {
           </section>
 
           <section className="glass-panel" style={{ padding: 32 }}>
-            <h3 className="orbitron neon-green" style={{ marginBottom: 24, fontSize: 16 }}>REFERRAL PROGRAM</h3>
+            <h3 className="orbitron neon-green" style={{ marginBottom: 8, fontSize: 16 }}>REFERRAL PROGRAM</h3>
             <p style={{ fontSize: 14, color: '#8888BB', marginBottom: 16 }}>
               Earn <strong style={{ color: '#00FF88' }}>5% lifetime</strong> from every ticket your referrals buy.
             </p>
+
+            {/* Referral link */}
             <div className={styles.referralLinkWrap}>
               <input
                 type="text"
                 readOnly
-                value={walletAddr ? `https://blockbite-game.vercel.app/r/${walletAddr.slice(0, 8)}` : 'Connect wallet to get your link'}
+                value={walletAddr ? `https://blockbite.vercel.app/r/${walletAddr.slice(0, 8)}` : 'Connect wallet to get your link'}
                 className={styles.referralInput}
               />
               <button
@@ -201,12 +218,42 @@ export default function ProfilePage() {
                 className="btn btn-primary btn-sm"
                 onClick={() => {
                   if (walletAddr) {
-                    navigator.clipboard.writeText(`https://blockbite-game.vercel.app/r/${walletAddr.slice(0, 8)}`);
+                    navigator.clipboard.writeText(`https://blockbite.vercel.app/r/${walletAddr.slice(0, 8)}`);
+                    setRefCopied(true);
+                    setTimeout(() => setRefCopied(false), 2000);
                   }
                 }}
               >
-                COPY
+                {refCopied ? '✓ COPIED' : 'COPY'}
               </button>
+            </div>
+
+            {/* Real referred wallets */}
+            <div style={{ marginTop: 20 }}>
+              <div style={{ fontSize: 12, color: '#55557A', fontFamily: "'Orbitron', monospace", letterSpacing: '0.1em', marginBottom: 12 }}>
+                TOTAL REFERRALS: <span style={{ color: '#00FF88' }}>{referredWallets.length}</span>
+              </div>
+              {referredWallets.length === 0 ? (
+                <p style={{ fontSize: 13, color: '#444466', fontStyle: 'italic' }}>
+                  No referrals yet — share your link to start earning.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontSize: 12, color: '#55557A', marginBottom: 4 }}>REGISTERED WALLETS:</div>
+                  {referredWallets.map((wallet, i) => (
+                    <div key={wallet} style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.1)',
+                      borderRadius: 8, padding: '8px 12px',
+                    }}>
+                      <span style={{ color: '#00FF88', fontFamily: "'Orbitron', monospace", fontSize: 11 }}>{i + 1}.</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#CCCCCC', letterSpacing: '0.05em' }}>
+                        {wallet.length > 20 ? `${wallet.slice(0, 6)}...${wallet.slice(-6)}` : wallet}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
         </div>

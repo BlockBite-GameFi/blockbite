@@ -17,7 +17,7 @@ export default function Home() {
       <div className="grid-overlay"></div>
       <div className="scanline-overlay"></div>
       
-      {/* Hero Background with generated asset */}
+      {/* Hero Background — pure CSS, no images */}
       <div style={{
         position: 'absolute',
         top: 0,
@@ -26,27 +26,9 @@ export default function Home() {
         height: '100vh',
         zIndex: -2,
         overflow: 'hidden',
+        background: 'radial-gradient(ellipse 120% 80% at 50% -10%, rgba(0,245,255,0.08) 0%, transparent 60%), radial-gradient(ellipse 80% 60% at 80% 60%, rgba(255,0,255,0.06) 0%, transparent 50%), radial-gradient(ellipse 60% 50% at 20% 80%, rgba(0,255,136,0.04) 0%, transparent 50%), #060614',
       }}>
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          backgroundImage: 'url("/assets/hero_bg.png")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          filter: 'brightness(0.6) contrast(1.1)',
-          transform: 'scale(1.05)',
-        }} />
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          background: 'radial-gradient(circle at 50% 50%, transparent 0%, var(--bg-deep) 90%)',
-        }} />
+        <GameBackground />
       </div>
 
       <section className={styles.hero}>

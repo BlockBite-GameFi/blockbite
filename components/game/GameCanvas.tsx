@@ -486,9 +486,20 @@ export default function GameCanvas() {
   if (!connected) {
     return (
       <div className={styles.overlay}>
-        <h2 className="orbitron neon-cyan">WALLET REQUIRED</h2>
-        <p style={{ color: '#8888BB', marginBottom: '24px' }}>Please connect your Solana wallet to enter the arena.</p>
-        <Link href="/" className="btn btn-primary">BACK TO HOME</Link>
+        <h2 className={`orbitron neon-cyan ${styles.overlayTitle}`}>WALLET REQUIRED</h2>
+        <p className={styles.overlayBody}>
+          Connect a <strong style={{ color: '#00F5FF' }}>Solana</strong> wallet to enter the arena.
+          <br />MetaMask is Ethereum — it won&apos;t work here.
+        </p>
+        <div className={styles.walletIcons}>
+          {[['👻', 'Phantom'], ['🔥', 'Solflare'], ['🎒', 'Backpack']].map(([icon, name]) => (
+            <div key={name} className={styles.walletChip}>
+              <span>{icon}</span>
+              <span>{name}</span>
+            </div>
+          ))}
+        </div>
+        <Link href="/" className="btn btn-primary" style={{ marginTop: 8 }}>BACK TO HOME</Link>
       </div>
     );
   }

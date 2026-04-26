@@ -251,13 +251,6 @@ function reducer(state: GameState, action: Action): GameState {
 
       // Check game over
       const isGameOver = !hasAnyLegalMove(newBoard, newTray);
-      // Persist stats to localStorage on game over (browser-only guard)
-      if (isGameOver && typeof window !== 'undefined') {
-        const prevMax = parseInt(localStorage.getItem('bb_max_level') ?? '1');
-        if (newLevel > prevMax) localStorage.setItem('bb_max_level', newLevel.toString());
-        const prevGames = parseInt(localStorage.getItem('bb_games_played') ?? '0');
-        localStorage.setItem('bb_games_played', (prevGames + 1).toString());
-      }
 
       // Score pop animation
       const newPops: ScorePopAnimation[] = [...state.scorePops];
@@ -287,6 +280,14 @@ function reducer(state: GameState, action: Action): GameState {
           startTime: Date.now(),
         });
         if (isMysteryBoxLevel(newLevel)) triggeredMysteryBox = true;
+      }
+
+      // Persist stats on game over (after newLevel is finalised)
+      if (isGameOver && typeof window !== 'undefined') {
+        const prevMax = parseInt(localStorage.getItem('bb_max_level') ?? '1');
+        if (newLevel > prevMax) localStorage.setItem('bb_max_level', newLevel.toString());
+        const prevGames = parseInt(localStorage.getItem('bb_games_played') ?? '0');
+        localStorage.setItem('bb_games_played', (prevGames + 1).toString());
       }
 
       return {

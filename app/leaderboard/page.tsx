@@ -15,10 +15,12 @@ type Tab = typeof TABS[number];
 
 interface LiveEntry {
   rank: number;
-  walletAddress: string;
+  walletAddress: string; // API returns 'walletAddress' for live entries
+  wallet?: string;       // API also returns truncated 'wallet'
   score: number;
-  level: number;
-  submittedAt: number;
+  level: number | null;
+  submittedAt: number | null;
+  live?: boolean;
 }
 
 function rankLabel(rank: number | [number, number]): string {
@@ -161,9 +163,11 @@ export default function LeaderboardPage() {
                   </div>
                   <div className={styles.playerCol}>
                     <div style={{ fontWeight: 700, color: isTop ? '#FFFFFF' : '#CCCCCC', fontFamily: "'Orbitron', monospace", fontSize: 13 }}>
-                      {shortWallet(entry.walletAddress)}
+                      {entry.wallet ?? shortWallet(entry.walletAddress ?? '')}
                     </div>
-                    <div style={{ fontSize: 11, color: '#55557A' }}>Level {entry.level}</div>
+                    {entry.level != null && (
+                      <div style={{ fontSize: 11, color: '#55557A' }}>Level {entry.level}</div>
+                    )}
                   </div>
                   <div style={{ textAlign: 'right' }} className="neon-cyan orbitron">
                     {entry.score.toLocaleString()}

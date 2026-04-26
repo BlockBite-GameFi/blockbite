@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     title: 'BlockBite — Bite Into the Prize Pool',
     description: 'Compete monthly for USDC prizes in the ultimate skill-based arcade GameFi on Solana.',
     type: 'website',
-    url: 'https://blockbite.vercel.app',
+    url: process.env.NEXT_PUBLIC_APP_URL ?? 'https://blockbite-game.vercel.app',
   },
   twitter: {
     card: 'summary_large_image',

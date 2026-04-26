@@ -193,7 +193,7 @@ export default function ProfilePage() {
               <input
                 type="text"
                 readOnly
-                value={walletAddr ? `https://blockbite.vercel.app/r/${walletAddr.slice(0, 8)}` : 'Connect wallet to get your link'}
+                value={walletAddr ? `https://blockbite-game.vercel.app/r/${walletAddr.slice(0, 8)}` : 'Connect wallet to get your link'}
                 className={styles.referralInput}
               />
               <button
@@ -201,7 +201,7 @@ export default function ProfilePage() {
                 className="btn btn-primary btn-sm"
                 onClick={() => {
                   if (walletAddr) {
-                    navigator.clipboard.writeText(`https://blockbite.vercel.app/r/${walletAddr.slice(0, 8)}`);
+                    navigator.clipboard.writeText(`https://blockbite-game.vercel.app/r/${walletAddr.slice(0, 8)}`);
                   }
                 }}
               >

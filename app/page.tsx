@@ -56,12 +56,11 @@ export default function Home() {
             SOLANA MAINNET READY
           </div>
           <h1 className={styles.title}>
-            SKILL. STRATEGY.<br />
-            <span className="neon-cyan">BLOCKBITE</span> <span className="neon-magenta">WEB3</span>
+            STACK. CLEAR.<br />
+            <span className="neon-cyan">EARN.</span>
           </h1>
           <p className={styles.subtitle}>
-            The world's first 100% transparent, skill-based puzzle arena on Solana. 
-            Turn your strategy into USDC rewards.
+            Skill-based arcade on Solana — 4,000 deterministic puzzle levels, transparent prize pool, real USDC rewards. Earn by playing better, not by gambling.
           </p>
 
           <div className={styles.prizeCard}>
@@ -89,29 +88,61 @@ export default function Home() {
       <section className={styles.features}>
         <div className="glass-panel" style={{ padding: '32px' }}>
           <div style={{ fontSize: '32px', marginBottom: '16px' }}>🎯</div>
-          <h3 className="neon-cyan">0% LUCK</h3>
+          <h3 className="neon-cyan">SKILL, NOT LUCK</h3>
           <p style={{ color: '#8888BB', fontSize: '14px', lineHeight: '1.6' }}>
-            No RNG, no gambling. Every piece placement is a strategic decision that affects your final payout.
+            4,000 deterministic puzzle levels — same seed, same board for every player. Pure skill decides the leaderboard.
           </p>
         </div>
         <div className="glass-panel" style={{ padding: '32px' }}>
           <div style={{ fontSize: '32px', marginBottom: '16px' }}>⛓️</div>
-          <h3 className="neon-magenta">100% ON-CHAIN</h3>
+          <h3 className="neon-magenta">TRANSPARENT POOL</h3>
           <p style={{ color: '#8888BB', fontSize: '14px', lineHeight: '1.6' }}>
-            Verify every prize pool distribution and top score directly on the Solana blockchain.
+            70% of every ticket goes on-chain to the prize pool. Smart-contract settlement, public leaderboard. No team interference.
           </p>
         </div>
         <div className="glass-panel" style={{ padding: '32px' }}>
           <div style={{ fontSize: '32px', marginBottom: '16px' }}>💰</div>
           <h3 className="neon-green">USDC REWARDS</h3>
           <p style={{ color: '#8888BB', fontSize: '14px', lineHeight: '1.6' }}>
-            Win real stablecoins. No volatile tokens, no inflationary mechanics. Pure skill, pure rewards.
+            Win real stablecoins. Top-10 monthly winners split 85% of the prize pool. Every player earns from the remaining 15%.
           </p>
         </div>
       </section>
 
+      {/* 8-Act Progression */}
+      <section style={{ padding: '0 24px 80px', maxWidth: 900, margin: '0 auto' }}>
+        <h2 style={{ fontFamily: "'Orbitron', monospace", fontSize: 'clamp(18px,3vw,28px)', fontWeight: 700, color: '#FFFFFF', textAlign: 'center', marginBottom: 32, letterSpacing: '0.06em' }}>
+          8 ACTS · 4,000 LEVELS
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+          {([
+            { act: 'I',   name: 'Awakening',   range: '1–500',    color: '#00F5FF', icon: '🌅' },
+            { act: 'II',  name: 'Frostfall',   range: '501–1000', color: '#00C3FF', icon: '❄️' },
+            { act: 'III', name: 'Inferno',      range: '1001–1500',color: '#FF6B00', icon: '🔥' },
+            { act: 'IV',  name: 'Stormlands',   range: '1501–2000',color: '#FFD700', icon: '⚡' },
+            { act: 'V',   name: 'Verdant',      range: '2001–2500',color: '#00FF88', icon: '🌿' },
+            { act: 'VI',  name: 'Nightfall',    range: '2501–3000',color: '#AA00FF', icon: '🌑' },
+            { act: 'VII', name: 'Crystalline',  range: '3001–3500',color: '#FF00FF', icon: '💎' },
+            { act: 'VIII',name: 'Voidbreak',    range: '3501–4000',color: '#FFFFFF', icon: '🌌' },
+          ] as const).map(a => (
+            <div key={a.act} style={{
+              background: 'rgba(18,18,42,0.7)', border: `1px solid ${a.color}22`,
+              borderRadius: 12, padding: '14px 16px',
+              borderLeft: `3px solid ${a.color}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span>{a.icon}</span>
+                <span style={{ fontFamily: "'Orbitron', monospace", fontSize: 11, color: a.color, fontWeight: 700 }}>ACT {a.act}</span>
+              </div>
+              <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, color: '#FFFFFF', fontWeight: 700 }}>{a.name}</div>
+              <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 11, color: '#555577', marginTop: 2 }}>Levels {a.range}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <footer className={styles.footer}>
-        <p>© 2026 BlockBite Web3 · Built on Solana for the next generation of gamers.</p>
+        <p>© 2026 BlockBite Web3 · Built on Solana · <a href="https://explorer.solana.com" target="_blank" rel="noopener noreferrer" style={{ color: '#00F5FF' }}>Verify on-chain</a></p>
       </footer>
     </main>
   );

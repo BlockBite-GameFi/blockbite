@@ -9,16 +9,16 @@ import {
   BOARD_COLS,
   Cell,
   BlockColor,
-  OBSTACLE_SPAWN_LEVEL,
   CURSED_MODE_LEVEL,
   CURSED_PLACEMENT_TRIGGER,
   MAX_GAME_LEVEL,
   getLevelThreshold,
-  getObstacleCountForLevel,
 } from './constants';
 import { isMysteryBoxLevel } from './stages';
 import { Piece, generateInitialTray, generateRandomPiece, getPieceCells } from './pieces';
 import { calculateScore, isBoardEmpty } from './scoring';
+import { safeLevelConfig, levelConfigToBoard, levelConfigToTray, contentLevelFor } from './levelBridge';
+import type { LevelConfig } from './levelTypes';
 
 // ── State Definition ─────────────────────────────────────────────
 
@@ -65,6 +65,12 @@ export interface GameState {
   mysteryBoxPicks: number;
   /** Active multiplier from a mystery-box MULTIPLIER result */
   mysteryMultiplier: number;
+  /** Current level config from the 4,000-level system (null = not yet loaded) */
+  currentLevelConfig: LevelConfig | null;
+  /** Display name for the current level (e.g. "Quiet Steps") */
+  levelName: string;
+  /** Active mechanic IDs for the current level */
+  activeMechanics: string[];
 }
 
 // ── Actions ──────────────────────────────────────────────────────
@@ -86,20 +92,20 @@ function createEmptyBoard(): Cell[][] {
   );
 }
 
-function createBoardWithObstacles(level: number): Cell[][] {
-  const board = createEmptyBoard();
-  const count = getObstacleCountForLevel(level);
-  let placed = 0;
-  // Place randomly, avoid clusters at edges
-  while (placed < count) {
-    const r = Math.floor(Math.random() * BOARD_ROWS);
-    const c = Math.floor(Math.random() * BOARD_COLS);
-    if (board[r][c].type === 'empty') {
-      board[r][c] = { type: 'obstacle', color: 'void' as BlockColor };
-      placed++;
-    }
-  }
-  return board;
+/**
+ * Build the initial board for `level` using the 4,000-level content system.
+ * Falls back to an empty board if the config cannot be generated.
+ */
+function createLevelBoard(level: number): Cell[][] {
+  const config = safeLevelConfig(level);
+  if (config) return levelConfigToBoard(config);
+  return createEmptyBoard();
+}
+
+function createLevelTray(level: number): [Piece, Piece, Piece] {
+  const config = safeLevelConfig(level);
+  if (config) return levelConfigToTray(config);
+  return generateInitialTray();
 }
 
 /** Check if a piece can be placed at (row, col) on the board */
@@ -325,12 +331,10 @@ function reducer(state: GameState, action: Action): GameState {
 
     case 'NEW_GAME': {
       const level = 1;
-      const board = level >= OBSTACLE_SPAWN_LEVEL
-        ? createBoardWithObstacles(level)
-        : createEmptyBoard();
+      const cfg = safeLevelConfig(level);
       return {
-        board,
-        tray: generateInitialTray(),
+        board: createLevelBoard(level),
+        tray: createLevelTray(level),
         score: 0,
         bestScore: state.bestScore,
         level,
@@ -344,26 +348,30 @@ function reducer(state: GameState, action: Action): GameState {
         sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2)}`,
         placements: 0,
         pendingMysteryBox: false,
-        mysteryBoxPicks: state.mysteryBoxPicks, // persist across games in session
+        mysteryBoxPicks: state.mysteryBoxPicks,
         mysteryMultiplier: 1,
+        currentLevelConfig: cfg,
+        levelName: cfg?.name ?? 'First Steps',
+        activeMechanics: cfg?.mechanics ?? [],
       };
     }
 
     case 'NEXT_LEVEL': {
       const level = state.level + 1;
-      const board = level >= OBSTACLE_SPAWN_LEVEL
-        ? createBoardWithObstacles(level)
-        : createEmptyBoard();
+      const cfg = safeLevelConfig(level);
       return {
         ...state,
-        board,
-        tray: generateInitialTray(),
+        board: createLevelBoard(level),
+        tray: createLevelTray(level),
         level,
         chain: 0,
         noClears: 0,
         isGameOver: false,
         clearAnimation: null,
         scorePops: [],
+        currentLevelConfig: cfg,
+        levelName: cfg?.name ?? `Level ${contentLevelFor(level)}`,
+        activeMechanics: cfg?.mechanics ?? [],
       };
     }
 
@@ -375,9 +383,10 @@ function reducer(state: GameState, action: Action): GameState {
 // ── Initial State ────────────────────────────────────────────────
 
 function createInitialState(): GameState {
+  const cfg = safeLevelConfig(1);
   return {
-    board: createEmptyBoard(),
-    tray: generateInitialTray(),
+    board: createLevelBoard(1),
+    tray: createLevelTray(1),
     score: 0,
     bestScore: 0,
     level: 1,
@@ -393,6 +402,9 @@ function createInitialState(): GameState {
     pendingMysteryBox: false,
     mysteryBoxPicks: 0,
     mysteryMultiplier: 1,
+    currentLevelConfig: cfg,
+    levelName: cfg?.name ?? 'First Steps',
+    activeMechanics: cfg?.mechanics ?? [],
   };
 }
 
@@ -440,5 +452,7 @@ export function useGameEngine() {
     mysteryBoxPicked,
     canPlace,
     canPlaceAnywhere,
+    levelName: state.levelName,
+    activeMechanics: state.activeMechanics,
   };
 }

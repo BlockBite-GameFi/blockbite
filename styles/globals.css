@@ -1,6 +1,7 @@
 /* -------------------------------------------------------------------------- */
-/* BLOCKBLAST WEB3 - DEEP SPACE NEON ARCADE THEME (HDR ULTRA)                 */
+/* BLOCKBITE WEB3 - DEEP SPACE NEON ARCADE THEME (HDR ULTRA)                  */
 /* -------------------------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
   /* Core Colors */
@@ -37,6 +38,71 @@
   /* Layout */
   --nav-height: 72px;
   --container-max: 1200px;
+
+  /* ── Design-system token aliases (canonical names from design spec) ── */
+  /* Surfaces */
+  --bg-0: #0A0A1A;
+  --bg-1: #12122A;
+  --bg-2: #1A1A35;
+  --panel: rgba(255,255,255,0.05);
+  --panel-hover: rgba(255,255,255,0.08);
+  --border: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.16);
+
+  /* Accent shorthands */
+  --cyan:    #00F5FF;
+  --magenta: #FF00FF;
+  --gold:    #FFD700;
+  --green:   #00FF88;
+  --orange:  #FF8C00;
+  --red:     #FF3366;
+  --purple:  #AA00FF;
+
+  /* Text scale */
+  --fg-1: #FFFFFF;
+  --fg-2: #B8B8D4;
+  --fg-3: #8888BB;
+  --fg-4: #555577;
+
+  /* Typography */
+  --font-display: 'Orbitron', 'Courier New', monospace;
+  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:    'Orbitron', 'Courier New', monospace;
+
+  /* Spacing scale (4px base) */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px;
+  --s-4: 16px; --s-5: 20px; --s-6: 24px;
+  --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px;
+
+  /* Radii */
+  --r-sm:   6px;
+  --r-md:   12px;
+  --r-lg:   20px;
+  --r-xl:   28px;
+  --r-full: 999px;
+
+  /* Elevation */
+  --elev-1: 0 2px 8px  rgba(0,0,0,0.3);
+  --elev-2: 0 8px 24px rgba(0,0,0,0.4);
+  --elev-3: 0 16px 48px rgba(0,0,0,0.5);
+
+  /* Colored glow shadows */
+  --glow-cyan:        0 0 24px rgba(0,245,255,0.4);
+  --glow-cyan-strong: 0 0 32px rgba(0,245,255,0.7);
+  --glow-magenta:     0 0 24px rgba(255,0,255,0.4);
+  --glow-gold:        0 0 24px rgba(255,215,0,0.5);
+  --glow-green:       0 0 24px rgba(0,255,136,0.4);
+  --glow-red:         0 0 24px rgba(255,51,102,0.4);
+
+  /* Easing curves */
+  --ease-out:       cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out:    cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Transition shorthands */
+  --t-fast: 80ms  var(--ease-out);
+  --t-base: 160ms var(--ease-out);
+  --t-slow: 320ms var(--ease-out);
 }
 
 /* Base Reset & Fonts */

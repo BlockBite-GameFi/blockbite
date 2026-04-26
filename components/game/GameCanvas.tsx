@@ -115,7 +115,8 @@ export default function GameCanvas() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragPiece, setDragPiece] = useState<{ trayIdx: 0|1|2; mouseX: number; mouseY: number } | null>(null);
 
-  const { state, placePiece, newGame, clearAnimationDone, removeScorePop, mysteryBoxPicked } = useGameEngine();
+  const { state, placePiece, newGame, clearAnimationDone, removeScorePop, mysteryBoxPicked, levelName } = useGameEngine();
+  const sessionTokenRef = useRef<string | null>(null);
 
   // Board origin
   const originX = 12;
@@ -135,22 +136,32 @@ export default function GameCanvas() {
     }
   }, [connected, publicKey]);
 
-  const handleStartGame = () => {
+  const handleStartGame = async () => {
     if (!connected || !publicKey) return;
     if (ticketBalance && ticketBalance > 0) {
       const newBal = ticketBalance - 1;
       setTicketBalance(newBal);
       localStorage.setItem(`tickets_${publicKey.toBase58()}`, newBal.toString());
+      // Start a server-side session so the submit endpoint can validate the score
+      try {
+        const res = await fetch('/api/session/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ walletAddress: publicKey.toBase58() }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          sessionTokenRef.current = data.token ?? null;
+        }
+      } catch { /* non-fatal — game proceeds without server session */ }
       newGame();
     }
   };
 
-  // Deduct 1 ticket automatically when game over (called once per game-over state transition)
   const gameOverHandledRef = useRef(false);
   useEffect(() => {
     if (state.isGameOver && !gameOverHandledRef.current && connected && publicKey) {
       gameOverHandledRef.current = true;
-      // Report to dev analytics
       reportError({
         severity: 'info',
         message: `Game over at ${getStageName(state.level)} — score ${state.score}`,
@@ -159,9 +170,23 @@ export default function GameCanvas() {
         walletAddress: publicKey.toBase58(),
         component: 'GameCanvas',
       });
+      // Submit score to leaderboard API
+      if (sessionTokenRef.current) {
+        fetch('/api/session/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: sessionTokenRef.current,
+            score: state.score,
+            level: state.level,
+            placements: state.placements,
+            walletAddress: publicKey.toBase58(),
+          }),
+        }).catch(() => { /* best-effort */ });
+      }
     }
     if (!state.isGameOver) gameOverHandledRef.current = false;
-  }, [state.isGameOver, connected, publicKey, state.level, state.score, state.sessionId]);
+  }, [state.isGameOver, connected, publicKey, state.level, state.score, state.sessionId, state.placements]);
 
   const handleMysteryBoxResult = useCallback((result: BoxResult) => {
     mysteryBoxPicked(result.halvScore, result.pointsDelta, result.nextMultiplier);
@@ -395,19 +420,45 @@ export default function GameCanvas() {
       });
 
       if (state.isGameOver) {
-        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        // Dim overlay
+        ctx.fillStyle = 'rgba(6,6,20,0.88)';
         ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-        ctx.font = `bold 40px 'Orbitron'`;
-        ctx.fillStyle = '#FF3366';
+
+        // Game-over card
+        const cardW = CANVAS_W - 48, cardH = 180, cardX = 24, cardY = CANVAS_H / 2 - 110;
+        ctx.fillStyle = 'rgba(255,51,102,0.08)';
+        ctx.strokeStyle = 'rgba(255,51,102,0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        roundRect(ctx, cardX, cardY, cardW, cardH, 16);
+        ctx.fill(); ctx.stroke();
+
         ctx.textAlign = 'center';
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = '#FF3366';
-        ctx.fillText('MISSION FAILED', CANVAS_W / 2, CANVAS_H / 2 - 40);
-        
-        ctx.font = `bold 24px 'Orbitron'`;
-        ctx.fillStyle = '#FFFFFF';
+
+        // Title
+        ctx.font = `900 32px 'Orbitron'`;
+        ctx.fillStyle = '#FF3366';
+        ctx.shadowBlur = 24; ctx.shadowColor = '#FF3366';
+        ctx.fillText('GAME OVER', CANVAS_W / 2, cardY + 48);
         ctx.shadowBlur = 0;
-        ctx.fillText(`SCORE: ${formatScore(state.score)}`, CANVAS_W / 2, CANVAS_H / 2 + 20);
+
+        // Score
+        ctx.font = `700 20px 'Orbitron'`;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(formatScore(state.score), CANVAS_W / 2, cardY + 84);
+        ctx.font = `500 11px 'Plus Jakarta Sans'`;
+        ctx.fillStyle = '#8888BB';
+        ctx.fillText('FINAL SCORE', CANVAS_W / 2, cardY + 100);
+
+        // Level name
+        ctx.font = `600 12px 'Plus Jakarta Sans'`;
+        ctx.fillStyle = '#00F5FF';
+        ctx.fillText(`Reached: Level ${state.level}`, CANVAS_W / 2, cardY + 130);
+
+        // Hint
+        ctx.font = `500 11px 'Plus Jakarta Sans'`;
+        ctx.fillStyle = '#555577';
+        ctx.fillText('Your score has been submitted to the leaderboard', CANVAS_W / 2, cardY + 154);
       }
 
       ctx.restore();
@@ -482,6 +533,11 @@ export default function GameCanvas() {
         </div>
         <div className={styles.hudCenter}>
           <span className={styles.levelBadge} title={getLevelTier(state.level)}>LVL {state.level}</span>
+          {levelName && (
+            <span style={{ fontSize: 10, color: '#8888BB', fontFamily: "'Plus Jakarta Sans', sans-serif", marginTop: 2, letterSpacing: '0.04em', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {levelName}
+            </span>
+          )}
           <div className={styles.levelProgressBar}>
             {(() => {
               const prev = state.level <= 1 ? 0 : getLevelThreshold(state.level - 1);
@@ -517,7 +573,7 @@ export default function GameCanvas() {
       />
 
       <div className={styles.hint}>
-        <span className={styles.hintKey}>1-3</span> PILIH PIECE · <span className={styles.hintKey}>CLICK</span> BOARD UNTUK PASANG
+        <span className={styles.hintKey}>1-3</span> SELECT PIECE · <span className={styles.hintKey}>CLICK</span> BOARD TO PLACE · <span className={styles.hintKey}>ESC</span> DESELECT
       </div>
 
       {(state.isGameOver || (state.score === 0 && ticketBalance! > 0)) && (

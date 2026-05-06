@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-
 const MOCK_WINNERS = [
   { addr: 'Ph4nt...x9zK', amount: '142.80', act: 'Voidbreak', rank: 1 },
   { addr: 'So1fl...mN3A', amount: '89.50',  act: 'Crystalline', rank: 2 },
@@ -16,8 +14,6 @@ const MOCK_WINNERS = [
 const RANK_COLORS: Record<number, string> = { 1: '#FFD700', 2: '#C0C0C0', 3: '#CD7F32' };
 
 export default function WinnersTicker() {
-  const trackRef = useRef<HTMLDivElement>(null);
-
   return (
     <div style={{
       width: '100%',

@@ -41,3 +41,10 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# Anchor / Rust build artifacts
+programs/*/target/
+programs/*/Cargo.lock
+
+# Deploy scripts with embedded keypairs (contain secrets)
+scripts/

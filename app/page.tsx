@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import PrizePoolCounter from '@/components/PrizePoolCounter';
 import Countdown from '@/components/Countdown';
 import Navbar from '@/components/Navbar';
+import WinnersTicker from '@/components/WinnersTicker';
 import styles from './page.module.css';
 
 // Client-only game background
@@ -63,6 +64,34 @@ export default function Home() {
               LEARN MECHANICS
             </Link>
           </div>
+        </div>
+      </section>
+
+      {/* Winners Ticker */}
+      <WinnersTicker />
+
+      {/* 3-Step Guide */}
+      <section style={{ padding: '48px 24px 0', maxWidth: 860, margin: '0 auto', width: '100%' }}>
+        <h2 style={{ fontFamily: "'Orbitron', monospace", fontSize: 'clamp(14px,2.5vw,20px)', fontWeight: 700, color: '#8888BB', textAlign: 'center', letterSpacing: '0.1em', marginBottom: 28 }}>
+          START IN 3 STEPS
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+          {[
+            { step: '01', icon: '🔗', title: 'Connect Wallet', desc: 'Phantom, Backpack or Solflare — any Solana wallet works.', href: '#', color: '#00F5FF' },
+            { step: '02', icon: '🎟', title: 'Buy a Ticket', desc: 'Starting at $1 USDC. 70% goes straight to the prize pool.', href: '/shop', color: '#FF00FF' },
+            { step: '03', icon: '🏆', title: 'Play & Claim', desc: 'Top-10 on the monthly leaderboard? Claim your USDC prize.', href: '/game', color: '#00FF88' },
+          ].map(s => (
+            <Link key={s.step} href={s.href} style={{ textDecoration: 'none' }}>
+              <div style={{ background: 'rgba(18,18,42,0.8)', border: `1px solid ${s.color}22`, borderLeft: `3px solid ${s.color}`, borderRadius: 14, padding: '22px 20px', cursor: 'pointer', transition: 'border-color 0.2s' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <span style={{ fontFamily: "'Orbitron', monospace", fontSize: 11, color: s.color, fontWeight: 800, letterSpacing: '0.1em' }}>STEP {s.step}</span>
+                  <span style={{ fontSize: 20 }}>{s.icon}</span>
+                </div>
+                <div style={{ fontFamily: "'Orbitron', monospace", fontSize: 14, color: '#FFFFFF', fontWeight: 700, marginBottom: 8 }}>{s.title}</div>
+                <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, color: '#8888BB', lineHeight: 1.55 }}>{s.desc}</div>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 

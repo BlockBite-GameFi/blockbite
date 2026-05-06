@@ -335,7 +335,7 @@ Prize claim (Rank 1, pool = 1000 USDC):
 | Role | Handle |
 | --- | --- |
 | Founder / Lead Dev | @nayrbryanGaming |
-| Smart Contract | @Zidancode |
+| Smart Contract | @Raisha |
 
 ---
 

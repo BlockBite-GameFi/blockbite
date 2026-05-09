@@ -1,0 +1,19 @@
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+blockbite_vesting = "Fg6PaFpoGXkYsidMpWxTWqzXY6vSAQ6sMmBm4o9mpU3"
+
+[programs.devnet]
+blockbite_vesting = "Fg6PaFpoGXkYsidMpWxTWqzXY6vSAQ6sMmBm4o9mpU3"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "node tests/deploy-smoke.js"

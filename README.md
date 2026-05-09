@@ -49,12 +49,11 @@ cd blockblast
 npm install
 solana config set --url localhost
 solana-keygen new --no-bip39-passphrase
-anchor build
 anchor keys sync
 anchor build
 ```
 
-The first `anchor build` creates a local program keypair if one does not exist yet. `anchor keys sync` then updates `Anchor.toml` and `declare_id!` to match that generated keypair. The second build verifies the synced program ID.
+`anchor keys sync` creates or syncs the local program keypair and updates `Anchor.toml` plus `declare_id!`. The build step then verifies the synced program ID.
 
 ## Build
 
@@ -79,7 +78,6 @@ The current smoke test checks that Anchor generated the IDL and that the require
 ```bash
 solana config set --url devnet
 solana airdrop 2
-anchor build
 anchor keys sync
 anchor build
 anchor deploy --provider.cluster devnet
@@ -105,7 +103,7 @@ GitHub Actions workflow:
 .github/workflows/ci.yml
 ```
 
-The CI pipeline runs on pushes to `main`/`master` and on pull requests. It installs Rust, Solana CLI, Anchor CLI, creates a temporary wallet, creates/syncs the local program keypair, then executes:
+The CI pipeline runs on pushes to `main`/`master` and on pull requests. It installs Rust, Solana CLI, Anchor CLI, creates a temporary wallet, syncs the local program keypair, then executes:
 
 ```bash
 anchor build

@@ -42,9 +42,6 @@ jobs:
           mkdir -p ~/.config/solana
           solana-keygen new --no-bip39-passphrase --silent --outfile ~/.config/solana/id.json
 
-      - name: Create program keypair
-        run: anchor build
-
       - name: Sync generated program key
         run: anchor keys sync
 

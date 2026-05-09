@@ -37,6 +37,14 @@ jobs:
           echo "$HOME/.avm/bin" >> "$GITHUB_PATH"
           anchor --version
 
+      - name: Use Solana-compatible Rust
+        run: |
+          rustup toolchain install 1.75.0
+          rustup default 1.75.0
+          rm -f Cargo.lock
+          rustc --version
+          cargo --version
+
       - name: Generate local wallet
         run: |
           mkdir -p ~/.config/solana

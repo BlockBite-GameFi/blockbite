@@ -26,7 +26,7 @@ jobs:
 
       - name: Install Solana CLI
         run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/v1.18.17/install)"
+          sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
 
       - name: Install Anchor CLI
@@ -36,14 +36,6 @@ jobs:
           avm use 0.30.1
           echo "$HOME/.avm/bin" >> "$GITHUB_PATH"
           anchor --version
-
-      - name: Use Solana-compatible Rust
-        run: |
-          rustup toolchain install 1.75.0
-          rustup default 1.75.0
-          rm -f Cargo.lock
-          rustc --version
-          cargo --version
 
       - name: Generate local wallet
         run: |

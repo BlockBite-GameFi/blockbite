@@ -23,7 +23,7 @@ Install these tools before running the project:
 | --- | --- |
 | Node.js | 18+ |
 | Rust | stable |
-| Solana CLI | 1.18.x |
+| Solana CLI | stable |
 | Anchor CLI | 0.30.1 |
 
 Useful install references:

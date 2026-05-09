@@ -137,7 +137,7 @@ Required Week 3 handlers:
 
 | Handler | Current behavior |
 | --- | --- |
-| `create_stream` | Empty handler that compiles and initializes the stream account shape through Anchor constraints |
+| `create_stream` | Empty handler that compiles with the stream account shape |
 | `withdraw` | Empty handler that compiles |
 | `cancel` | Empty handler that compiles |
 

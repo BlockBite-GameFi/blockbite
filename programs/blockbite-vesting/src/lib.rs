@@ -27,23 +27,10 @@ pub mod blockbite_vesting {
 }
 
 #[derive(Accounts)]
-#[instruction(stream_id: u64)]
 pub struct CreateStream<'info> {
     #[account(mut)]
-    pub payer: Signer<'info>,
-    /// CHECK: Week 3 skeleton only records the account shape; validation comes in Week 4.
-    pub beneficiary: UncheckedAccount<'info>,
-    /// CHECK: Token mint validation is intentionally deferred until business logic is added.
-    pub mint: UncheckedAccount<'info>,
-    /// CHECK: Vault ownership and token constraints are deferred for the Week 4 implementation.
-    pub vault: UncheckedAccount<'info>,
-    #[account(
-        init,
-        payer = payer,
-        space = 8 + StreamAccount::LEN,
-        seeds = [b"stream", payer.key().as_ref(), &stream_id.to_le_bytes()],
-        bump
-    )]
+    pub authority: Signer<'info>,
+    #[account(mut)]
     pub stream: Account<'info, StreamAccount>,
     pub system_program: Program<'info, System>,
 }

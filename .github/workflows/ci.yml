@@ -37,6 +37,13 @@ jobs:
           echo "$HOME/.avm/bin" >> "$GITHUB_PATH"
           anchor --version
 
+      - name: Use Anchor-compatible nightly Rust
+        run: |
+          rustup toolchain install nightly-2025-04-14
+          rustup default nightly-2025-04-14
+          rustc --version
+          cargo --version
+
       - name: Generate local wallet
         run: |
           mkdir -p ~/.config/solana
@@ -47,8 +54,6 @@ jobs:
 
       - name: Build program
         shell: bash
-        env:
-          RUSTFLAGS: --cfg procmacro2_semver_exempt
         run: |
           set +e
           anchor build 2>&1 | tee anchor-build.log

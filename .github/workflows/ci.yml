@@ -32,17 +32,10 @@ jobs:
       - name: Install Anchor CLI
         run: |
           cargo install --git https://github.com/solana-foundation/anchor avm --locked --force
-          avm install 0.30.1
-          avm use 0.30.1
+          avm install 0.32.1
+          avm use 0.32.1
           echo "$HOME/.avm/bin" >> "$GITHUB_PATH"
           anchor --version
-
-      - name: Use Anchor-compatible nightly Rust
-        run: |
-          rustup toolchain install nightly-2025-04-14
-          rustup default nightly-2025-04-14
-          rustc --version
-          cargo --version
 
       - name: Generate local wallet
         run: |

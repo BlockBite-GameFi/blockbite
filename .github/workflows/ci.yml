@@ -47,6 +47,8 @@ jobs:
 
       - name: Build program
         shell: bash
+        env:
+          RUSTFLAGS: --cfg procmacro2_semver_exempt
         run: |
           set +e
           anchor build 2>&1 | tee anchor-build.log

@@ -71,10 +71,8 @@ export default function ProfilePage() {
   const avatarCfg = AVATAR_CONFIGS[selectedAvatar] ?? AVATAR_CONFIGS[0];
 
   return (
-    <main className={styles.main}>
+    <main className={styles.main} style={{ background: 'var(--ds-bg)', color: 'var(--ds-text)', fontFamily: "'Space Grotesk', system-ui, sans-serif" }}>
       <Navbar />
-      <GameBackground />
-      <div className="grid-overlay" />
 
       <div className="container" style={{ paddingTop: 120, paddingBottom: 100 }}>
 

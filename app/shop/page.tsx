@@ -92,26 +92,24 @@ export default function ShopPage() {
   return (
     <>
       <Navbar />
-      <main style={{ paddingTop: 80, minHeight: '100vh', paddingBottom: 80 }}>
-        <div className="container">
+      <main style={{ minHeight: '100vh', paddingBottom: 80, background: 'var(--ds-bg)', color: 'var(--ds-text)' }}>
+        {/* Page header band */}
+        <div style={{ padding: '80px 24px 32px', background: 'linear-gradient(180deg, #1e1b4b 0%, var(--ds-bg) 100%)', borderBottom: '1px solid #312e81' }}>
+          <div className="container">
+            <div style={{ fontSize: 11, letterSpacing: 2, color: 'var(--ds-accent)', fontWeight: 800, marginBottom: 6 }}>BLOCKBITE SHOP</div>
+            <h1 style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", fontSize: 'clamp(26px, 5vw, 42px)', fontWeight: 900, marginBottom: 8, letterSpacing: '-0.5px' }}>
+              Tickets · USDC
+            </h1>
+            <p style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", fontSize: 13, color: 'var(--ds-text-dim)', marginBottom: 0 }}>
+              70% prize pool · 15% team · 10% dev · 5% referral · split on-chain
+            </p>
+          </div>
+        </div>
+        <div className="container" style={{ paddingTop: 32 }}>
 
           {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <h1 style={{
-              fontFamily: "'Orbitron', monospace",
-              fontSize: 'clamp(28px, 5vw, 52px)',
-              fontWeight: 900,
-              marginBottom: 12,
-            }}>
-              🎟 <span className="neon-cyan">Ticket Shop</span>
-            </h1>
-            <p style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: 16,
-              color: '#8888BB',
-              maxWidth: 500,
-              margin: '0 auto 24px',
-            }}>
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <p style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", fontSize: 15, color: 'var(--ds-text-dim)', maxWidth: 500, margin: '0 auto 24px', lineHeight: 1.6 }}>
               Buy tickets to compete on the leaderboard. More tickets = more chances to top the board.
               70% of every purchase goes directly to the prize pool.
             </p>

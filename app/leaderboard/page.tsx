@@ -57,27 +57,26 @@ export default function LeaderboardPage() {
   }, []);
 
   return (
-    <main className={styles.main}>
+    <main className={styles.main} style={{ background: 'var(--ds-bg)', color: 'var(--ds-text)' }}>
       <Navbar />
-      <GameBackground />
-      <div className="grid-overlay" />
 
-      <div className="container" style={{ paddingTop: 100, paddingBottom: 100 }}>
-
-        {/* Header */}
-        <header style={{ textAlign: 'center', marginBottom: 60 }}>
-          <div className="badge badge-gold" style={{ marginBottom: 16 }}>SEASON 1 · PHASE 0</div>
-          <h1 className="orbitron neon-gold" style={{ fontSize: 'clamp(32px,8vw,64px)', marginBottom: 16 }}>
-            HALL OF FAME
+      {/* Header band */}
+      <div style={{ padding: '80px 24px 32px', background: 'linear-gradient(180deg, #422006 0%, var(--ds-bg) 100%)', borderBottom: '1px solid #78350f44' }}>
+        <div className="container" style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, color: '#fbbf24', fontWeight: 800, marginBottom: 8 }}>SEASON 1 · ON-CHAIN</div>
+          <h1 style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", fontSize: 'clamp(28px,6vw,52px)', fontWeight: 900, letterSpacing: '-0.5px', marginBottom: 10 }}>
+            Leaderboard
           </h1>
-          <p style={{ color: '#8888BB', maxWidth: 600, margin: '0 auto', lineHeight: 1.6 }}>
-            Top players split the prize pool every month — smart-contract payouts, zero middlemen.
-            <br />
-            <span style={{ fontSize: 12, color: '#444466' }}>
-              Phase 0 · Devnet · No real funds at risk
-            </span>
+          <p style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", fontSize: 13, color: 'var(--ds-text-dim)', maxWidth: 480, margin: '0 auto' }}>
+            Reads PlayerClaim PDAs · refreshes every 30s · rewards distributed on-chain monthly
           </p>
-        </header>
+        </div>
+      </div>
+
+      <div className="container" style={{ paddingTop: 40, paddingBottom: 100 }}>
+
+        {/* Header — legacy spacing filler */}
+        <header style={{ marginBottom: 40 }}>
 
         {/* Pool + Timer */}
         <div className={styles.statsGrid}>
@@ -92,16 +91,16 @@ export default function LeaderboardPage() {
         </div>
 
         {/* Prize Tiers */}
-        <div className="glass-panel" style={{ padding: 32, marginBottom: 40 }}>
-          <h3 className="orbitron neon-cyan" style={{ fontSize: 14, marginBottom: 8 }}>PRIZE DISTRIBUTION</h3>
-          <p style={{ color: '#8888BB', fontSize: 12, marginBottom: 24 }}>
-            On-chain distribution via <code style={{ color: '#E0C5FF' }}>distribute_rewards</code> instruction · Settled automatically at month end.
+        <div style={{ padding: 24, marginBottom: 32, background: 'var(--ds-surface)', border: '1px solid var(--ds-border)', borderRadius: 16 }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, color: 'var(--ds-accent)', fontWeight: 800, marginBottom: 6 }}>PRIZE DISTRIBUTION</div>
+          <p style={{ color: 'var(--ds-text-dim)', fontSize: 12, marginBottom: 20 }}>
+            On-chain distribution via <code style={{ color: 'var(--ds-accent2)' }}>distribute_rewards</code> instruction · Settled automatically at month end.
           </p>
           <div className={styles.prizeGrid}>
             {PRIZE_DISTRIBUTION.map((tier, i) => (
               <div key={i} className={styles.prizeCard}>
-                <span style={{ color: '#55557A' }}>{rankLabel(tier.rank)}</span>
-                <span className="neon-green" style={{ fontWeight: 800 }}>{tier.pct}%</span>
+                <span style={{ color: 'var(--ds-text-dim)' }}>{rankLabel(tier.rank)}</span>
+                <span style={{ color: 'var(--ds-ok)', fontWeight: 800 }}>{tier.pct}%</span>
                 <span style={{ fontSize: 11, opacity: 0.6 }}>{tier.label}</span>
               </div>
             ))}
@@ -122,7 +121,7 @@ export default function LeaderboardPage() {
         </div>
 
         {/* Table */}
-        <div className="glass-panel" style={{ overflow: 'hidden' }}>
+        <div style={{ overflow: 'hidden', background: 'var(--ds-surface)', border: '1px solid var(--ds-border)', borderRadius: 16 }}>
           <div className={styles.tableHeader}>
             <span>RANK</span>
             <span>PLAYER</span>
@@ -132,19 +131,19 @@ export default function LeaderboardPage() {
 
           <div className={styles.tableBody}>
             {loading && (
-              <div style={{ textAlign: 'center', padding: '60px 24px', color: '#55557A' }}>
+              <div style={{ textAlign: 'center', padding: '60px 24px', color: 'var(--ds-text-dim)' }}>
                 <div className="spinner" style={{ margin: '0 auto 16px' }} />
-                <p className="orbitron" style={{ fontSize: 13 }}>LOADING SCORES...</p>
+                <p style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", fontSize: 13, letterSpacing: 1 }}>LOADING SCORES…</p>
               </div>
             )}
 
             {!loading && entries.length === 0 && (
               <div style={{ textAlign: 'center', padding: '80px 24px' }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>🏆</div>
-                <h3 className="orbitron neon-cyan" style={{ fontSize: 18, marginBottom: 12 }}>
+                <h3 style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", color: 'var(--ds-accent)', fontSize: 18, marginBottom: 12 }}>
                   NO SCORES YET
                 </h3>
-                <p style={{ color: '#55557A', fontSize: 14, marginBottom: 24, maxWidth: 340, margin: '0 auto 24px' }}>
+                <p style={{ color: 'var(--ds-text-dim)', fontSize: 14, marginBottom: 24, maxWidth: 340, margin: '0 auto 24px' }}>
                   Be the first to claim the top spot. Play a game and submit your score to appear here.
                 </p>
                 <a href="/game" className="btn btn-primary">PLAY NOW →</a>

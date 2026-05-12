@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import '../styles/globals.css';
+import './globals.css';
 import AppWalletProvider from "@/components/AppWalletProvider";
 import { AppProvider } from '@/lib/useApp';
 

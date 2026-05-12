@@ -1,2 +1,30 @@
-/* This file is intentionally empty. */
-/* Global styles are in styles/globals.css — imported from app/layout.tsx */
+/* Theme tokens — switch by [data-theme] on <html>. */
+:root[data-theme='dark'] {
+  --bg: #08081a; --surface: rgba(255,255,255,0.04); --text: #fff;
+  --text-dim: #94a3b8; --border: #1f1f3a;
+  --accent: #a78bfa; --accent2: #5eead4;
+  --warn: #fbbf24; --danger: #ef4444; --ok: #22c55e;
+  --header-grad: linear-gradient(180deg, #1e1b4b 0%, #08081a 100%);
+}
+:root[data-theme='light'] {
+  --bg: #f7f7fb; --surface: rgba(0,0,0,0.04); --text: #0a0a14;
+  --text-dim: #475569; --border: #e2e8f0;
+  --accent: #6d28d9; --accent2: #0d9488;
+  --warn: #b45309; --danger: #b91c1c; --ok: #15803d;
+  --header-grad: linear-gradient(180deg, #ede9fe 0%, #f7f7fb 100%);
+}
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  transition: background .25s, color .25s; }
+.seg { display: flex; gap: 4px; padding: 3px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border); }
+.seg button { flex: 1; padding: 8px 12px; border-radius: 999px; border: none;
+  background: transparent; color: var(--text); font-weight: 800;
+  cursor: pointer; }
+.seg button[data-on='true'] { background: var(--accent); color: var(--bg); }
+.card { padding: 16px; border-radius: 14px; background: var(--surface);
+  border: 1px solid var(--border); }
+.card .k { font-size: 10px; letter-spacing: 1.5px; color: var(--text-dim); }
+.card .v { font-size: 24px; font-weight: 900; margin-top: 4px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px; padding: 16px; }

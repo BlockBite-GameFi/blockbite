@@ -1,7 +1,7 @@
 /* -------------------------------------------------------------------------- */
 /* BLOCKBITE WEB3 - DEEP SPACE NEON ARCADE THEME (HDR ULTRA)                  */
 /* -------------------------------------------------------------------------- */
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
   /* Core Colors */
@@ -103,6 +103,42 @@
   --t-fast: 80ms  var(--ease-out);
   --t-base: 160ms var(--ease-out);
   --t-slow: 320ms var(--ease-out);
+
+  /* ── New Design System (Space Grotesk era) ── */
+  --font-sg: 'Space Grotesk', system-ui, sans-serif;
+  --font-jb: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Dark theme tokens (default) */
+  --ds-bg:        #08081a;
+  --ds-surface:   rgba(255,255,255,0.04);
+  --ds-surface2:  rgba(0,0,0,0.35);
+  --ds-text:      #ffffff;
+  --ds-text-dim:  #94a3b8;
+  --ds-border:    #1f1f3a;
+  --ds-accent:    #a78bfa;
+  --ds-accent2:   #5eead4;
+  --ds-warn:      #fbbf24;
+  --ds-danger:    #ef4444;
+  --ds-ok:        #22c55e;
+  --ds-header:    linear-gradient(180deg, #1e1b4b 0%, #08081a 100%);
+  --ds-grad:      linear-gradient(135deg, #a78bfa, #5eead4);
+}
+
+/* Light theme overrides */
+:root[data-theme='light'], html[data-theme='light'] {
+  --ds-bg:       #f7f7fb;
+  --ds-surface:  rgba(0,0,0,0.04);
+  --ds-surface2: rgba(255,255,255,0.9);
+  --ds-text:     #0a0a14;
+  --ds-text-dim: #475569;
+  --ds-border:   #e2e8f0;
+  --ds-accent:   #6d28d9;
+  --ds-accent2:  #0d9488;
+  --ds-warn:     #b45309;
+  --ds-danger:   #b91c1c;
+  --ds-ok:       #15803d;
+  --ds-header:   linear-gradient(180deg, #ede9fe 0%, #f7f7fb 100%);
+  --ds-grad:     linear-gradient(135deg, #6d28d9, #0d9488);
 }
 
 /* Base Reset & Fonts */

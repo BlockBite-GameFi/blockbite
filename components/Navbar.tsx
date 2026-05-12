@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Rocket, Trophy, ShoppingBag, Info, User, Map } from 'lucide-react';
+import { Rocket, Trophy, ShoppingBag, Info, User, Map, Moon, Sun } from 'lucide-react';
 import styles from './Navbar.module.css';
+import { useApp } from '@/lib/useApp';
 
 const CustomWalletButton = dynamic(
   () => import('./CustomWalletButton'),
@@ -25,6 +26,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
+  const { lang, setLang, theme, setTheme } = useApp();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -66,8 +68,26 @@ export default function Navbar() {
           ))}
         </ul>
 
-        {/* Right: wallet + hamburger */}
+        {/* Right: lang + theme + wallet + hamburger */}
         <div className={styles.right}>
+          <button
+            type="button"
+            className={styles.iconToggle}
+            onClick={() => setLang(lang === 'en' ? 'id' : 'en')}
+            aria-label="Toggle language"
+            title={lang === 'en' ? 'Switch to Indonesian' : 'Switch to English'}
+          >
+            <span className={styles.langLabel}>{lang.toUpperCase()}</span>
+          </button>
+          <button
+            type="button"
+            className={styles.iconToggle}
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            aria-label="Toggle theme"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
           <CustomWalletButton />
           <button
             type="button"

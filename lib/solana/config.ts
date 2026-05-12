@@ -34,7 +34,10 @@ export const USDC_DECIMALS = 6;
 // ── Platform wallets ───────────────────────────────────────────────
 // These receive the non-prize-pool share of ticket revenue.
 export const TEAM_WALLET  = new PublicKey('ETcQvsQek2w9feLfsqoe4AypCWfnrSwQiv3djqocaP2m');
-export const FEE_WALLET   = new PublicKey('35z7X59rtyts557Up1RAwpyYN7x2cFqcDc7RjPuNxFzr');
+// FEE_WALLET reads from env — never hard-code. Set NEXT_PUBLIC_FEE_WALLET in Vercel dashboard.
+export const FEE_WALLET   = new PublicKey(
+  process.env.NEXT_PUBLIC_FEE_WALLET ?? 'ETcQvsQek2w9feLfsqoe4AypCWfnrSwQiv3djqocaP2m',
+);
 
 // ── Token amounts ──────────────────────────────────────────────────
 /** Convert a human USDC amount to raw u64 lamports (6 decimals). */

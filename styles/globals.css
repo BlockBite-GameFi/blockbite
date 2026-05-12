@@ -346,3 +346,100 @@ h1, h2, h3 {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   DESIGN SYSTEM v2 — shorthand token aliases + utility classes
+   These mirror the canonical design from /CLAUDE DESIGN/BLOCKBITE…
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Shorthand aliases that page components use directly */
+:root {
+  --bg:       var(--ds-bg);
+  --surface:  var(--ds-surface);
+  --surface2: var(--ds-surface2);
+  --text:     var(--ds-text);
+  --dim:      var(--ds-text-dim);
+  --border-c: var(--ds-border);
+  --accent:   var(--ds-accent);
+  --accent2:  var(--ds-accent2);
+  --p1:       var(--ds-accent);
+  --p2:       var(--ds-accent2);
+  --p3:       #fbbf24;
+  --p4:       #f472b6;
+  --grad:     var(--ds-grad);
+}
+
+/* Segmented control (used on onboarding, settings) */
+.seg {
+  display: flex; gap: 4px; padding: 3px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border-c);
+}
+.seg button {
+  flex: 1; padding: 8px 14px; border-radius: 999px; border: none;
+  background: transparent; color: var(--text); font-weight: 800;
+  font-size: 12px; cursor: pointer; font-family: var(--font-sg);
+  transition: .15s; letter-spacing: .5px;
+}
+.seg button[data-on='true'] { background: var(--accent); color: var(--bg); }
+
+/* Card */
+.card {
+  padding: 16px; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--border-c);
+}
+.card .k { font-size: 10px; letter-spacing: 1.5px; color: var(--dim); font-weight: 700; }
+.card .v { font-size: 24px; font-weight: 900; margin-top: 4px; }
+
+/* Responsive grid */
+.grid-ds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px; padding: 16px;
+}
+
+/* Onboarding slides */
+.onboard {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-sg); text-align: center; padding: 32px 24px; gap: 20px;
+}
+.onboard .ic { font-size: 64px; line-height: 1; }
+.onboard h1 { font-size: 28px; font-weight: 900; letter-spacing: -.5px; }
+.onboard p  { font-size: 15px; color: var(--dim); max-width: 320px; line-height: 1.6; }
+.onboard .dots { display: flex; gap: 8px; }
+.onboard .dots span {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--border-c); transition: .2s;
+}
+.onboard .dots span[data-on='true'] { background: var(--accent); }
+.onboard button {
+  padding: 14px 32px; border-radius: 14px; border: none;
+  background: var(--grad); color: #0a0a14; font-weight: 900;
+  font-size: 15px; font-family: var(--font-sg); cursor: pointer;
+  box-shadow: 0 0 24px rgba(167,139,250,0.35); transition: .15s;
+}
+.onboard button:hover { transform: translateY(-2px); }
+
+/* Settings sections */
+.settings-section {
+  background: var(--surface); border: 1px solid var(--border-c);
+  border-radius: 16px; padding: 20px; margin-bottom: 12px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.settings-label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; color: var(--dim);
+  letter-spacing: .5px; text-transform: uppercase;
+}
+
+/* Waitlist badge pulse */
+@keyframes wl-pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.4; transform:scale(.75); }
+}
+/* Waitlist float animation */
+@keyframes wl-float {
+  0%,100% { transform:translateY(0) rotate(0deg); }
+  50%      { transform:translateY(-10px) rotate(5deg); }
+}

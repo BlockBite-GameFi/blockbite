@@ -29,6 +29,9 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230A0A1E'/><rect x='4' y='4' width='26' height='26' rx='5' fill='%2300F5FF'/><rect x='34' y='4' width='26' height='26' rx='5' fill='%23FF00FF'/><rect x='4' y='34' width='26' height='26' rx='5' fill='%23FFD700'/><rect x='34' y='34' width='26' height='26' rx='5' fill='%2300FF88'/><circle cx='32' cy='32' r='16' fill='%230A0A1E'/><rect x='22' y='18' width='5' height='9' rx='2' fill='white'/><rect x='31' y='16' width='5' height='9' rx='2' fill='white'/><rect x='45' y='25' width='9' height='5' rx='2' fill='white'/><rect x='47' y='34' width='9' height='5' rx='2' fill='white'/><circle cx='14' cy='14' r='4' fill='%230A0A1E'/><circle cx='15' cy='13' r='1.5' fill='white'/></svg>" />
       </head>
       <body>

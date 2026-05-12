@@ -1,160 +1,263 @@
 'use client';
 
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import PrizePoolCounter from '@/components/PrizePoolCounter';
-import Countdown from '@/components/Countdown';
+import { useState, useEffect, useRef } from 'react';
+import { useApp } from '@/lib/useApp';
 import Navbar from '@/components/Navbar';
-import WinnersTicker from '@/components/WinnersTicker';
-import styles from './page.module.css';
 
-// Client-only game background
-const GameBackground = dynamic(() => import('@/components/GameBackground'), { ssr: false });
+const BLOCK_COLORS = ['#a78bfa','#5eead4','#fbbf24','#f472b6','#7dd3fc','#fb923c'];
+const BLOCK_ICONS  = ['◆','◈','◉','✦','⬡','◇'];
+
+const FEATURES = {
+  en: [
+    { ic:'◆', t:'On-chain Proofs',       d:'Every Act completion writes a ProofCache PDA to Solana. Your progress is permanent and verifiable.' },
+    { ic:'⛁', t:'Real USDC Rewards',      d:'70% of ticket revenue goes to the prize pool. Claim USDC directly to your wallet — no intermediaries.' },
+    { ic:'▦', t:'Skill-Based Match-3',     d:'4,000 levels across 8 biomes. Boards seeded by keccak256 — same level, identical for every player.' },
+    { ic:'◷', t:'Vesting Cooldown',        d:'24-hour on-chain cooldown between claims. Enforced by the Solana program — not just a UI check.' },
+    { ic:'◈', t:'Transparent Tokenomics',  d:'70% prize · 15% team · 10% dev · 5% referral. All splits happen atomically on-chain.' },
+    { ic:'⛨', t:'Squads Multisig',         d:'Admin actions require 2-of-3 Squads v4 signatures. The vault is PDA-owned — not a team wallet.' },
+  ],
+  id: [
+    { ic:'◆', t:'Bukti On-chain',          d:'Setiap Babak selesai menulis ProofCache PDA ke Solana. Progresmu permanen.' },
+    { ic:'⛁', t:'Hadiah USDC Nyata',       d:'70% pendapatan tiket masuk ke pool hadiah. Klaim USDC langsung ke wallet.' },
+    { ic:'▦', t:'Match-3 Berbasis Skill',   d:'4.000 level di 8 bioma. Papan diacak oleh keccak256.' },
+    { ic:'◷', t:'Cooldown Vesting',         d:'Cooldown 24 jam on-chain dipaksa oleh program Solana.' },
+    { ic:'◈', t:'Tokenomik Transparan',     d:'Pembagian 70/15/10/5 terjadi secara atomik on-chain.' },
+    { ic:'⛨', t:'Multisig Squads',          d:'Aksi admin memerlukan tanda tangan 2-dari-3 Squads v4.' },
+  ],
+};
+
+const STEPS = {
+  en: [
+    { t:'Connect Wallet',  d:'Phantom, Solflare, Backpack, or any Solana wallet.' },
+    { t:'Buy Tickets',     d:'From $1 USDC. Tickets fuel gameplay and unlock reward tiers.' },
+    { t:'Clear Acts',      d:'Complete 500 levels to finish an Act and write your proof on-chain.' },
+    { t:'Claim USDC',      d:'After the 24h cooldown, claim your tier reward directly to your wallet.' },
+  ],
+  id: [
+    { t:'Hubungkan Wallet',  d:'Phantom, Solflare, Backpack, atau wallet Solana apapun.' },
+    { t:'Beli Tiket',        d:'Mulai dari $1 USDC. Tiket untuk bermain dan membuka tingkat hadiah.' },
+    { t:'Selesaikan Babak',  d:'Selesaikan 500 level untuk menyelesaikan Babak dan tulis bukti on-chain.' },
+    { t:'Klaim USDC',        d:'Setelah cooldown 24 jam, klaim hadiahmu langsung ke wallet.' },
+  ],
+};
+
+const BIOMES = {
+  en: ['Crystal Caverns','Frozen Pass','Ember Foundry','Verdant Hollow','Abyss Tide','Sandborn Dunes','Voidline Citadel','Apex Sanctum'],
+  id: ['Gua Kristal','Celah Beku','Pande Api','Lembah Hijau','Arus Jurang','Bukit Pasir','Benteng Kehampaan','Kuil Puncak'],
+};
+const BIOME_COLORS = ['#a78bfa','#7dd3fc','#fb923c','#86efac','#22d3ee','#fcd34d','#c084fc','#fbbf24'];
 
 export default function Home() {
+  const { lang, t } = useApp();
+  const [email, setEmail]   = useState('');
+  const [done, setDone]     = useState(false);
+  const [busy, setBusy]     = useState(false);
+  const [wlCount, setWlCount] = useState(0);
+  const cvs = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const c = cvs.current; if (!c) return;
+    const ctx = c.getContext('2d'); if (!ctx) return;
+    let raf: number;
+    const resize = () => { c.width = window.innerWidth; c.height = window.innerHeight; };
+    resize(); window.addEventListener('resize', resize);
+    const bl = Array.from({ length: 22 }, (_, i) => ({
+      x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight,
+      sz: 18 + Math.random() * 28, spd: 0.18 + Math.random() * 0.38,
+      color: BLOCK_COLORS[i % 6], icon: BLOCK_ICONS[i % 6],
+      rot: Math.random() * Math.PI * 2, rs: (Math.random() - .5) * .012,
+      op: 0.07 + Math.random() * 0.13,
+    }));
+    const draw = () => {
+      ctx.clearRect(0, 0, c.width, c.height);
+      bl.forEach(b => {
+        b.y -= b.spd; b.rot += b.rs;
+        if (b.y < -50) { b.y = c.height + 50; b.x = Math.random() * c.width; }
+        ctx.save(); ctx.globalAlpha = b.op;
+        ctx.translate(b.x, b.y); ctx.rotate(b.rot);
+        ctx.fillStyle = b.color;
+        ctx.font = `900 ${b.sz}px "Space Grotesk",system-ui`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(b.icon, 0, 0); ctx.restore();
+      });
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/waitlist/count').then(r => r.json()).then(d => setWlCount(d.count ?? 0)).catch(() => {});
+  }, []);
+
+  const join = async () => {
+    if (!email || !email.includes('@')) return;
+    setBusy(true);
+    try { await fetch('/api/waitlist', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email}) }); } catch {}
+    setDone(true); setBusy(false); setWlCount(c => c + 1);
+  };
+
+  const F = FEATURES[lang] ?? FEATURES.en;
+  const S = STEPS[lang]    ?? STEPS.en;
+  const B = BIOMES[lang]   ?? BIOMES.en;
+
   return (
-    <main className={styles.main}>
+    <div style={{ minHeight:'100vh', background:'var(--ds-bg)', color:'var(--ds-text)', fontFamily:'var(--font-sg)', overflowX:'hidden', transition:'background .25s,color .25s' }}>
+      <canvas ref={cvs} style={{ position:'fixed', inset:0, pointerEvents:'none', zIndex:0, opacity:.18 }} />
       <Navbar />
-      <div className="grid-overlay"></div>
-      <div className="scanline-overlay"></div>
-      
-      {/* Hero Background — pure CSS, no images */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100vh',
-        zIndex: -2,
-        overflow: 'hidden',
-        background: 'radial-gradient(ellipse 120% 80% at 50% -10%, rgba(0,245,255,0.08) 0%, transparent 60%), radial-gradient(ellipse 80% 60% at 80% 60%, rgba(255,0,255,0.06) 0%, transparent 50%), radial-gradient(ellipse 60% 50% at 20% 80%, rgba(0,255,136,0.04) 0%, transparent 50%), #060614',
-      }}>
-        <GameBackground />
-      </div>
 
-      <section className={styles.hero}>
+      {/* HERO */}
+      <section style={{ position:'relative', zIndex:1, minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'100px 24px 60px', textAlign:'center', gap:28 }}>
+        <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'8px 16px', borderRadius:999, border:'1px solid var(--ds-accent)', background:'rgba(167,139,250,.12)', fontSize:12, fontWeight:800, color:'var(--ds-accent)', letterSpacing:'1.5px' }}>
+          <span style={{ width:7, height:7, borderRadius:'50%', background:'var(--ds-accent)', display:'inline-block', animation:'bbPulse 2s infinite' }} />
+          {lang==='id' ? 'SEGERA HADIR · SOLANA DEVNET' : 'COMING SOON · SOLANA DEVNET'}
+        </div>
 
-        <div className={styles.heroContent}>
-          <div className="badge badge-cyan" style={{ marginBottom: '24px', animation: 'float 3s ease-in-out infinite' }}>
-            SOLANA MAINNET READY
-          </div>
-          <h1 className={styles.title}>
-            STACK. CLEAR.<br />
-            <span className="neon-cyan">EARN.</span>
-          </h1>
-          <p className={styles.subtitle}>
-            Skill-based arcade on Solana — 4,000 deterministic puzzle levels, transparent prize pool, real USDC rewards. Earn by playing better, not by gambling.
-          </p>
+        <h1 style={{ fontSize:'clamp(38px,9vw,92px)', fontWeight:900, lineHeight:.95, letterSpacing:'-2px', margin:0 }}>
+          {lang==='id' ? <>Main Blok.<br/><span style={{ background:'var(--ds-grad)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>Dapat USDC Asli.</span></>
+                       : <>Play Blocks.<br/><span style={{ background:'var(--ds-grad)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>Earn Real USDC.</span></>}
+        </h1>
 
-          <div className={styles.prizeCard}>
-            <div className={styles.prizeLabel}>MONTHLY PRIZE POOL</div>
-            <PrizePoolCounter />
-            <div className={styles.prizeDivider}></div>
-            <div className={styles.timerWrap}>
-              <span>ENDS IN:</span>
-              <Countdown />
+        <p style={{ fontSize:'clamp(14px,2vw,18px)', color:'var(--ds-text-dim)', maxWidth:520, lineHeight:1.65, margin:0 }}>
+          {lang==='id'
+            ? 'BlockBite adalah game puzzle match-3 on-chain di Solana. Selesaikan Babak, tulis bukti on-chain, dan klaim hadiah USDC nyata.'
+            : 'BlockBite is an on-chain match-3 puzzle game on Solana. Clear Acts, write proofs on-chain, and claim real USDC rewards.'}
+        </p>
+
+        <div style={{ display:'flex', gap:10, justifyContent:'center', flexWrap:'wrap' }}>
+          {BLOCK_COLORS.map((c,i) => (
+            <div key={i} style={{ width:42, height:42, borderRadius:11, background:c, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:900, color:'#0a0a14', animation:`bbFloat ${2.5+i*.3}s ease-in-out infinite`, animationDelay:`${i*.18}s` }}>
+              {BLOCK_ICONS[i]}
             </div>
-          </div>
+          ))}
+        </div>
 
-          <div className={styles.actions}>
-            <Link href="/game" className="btn btn-primary btn-lg">
-              ▶ LAUNCH GAME
-            </Link>
-            <Link href="/how-to-play" className="btn btn-secondary btn-lg">
-              LEARN MECHANICS
-            </Link>
-          </div>
+        {/* Waitlist form */}
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, width:'100%', maxWidth:480 }}>
+          {done ? (
+            <div style={{ padding:'16px 24px', borderRadius:14, background:'rgba(94,234,212,.15)', border:'1px solid var(--ds-accent2)', color:'var(--ds-accent2)', fontWeight:700, fontSize:14, textAlign:'center' }}>
+              {t('waitlist_success')}
+            </div>
+          ) : (
+            <div style={{ display:'flex', gap:8, width:'100%', flexWrap:'wrap' }}>
+              <input type="email" placeholder="your@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&join()}
+                style={{ flex:1, minWidth:180, padding:'14px 18px', borderRadius:12, background:'var(--ds-surface2)', border:'1px solid var(--ds-border)', color:'var(--ds-text)', fontFamily:'inherit', fontSize:15, outline:'none' }} />
+              <button onClick={join} disabled={busy}
+                style={{ padding:'14px 26px', borderRadius:12, background:'var(--ds-grad)', color:'#0a0a14', fontWeight:900, fontSize:15, border:'none', cursor:'pointer', whiteSpace:'nowrap', boxShadow:'0 0 24px rgba(167,139,250,.4)' }}>
+                {busy ? '…' : t('join_waitlist')}
+              </button>
+            </div>
+          )}
+          <div style={{ fontSize:11, color:'var(--ds-text-dim)', letterSpacing:'.5px' }}>{t('waitlist_note')}</div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ display:'flex', gap:36, flexWrap:'wrap', justifyContent:'center', marginTop:8 }}>
+          {[{v:'4,000',l:lang==='id'?'LEVEL':'LEVELS'},{v:'8',l:lang==='id'?'BABAK':'ACTS'},{v:'100%',l:'ON-CHAIN'},{v:wlCount>0?wlCount.toLocaleString():'—',l:'WAITLIST'}].map((s,i)=>(
+            <div key={i} style={{ textAlign:'center' }}>
+              <div style={{ fontSize:28, fontWeight:900 }}>{s.v}</div>
+              <div style={{ fontSize:11, color:'var(--ds-text-dim)', letterSpacing:'1.5px', marginTop:2 }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* CTAs */}
+        <div style={{ display:'flex', gap:12, flexWrap:'wrap', justifyContent:'center', marginTop:8 }}>
+          <Link href="/game" style={{ padding:'14px 32px', borderRadius:12, background:'var(--ds-grad)', color:'#0a0a14', fontWeight:900, fontSize:16, textDecoration:'none', boxShadow:'0 0 28px rgba(167,139,250,.45)' }}>
+            ▶ {lang==='id'?'MAIN SEKARANG':'PLAY NOW'}
+          </Link>
+          <Link href="/map" style={{ padding:'14px 28px', borderRadius:12, background:'transparent', border:'1px solid var(--ds-border)', color:'var(--ds-text)', fontWeight:700, fontSize:16, textDecoration:'none' }}>
+            {lang==='id'?'LIHAT PETA':'VIEW MAP'}
+          </Link>
         </div>
       </section>
 
-      {/* Winners Ticker */}
-      <WinnersTicker />
+      {/* FEATURES */}
+      <section style={{ position:'relative', zIndex:1, padding:'60px 24px', maxWidth:1100, margin:'0 auto' }}>
+        <p style={{ fontSize:11, letterSpacing:'2px', color:'var(--ds-accent)', textAlign:'center', marginBottom:10 }}>{lang==='id'?'FITUR UTAMA':'CORE FEATURES'}</p>
+        <h2 style={{ fontSize:'clamp(22px,3vw,32px)', fontWeight:900, textAlign:'center', marginBottom:40 }}>{lang==='id'?'Kenapa BlockBite?':'Why BlockBite?'}</h2>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:16 }}>
+          {F.map((f,i)=>(
+            <div key={i} style={{ padding:24, borderRadius:20, background:'var(--ds-surface)', border:'1px solid var(--ds-border)', transition:'.2s' }}
+              onMouseEnter={e=>{const d=e.currentTarget as HTMLElement;d.style.borderColor='var(--ds-accent)';d.style.background='rgba(167,139,250,.08)';}}
+              onMouseLeave={e=>{const d=e.currentTarget as HTMLElement;d.style.borderColor='var(--ds-border)';d.style.background='var(--ds-surface)';}}>
+              <div style={{ fontSize:32, marginBottom:14 }}>{f.ic}</div>
+              <div style={{ fontSize:16, fontWeight:800, marginBottom:6 }}>{f.t}</div>
+              <div style={{ fontSize:13, color:'var(--ds-text-dim)', lineHeight:1.6 }}>{f.d}</div>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      {/* 3-Step Guide */}
-      <section style={{ padding: '48px 24px 0', maxWidth: 860, margin: '0 auto', width: '100%' }}>
-        <h2 style={{ fontFamily: "'Orbitron', monospace", fontSize: 'clamp(14px,2.5vw,20px)', fontWeight: 700, color: '#8888BB', textAlign: 'center', letterSpacing: '0.1em', marginBottom: 28 }}>
-          START IN 3 STEPS
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+      {/* HOW IT WORKS */}
+      <section style={{ position:'relative', zIndex:1, padding:'60px 24px', maxWidth:1100, margin:'0 auto' }}>
+        <p style={{ fontSize:11, letterSpacing:'2px', color:'var(--ds-accent)', textAlign:'center', marginBottom:10 }}>{lang==='id'?'CARA KERJA':'HOW IT WORKS'}</p>
+        <h2 style={{ fontSize:'clamp(22px,3vw,32px)', fontWeight:900, textAlign:'center', marginBottom:40 }}>{lang==='id'?'Mulai dalam 4 langkah':'Start in 4 steps'}</h2>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:16 }}>
+          {S.map((s,i)=>(
+            <div key={i} style={{ padding:22, borderRadius:16, background:'var(--ds-surface)', border:'1px solid var(--ds-border)', position:'relative', overflow:'hidden' }}>
+              <div style={{ fontSize:52, fontWeight:900, color:'var(--ds-accent)', opacity:.12, position:'absolute', top:6, right:12, lineHeight:1, userSelect:'none' }}>{i+1}</div>
+              <div style={{ fontSize:15, fontWeight:800, marginBottom:8, position:'relative' }}>{s.t}</div>
+              <div style={{ fontSize:12, color:'var(--ds-text-dim)', lineHeight:1.6, position:'relative' }}>{s.d}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 8 BIOMES */}
+      <section style={{ position:'relative', zIndex:1, padding:'60px 24px', maxWidth:1100, margin:'0 auto' }}>
+        <p style={{ fontSize:11, letterSpacing:'2px', color:'var(--ds-accent)', textAlign:'center', marginBottom:10 }}>{lang==='id'?'8 BIOMA · 4.000 LEVEL':'8 BIOMES · 4,000 LEVELS'}</p>
+        <h2 style={{ fontSize:'clamp(22px,3vw,32px)', fontWeight:900, textAlign:'center', marginBottom:40 }}>{lang==='id'?'Dunia Petualangan':'Worlds to Conquer'}</h2>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))', gap:12 }}>
+          {B.map((name,i)=>(
+            <Link key={i} href={`/map?act=${i+1}`} style={{ textDecoration:'none' }}>
+              <div style={{ padding:'16px 18px', borderRadius:14, background:'var(--ds-surface)', border:`1px solid rgba(0,0,0,0)`, borderLeft:`3px solid ${BIOME_COLORS[i]}`, outline:`1px solid rgba(${BIOME_COLORS[i]},0.25)`, transition:'.2s', cursor:'pointer' }}>
+                <div style={{ fontSize:11, color:BIOME_COLORS[i], fontWeight:800, letterSpacing:'1px', marginBottom:4 }}>{lang==='id'?`BABAK ${i+1}`:`ACT ${i+1}`}</div>
+                <div style={{ fontSize:15, fontWeight:700, color:'var(--ds-text)' }}>{name}</div>
+                <div style={{ fontSize:11, color:'var(--ds-text-dim)', marginTop:2 }}>{lang==='id'?`Level ${i*500+1}–${(i+1)*500}`:`Levels ${i*500+1}–${(i+1)*500}`}</div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* TOKENOMICS */}
+      <section style={{ position:'relative', zIndex:1, padding:'60px 24px 80px', maxWidth:600, margin:'0 auto', textAlign:'center' }}>
+        <p style={{ fontSize:11, letterSpacing:'2px', color:'var(--ds-accent)', marginBottom:10 }}>{lang==='id'?'TOKENOMIK':'TOKENOMICS'}</p>
+        <h2 style={{ fontSize:'clamp(22px,3vw,32px)', fontWeight:900, marginBottom:32 }}>{lang==='id'?'Pembagian Pendapatan':'Revenue Split'}</h2>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10 }}>
           {[
-            { step: '01', icon: '🔗', title: 'Connect Wallet', desc: 'Phantom, Backpack or Solflare — any Solana wallet works.', href: '#', color: '#00F5FF' },
-            { step: '02', icon: '🎟', title: 'Buy a Ticket', desc: 'Starting at $1 USDC. 70% goes straight to the prize pool.', href: '/shop', color: '#FF00FF' },
-            { step: '03', icon: '🏆', title: 'Play & Claim', desc: 'Top-10 on the monthly leaderboard? Claim your USDC prize.', href: '/game', color: '#00FF88' },
-          ].map(s => (
-            <Link key={s.step} href={s.href} style={{ textDecoration: 'none' }}>
-              <div style={{ background: 'rgba(18,18,42,0.8)', border: `1px solid ${s.color}22`, borderLeft: `3px solid ${s.color}`, borderRadius: 14, padding: '22px 20px', cursor: 'pointer', transition: 'border-color 0.2s' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                  <span style={{ fontFamily: "'Orbitron', monospace", fontSize: 11, color: s.color, fontWeight: 800, letterSpacing: '0.1em' }}>STEP {s.step}</span>
-                  <span style={{ fontSize: 20 }}>{s.icon}</span>
-                </div>
-                <div style={{ fontFamily: "'Orbitron', monospace", fontSize: 14, color: '#FFFFFF', fontWeight: 700, marginBottom: 8 }}>{s.title}</div>
-                <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, color: '#8888BB', lineHeight: 1.55 }}>{s.desc}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section className={styles.features}>
-        <div className="glass-panel" style={{ padding: '32px' }}>
-          <div style={{ fontSize: '32px', marginBottom: '16px' }}>🎯</div>
-          <h3 className="neon-cyan">SKILL, NOT LUCK</h3>
-          <p style={{ color: '#8888BB', fontSize: '14px', lineHeight: '1.6' }}>
-            4,000 deterministic puzzle levels — same seed, same board for every player. Pure skill decides the leaderboard.
-          </p>
-        </div>
-        <div className="glass-panel" style={{ padding: '32px' }}>
-          <div style={{ fontSize: '32px', marginBottom: '16px' }}>⛓️</div>
-          <h3 className="neon-magenta">TRANSPARENT POOL</h3>
-          <p style={{ color: '#8888BB', fontSize: '14px', lineHeight: '1.6' }}>
-            70% of every ticket goes on-chain to the prize pool. Smart-contract settlement, public leaderboard. No team interference.
-          </p>
-        </div>
-        <div className="glass-panel" style={{ padding: '32px' }}>
-          <div style={{ fontSize: '32px', marginBottom: '16px' }}>💰</div>
-          <h3 className="neon-green">USDC REWARDS</h3>
-          <p style={{ color: '#8888BB', fontSize: '14px', lineHeight: '1.6' }}>
-            Win real stablecoins. Top-10 monthly winners split 85% of the prize pool. Every player earns from the remaining 15%.
-          </p>
-        </div>
-      </section>
-
-      {/* 8-Act Progression */}
-      <section style={{ padding: '0 24px 80px', maxWidth: 900, margin: '0 auto' }}>
-        <h2 style={{ fontFamily: "'Orbitron', monospace", fontSize: 'clamp(18px,3vw,28px)', fontWeight: 700, color: '#FFFFFF', textAlign: 'center', marginBottom: 32, letterSpacing: '0.06em' }}>
-          8 ACTS · 4,000 LEVELS
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-          {([
-            { act: 'I',   name: 'Awakening',   range: '1–500',    color: '#00F5FF', icon: '🌅' },
-            { act: 'II',  name: 'Frostfall',   range: '501–1000', color: '#00C3FF', icon: '❄️' },
-            { act: 'III', name: 'Inferno',      range: '1001–1500',color: '#FF6B00', icon: '🔥' },
-            { act: 'IV',  name: 'Stormlands',   range: '1501–2000',color: '#FFD700', icon: '⚡' },
-            { act: 'V',   name: 'Verdant',      range: '2001–2500',color: '#00FF88', icon: '🌿' },
-            { act: 'VI',  name: 'Nightfall',    range: '2501–3000',color: '#AA00FF', icon: '🌑' },
-            { act: 'VII', name: 'Crystalline',  range: '3001–3500',color: '#FF00FF', icon: '💎' },
-            { act: 'VIII',name: 'Voidbreak',    range: '3501–4000',color: '#FFFFFF', icon: '🌌' },
-          ] as const).map(a => (
-            <div key={a.act} style={{
-              background: 'rgba(18,18,42,0.7)', border: `1px solid ${a.color}22`,
-              borderRadius: 12, padding: '14px 16px',
-              borderLeft: `3px solid ${a.color}`,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <span>{a.icon}</span>
-                <span style={{ fontFamily: "'Orbitron', monospace", fontSize: 11, color: a.color, fontWeight: 700 }}>ACT {a.act}</span>
-              </div>
-              <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14, color: '#FFFFFF', fontWeight: 700 }}>{a.name}</div>
-              <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 11, color: '#555577', marginTop: 2 }}>Levels {a.range}</div>
+            {pct:'70%',c:'#5eead4',t:lang==='id'?'Pool Hadiah':'Prize Pool',   d:lang==='id'?'Dibayar ke pemenang via vault PDA':'Paid to winners via vault PDA'},
+            {pct:'15%',c:'#a78bfa',t:lang==='id'?'Tim':'Team',                 d:lang==='id'?'Operasional & pemasaran':'Operations & marketing'},
+            {pct:'10%',c:'#fbbf24',t:lang==='id'?'Dev':'Dev',                  d:lang==='id'?'Pengembangan protokol':'Protocol development'},
+            {pct:'5%', c:'#f472b6',t:lang==='id'?'Referral':'Referral',        d:lang==='id'?'Langsung ke wallet referrer':'Direct to referrer wallet'},
+          ].map((tok,i)=>(
+            <div key={i} style={{ padding:18, borderRadius:14, background:'var(--ds-surface)', border:'1px solid var(--ds-border)', display:'flex', alignItems:'center', gap:14, textAlign:'left' }}>
+              <div style={{ fontSize:26, fontWeight:900, color:tok.c, flexShrink:0 }}>{tok.pct}</div>
+              <div><div style={{ fontWeight:800, marginBottom:2 }}>{tok.t}</div><div style={{ fontSize:11, color:'var(--ds-text-dim)' }}>{tok.d}</div></div>
             </div>
           ))}
         </div>
       </section>
 
-      <footer className={styles.footer}>
-        <p>© 2026 BlockBite Web3 · Built on Solana · <a href="https://explorer.solana.com" target="_blank" rel="noopener noreferrer" style={{ color: '#00F5FF' }}>Verify on-chain</a></p>
+      {/* FOOTER */}
+      <footer style={{ position:'relative', zIndex:1, borderTop:'1px solid var(--ds-border)', padding:'28px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12, fontSize:12, color:'var(--ds-text-dim)' }}>
+        <div>© 2026 BlockBite · Solana Devnet</div>
+        <div style={{ display:'flex', gap:20 }}>
+          {['Twitter / X','Discord','GitHub'].map(lnk=>(
+            <a key={lnk} href="#" style={{ color:'var(--ds-text-dim)', textDecoration:'none' }}
+              onMouseEnter={e=>(e.currentTarget.style.color='var(--ds-accent)')}
+              onMouseLeave={e=>(e.currentTarget.style.color='var(--ds-text-dim)')}
+            >{lnk}</a>
+          ))}
+        </div>
       </footer>
-    </main>
+
+      <style>{`
+        @keyframes bbPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+        @keyframes bbFloat{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-10px) rotate(5deg)}}
+      `}</style>
+    </div>
   );
 }

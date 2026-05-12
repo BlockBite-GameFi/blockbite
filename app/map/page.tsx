@@ -7,14 +7,14 @@ import Navbar from '@/components/Navbar';
 import styles from './map.module.css';
 
 const ACTS = [
-  { id: 1, name: 'Awakening',  range: [1,   500],  color: '#00F5FF', bg: '#001A1F', icon: '☀️', desc: 'Learn the basics' },
-  { id: 2, name: 'Frostfall',  range: [501, 1000], color: '#00C3FF', bg: '#001020', icon: '❄️', desc: 'Ice mechanics unlock' },
-  { id: 3, name: 'Inferno',    range: [1001,1500], color: '#FF6B00', bg: '#1A0800', icon: '🔥', desc: 'Chain combos & bombs' },
-  { id: 4, name: 'Stormlands', range: [1501,2000], color: '#FFD700', bg: '#1A1400', icon: '⚡', desc: 'Gravity & time pressure' },
-  { id: 5, name: 'Verdant',    range: [2001,2500], color: '#00FF88', bg: '#001A0C', icon: '🌿', desc: 'Regrow & nature chaos' },
-  { id: 6, name: 'Nightfall',  range: [2501,3000], color: '#AA00FF', bg: '#0D0014', icon: '🌑', desc: 'Fog & darkness falls' },
-  { id: 7, name: 'Crystalline',range: [3001,3500], color: '#FF00FF', bg: '#1A001A', icon: '💎', desc: 'Prism & portal madness' },
-  { id: 8, name: 'Voidbreak',  range: [3501,4000], color: '#FFFFFF', bg: '#0A0A0A', icon: '🌌', desc: 'Final boss gauntlet' },
+  { id: 1, name: 'Crystal Caverns',  range: [1,   500],  color: '#00F5FF', bg: '#00111A', icon: '💎', desc: 'Discover the deep gem mines' },
+  { id: 2, name: 'Frozen Pass',       range: [501, 1000], color: '#7ADFFF', bg: '#000E1A', icon: '❄️', desc: 'Navigate icy corridors' },
+  { id: 3, name: 'Ember Foundry',     range: [1001,1500], color: '#FF7A3A', bg: '#1A0800', icon: '🔥', desc: 'Chain combos in the forge' },
+  { id: 4, name: 'Verdant Hollow',    range: [1501,2000], color: '#5FD07A', bg: '#021A08', icon: '🌿', desc: 'Regrow & nature overgrowth' },
+  { id: 5, name: 'Abyss Tide',        range: [2001,2500], color: '#3A7AFF', bg: '#000A1A', icon: '🌊', desc: 'Surge through the depths' },
+  { id: 6, name: 'Sandborn Dunes',    range: [2501,3000], color: '#FFD700', bg: '#1A1000', icon: '⚡', desc: 'Solar storms & mirages' },
+  { id: 7, name: 'Voidline Citadel',  range: [3001,3500], color: '#A78BFF', bg: '#0A0014', icon: '🌌', desc: 'Portal storms & dark matter' },
+  { id: 8, name: 'Apex Sanctum',      range: [3501,4000], color: '#FF3B6B', bg: '#0A0005', icon: '🏆', desc: 'Final boss gauntlet — glory awaits' },
 ] as const;
 
 const LEVELS_PER_ROW = 5;

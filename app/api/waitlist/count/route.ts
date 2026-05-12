@@ -13,7 +13,7 @@ export async function GET() {
   try {
     const kv = await getKV();
     if (kv) {
-      const count = await kv.scard('bb:waitlist');
+      const count = await kv.get<number>('blockbite:waitlist:count');
       return NextResponse.json({ count: count ?? 0 });
     }
     return NextResponse.json({ count: 0 });

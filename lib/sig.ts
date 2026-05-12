@@ -12,7 +12,9 @@ export async function verifySig(
   try {
     const msgBytes = new TextEncoder().encode(message);
     const sigBytes = Buffer.from(signatureBase64, 'base64');
-    const pubkeyBytes = new PublicKey(addr).toBytes();
+    // Explicit copy to ensure ArrayBuffer (not SharedArrayBuffer) for SubtleCrypto
+    const pubkeyRaw = new PublicKey(addr).toBytes();
+    const pubkeyBytes = new Uint8Array(pubkeyRaw).buffer;
 
     const cryptoKey = await crypto.subtle.importKey(
       'raw',

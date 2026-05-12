@@ -1,6 +1,6 @@
 /**
  * Ed25519 wallet signature verification via Web Crypto API (Node 18+).
- * No extra packages — uses @solana/web3.js for PublicKey parsing only.
+ * Uses Buffer.from() to satisfy TypeScript's strict BufferSource typing.
  */
 import { PublicKey } from '@solana/web3.js';
 
@@ -10,11 +10,10 @@ export async function verifySig(
   signatureBase64: string,
 ): Promise<boolean> {
   try {
-    const msgBytes = new TextEncoder().encode(message);
+    // Buffer.from() returns Uint8Array<ArrayBuffer> — satisfies SubtleCrypto's BufferSource
+    const msgBytes = Buffer.from(message, 'utf8');
     const sigBytes = Buffer.from(signatureBase64, 'base64');
-    // Explicit copy to ensure ArrayBuffer (not SharedArrayBuffer) for SubtleCrypto
-    const pubkeyRaw = new PublicKey(addr).toBytes();
-    const pubkeyBytes = new Uint8Array(pubkeyRaw).buffer;
+    const pubkeyBytes = Buffer.from(new PublicKey(addr).toBytes());
 
     const cryptoKey = await crypto.subtle.importKey(
       'raw',

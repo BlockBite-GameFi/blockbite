@@ -77,7 +77,6 @@ export default function LeaderboardPage() {
 
         {/* Header — legacy spacing filler */}
         <header style={{ marginBottom: 40 }}>
-
         {/* Pool + Timer */}
         <div className={styles.statsGrid}>
           <div className="glass-panel" style={{ padding: 40, textAlign: 'center' }}>
@@ -106,6 +105,7 @@ export default function LeaderboardPage() {
             ))}
           </div>
         </div>
+        </header>
 
         {/* Tabs */}
         <div className={styles.tabContainer}>

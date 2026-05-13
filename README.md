@@ -242,4 +242,37 @@ blockbite/
 
 ---
 
+---
+
+## AI Tool Disclosure
+
+Claude Code (Anthropic, `claude-sonnet-4-6`) was used as a coding assistant for W3 and W4:
+code generation, debugging CI failures, and security review. All output was reviewed
+and committed by Bryan Kwandou. See [`CONTRIBUTORS.md`](CONTRIBUTORS.md) for full details.
+
+---
+
+## Vercel KV — Status
+
+All data routes use `@vercel/kv` with a graceful in-memory fallback when `KV_URL` is
+not set (local dev). In production (`blockbite.vercel.app`) the KV env vars are
+configured and the following routes persist data across cold starts:
+
+| Route | KV key pattern |
+|---|---|
+| `POST /api/waitlist` | `blockbite:waitlist:{email}`, `blockbite:waitlist:count` |
+| `GET /api/waitlist/count` | `blockbite:waitlist:count` |
+| `POST /api/session/submit` | leaderboard via `lib/leaderboard/store.ts` |
+| `GET /api/leaderboard` | `blockbite:lb` (hset per wallet) |
+| `GET/POST /api/profile` | `blockbite:user:{addr}` |
+| `GET/POST /api/admin` | `blockbite:global` |
+| `GET /api/state` (SSE) | `blockbite:global` (snapshot on connect) |
+| `POST /api/redeem` | `blockbite:redeem:{addr}:act{n}` (deduplication) |
+| `GET /api/list/[kind]` | `blockbite:list:{kind}` |
+
+`/api/session/start` is intentionally stateless — HMAC-signed tokens are
+self-validating and do not require server-side session storage.
+
+---
+
 *Bryan Kwandou — Mancer Work Trial × Solana Superteam 2026*

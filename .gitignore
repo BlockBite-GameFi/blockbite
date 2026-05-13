@@ -41,3 +41,10 @@ programs/*/Cargo.lock
 # ─── Temp / logs ─────────────────────────────────────────────────────────────
 anchor-build.log
 *.claude-temp
+
+# ─── AI dev tool session data (Claude Code internal) ─────────────────────────
+# CLAUDE.md and AGENTS.md are kept (transparent AI tool disclosure).
+# Only ephemeral session/permission settings are excluded.
+.claude/settings.json
+.claude/settings.local.json
+.claude/worktrees/

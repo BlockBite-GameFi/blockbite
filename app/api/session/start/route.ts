@@ -1,16 +1,14 @@
 /**
  * POST /api/session/start
- * Called by the client just before a game begins.
+ * Issues a signed HMAC session token. The submit endpoint validates it without
+ * any server-side session storage — the token is self-contained and tamper-evident.
  *
  * Body:  { walletAddress: string }
- * Reply: { sessionId: string; levelConfig: { id, name, act, actName, mechanics } }
+ * Reply: { sessionId, token, expiresAt, walletAddress }
  *
- * Phase 0 — ticket balance lives in localStorage (client-side).
- * The server issues a signed session token so the submit endpoint can validate it.
- *
- * Upgrade path → Vercel KV:
- *   import { kv } from '@vercel/kv';
- *   await kv.set(`session:${sessionId}`, payload, { ex: 3600 });
+ * Design: stateless HMAC (HMAC-SHA256 over sessionId|wallet|issuedAt|expiresAt).
+ * No KV needed for sessions — the signature IS the proof of authenticity.
+ * Ticket balances live in the wallet / on-chain (W5: vesting contract integration).
  */
 
 import { NextRequest, NextResponse } from 'next/server';

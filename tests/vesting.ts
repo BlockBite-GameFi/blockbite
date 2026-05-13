@@ -473,10 +473,10 @@ describe("blockbite-vesting — Week 4 acceptance criteria", () => {
   it("Cliff: 0 claimable before cliff_ts; normal vesting after cliff", async () => {
     const streamIdCliff = new BN(20);
     const now           = Math.floor(Date.now() / 1000);
-    // Stream started 100s ago; cliff is 1hr in the future → nothing claimable yet
+    // Stream started 100s ago; cliff is 1hr in the future; ends at 2hr → nothing claimable yet
     const startTs = new BN(now - 100);
     const cliffTs = new BN(now + 3600);
-    const endTs   = new BN(now + 900);
+    const endTs   = new BN(now + 7200);
     const [streamPDA]   = await deriveStreamPDA(creator.publicKey, streamIdCliff);
     const [vaultPDA]    = await deriveVaultPDA(creator.publicKey, streamIdCliff);
 

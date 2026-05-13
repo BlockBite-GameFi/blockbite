@@ -12,8 +12,8 @@ blockbite_vesting = "Fg6PaFpoGXkYsidMpWxTWqzXY6vSAQ6sMmBm4o9mpU3"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "node tests/deploy-smoke.js"
+test = "yarn run ts-mocha -p ./tsconfig.anchor.json -t 1000000 tests/**/*.ts"

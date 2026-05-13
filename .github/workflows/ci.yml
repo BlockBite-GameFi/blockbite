@@ -74,7 +74,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Node dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Build program
         shell: bash

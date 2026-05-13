@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-declare_id!("GrWHUoeu8STsXh7Dy2gyMmQsaujjTux6qU6BS7119SfH");
+declare_id!("DvhxiL5PF8Cq3icqcjdbQvtMhJcj6LWheUgovRpaXTFf");
 
 // ─── VGPV — Velocity-Gated Proof Validation ─────────────────────────────────
 // W3 BD creative solution: bot-detection constants embedded at zero cost.

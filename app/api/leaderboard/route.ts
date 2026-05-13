@@ -1,23 +1,22 @@
 /**
  * GET /api/leaderboard?limit=10
- * Returns the current top-N leaderboard entries, sorted by score descending.
- * Backed by the same in-memory Map used by /api/session/submit.
- *
- * Upgrade path → Vercel KV:
- *   const entries = await kv.zrange('lb:scores', 0, limit - 1, { rev: true, withScores: true });
+ * Returns top-N entries sorted by score descending.
+ * Backed by Vercel KV (persists across cold starts) with in-memory fallback.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { LEADERBOARD } from '@/lib/leaderboard/store';
+import { LEADERBOARD, hydrateFromKV } from '@/lib/leaderboard/store';
 import { MOCK_LEADERBOARD } from '@/lib/game/constants';
 
 export const dynamic = 'force-dynamic';
 
-export function GET(req: NextRequest) {
+export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') ?? 10)));
 
-  // Use live in-memory entries if any have been submitted this server instance
+  // Hydrate from KV on cold start (no-op if already warm)
+  await hydrateFromKV();
+
   const live = [...LEADERBOARD.values()]
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
@@ -31,16 +30,18 @@ export function GET(req: NextRequest) {
       live: true,
     }));
 
-  // Fall back to mock data when no live entries exist yet
-  const entries = live.length > 0 ? live : MOCK_LEADERBOARD.slice(0, limit).map(e => ({
-    rank: e.rank,
-    wallet: e.wallet,
-    walletFull: null,
-    score: e.score,
-    level: null,
-    submittedAt: null,
-    live: false,
-  }));
+  // Fall back to mock data only when no real entries exist
+  const entries = live.length > 0
+    ? live
+    : MOCK_LEADERBOARD.slice(0, limit).map(e => ({
+        rank: e.rank,
+        wallet: e.wallet,
+        walletFull: null,
+        score: e.score,
+        level: null,
+        submittedAt: null,
+        live: false,
+      }));
 
   return NextResponse.json({ entries, total: LEADERBOARD.size });
 }

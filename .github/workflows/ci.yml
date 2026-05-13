@@ -2,9 +2,7 @@ name: Anchor CI
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [main, master]
   pull_request:
 
 jobs:
@@ -19,9 +17,18 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-
+
       - name: Install native build dependencies
         run: |
-          sudo apt-get update
+          sudo apt-get update -qq
           sudo apt-get install -y pkg-config build-essential libudev-dev libssl-dev
 
       - name: Install Solana CLI
@@ -29,7 +36,7 @@ jobs:
           sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
 
-      - name: Install Anchor CLI
+      - name: Install Anchor CLI (avm 0.32.1)
         run: |
           cargo install --git https://github.com/solana-foundation/anchor avm --locked --force
           avm install 0.32.1
@@ -37,12 +44,27 @@ jobs:
           echo "$HOME/.avm/bin" >> "$GITHUB_PATH"
           anchor --version
 
-      - name: Generate local wallet
+      - name: Restore program keypair
+        # The program keypair is stored as a GitHub Secret (base58 array JSON).
+        # CI always uses the same keypair so declare_id! and PROGRAM_ID always match.
+        # To set: Settings → Secrets → ANCHOR_PROGRAM_KEYPAIR → paste contents of
+        #         target/deploy/blockbite_vesting-keypair.json
         run: |
-          mkdir -p ~/.config/solana
+          mkdir -p ~/.config/solana target/deploy
           solana-keygen new --no-bip39-passphrase --silent --outfile ~/.config/solana/id.json
+          if [ -n "${{ secrets.ANCHOR_PROGRAM_KEYPAIR }}" ]; then
+            echo '${{ secrets.ANCHOR_PROGRAM_KEYPAIR }}' > target/deploy/blockbite_vesting-keypair.json
+            echo "Using program keypair from secret"
+          else
+            # Fallback: generate ephemeral key — anchor keys sync will update declare_id!
+            solana-keygen new --no-bip39-passphrase --silent \
+              --outfile target/deploy/blockbite_vesting-keypair.json
+            echo "No ANCHOR_PROGRAM_KEYPAIR secret found — using ephemeral key"
+          fi
 
-      - name: Sync generated program key
+      - name: Sync program ID
+        # Updates declare_id! in lib.rs to match the keypair we just wrote.
+        # This is safe because tests read PROGRAM_ID from IDL.address (not hardcoded).
         run: anchor keys sync
 
       - name: Build program
@@ -52,10 +74,12 @@ jobs:
           anchor build 2>&1 | tee anchor-build.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
-            message="$(tail -n 80 anchor-build.log | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+            message="$(tail -n 80 anchor-build.log | \
+              sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
             echo "::error title=Anchor build failed::$message"
             exit "$status"
           fi
 
       - name: Run tests
-        run: anchor test
+        # anchor test auto-deploys to local validator; tests read PROGRAM_ID from IDL.
+        run: anchor test --skip-build

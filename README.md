@@ -2,8 +2,10 @@
 
 **Live:** https://blockbite.vercel.app | **Waitlist:** https://blockbite.vercel.app/waitlist  
 **GitHub:** https://github.com/nayrbryanGaming/blockblast  
-**Program ID (devnet):** `GrWHUoeu8STsXh7Dy2gyMmQsaujjTux6qU6BS7119SfH`  
-**Deploy tx:** `234Wf4Zr3CofJ9339CKtLjQpaBQh4YiV2YWzmdwCcJMKgPipdxoGXGXLtCW4fjW2LkDLNcp3uJvjwF4xvGTs2UZr`
+**Program ID (devnet):** `DvhxiL5PF8Cq3icqcjdbQvtMhJcj6LWheUgovRpaXTFf`  
+**Deploy tx (W4):** `3q6KHeMvnSH1bA8mM1f1idz9BvPXHnheSSGub3PTREJCk6DBKbbfD4wkPUS1VMhf9twp3cCckn4vXrmnZdHGqXiM`  
+**IDL account:** `FgsBt6FeKaeax98XKSDD1psL24fMpDReAedzv2WAcorC`  
+**Upgrade authority:** `35z7X59rtyts557Up1RAwpyYN7x2cFqcDc7RjPuNxFzr`
 
 ---
 

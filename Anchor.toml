@@ -3,10 +3,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-blockbite_vesting = "Fg6PaFpoGXkYsidMpWxTWqzXY6vSAQ6sMmBm4o9mpU3"
+blockbite_vesting = "GrWHUoeu8STsXh7Dy2gyMmQsaujjTux6qU6BS7119SfH"
 
 [programs.devnet]
-blockbite_vesting = "Fg6PaFpoGXkYsidMpWxTWqzXY6vSAQ6sMmBm4o9mpU3"
+blockbite_vesting = "GrWHUoeu8STsXh7Dy2gyMmQsaujjTux6qU6BS7119SfH"
 
 [registry]
 url = "https://api.apr.dev"

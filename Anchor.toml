@@ -12,7 +12,7 @@ blockbite_vesting = "GrWHUoeu8STsXh7Dy2gyMmQsaujjTux6qU6BS7119SfH"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

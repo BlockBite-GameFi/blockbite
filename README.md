@@ -22,23 +22,25 @@
 
 ### Program: `programs/blockbite-vesting/src/lib.rs`
 
-Linear token vesting with PDA-controlled vault, deployed to Solana devnet.
+Linear token vesting with optional cliff, PDA-controlled vault, deployed to Solana devnet.
+VGPV (Velocity-Gated Proof Validation) fields are embedded — full enforcement ships in W5 via game-program CPI.
 
 **Instructions**
 
 | Instruction | Description |
 |---|---|
-| `create_stream(stream_id, amount, start_ts, end_ts)` | Locks tokens into PDA vault; initialises vesting schedule |
+| `create_stream(stream_id, amount, start_ts, cliff_ts, end_ts)` | Locks tokens into PDA vault. `cliff_ts = 0` means no cliff. |
 | `withdraw()` | Beneficiary claims linearly unlocked tokens; partial withdrawals supported |
-| `cancel_stream()` | Authority cancels; unvested remainder returned to creator |
+| `cancel()` | Authority cancels; unvested remainder returned to creator |
 
 **Vesting formula**
 
 ```
-unlocked = total_amount × elapsed / duration
+// Before cliff_ts  → 0 unlocked
+// After cliff_ts   → linear from start_ts:
+unlocked = total_amount × (now − start_ts) / (end_ts − start_ts)
+// After end_ts     → 100% unlocked
 ```
-
-where `elapsed = clamp(now − start_ts, 0, duration)`.
 
 **PDA derivation**
 
@@ -47,40 +49,68 @@ stream: ["stream", authority_pubkey, stream_id_le8]
 vault:  ["vault",  authority_pubkey, stream_id_le8]
 ```
 
+**VGPV — Velocity-Gated Proof Validation (W3 BD creative solution)**
+
+Anti-bot constants and struct fields are embedded now at zero cost:
+
+```rust
+pub const VGPV_MIN_SECONDS_PER_ACT: i64 = 7_200; // 2 hr human minimum per Act
+pub const VGPV_MAX_VELOCITY_STRIKES: u8  = 3;     // strikes before flagged
+
+// StreamAccount fields:
+pub velocity_strikes: u8,  // incremented on sub-human-speed claims
+pub last_action_ts:   i64, // timestamp of last withdrawal
+```
+
+Full enforcement (auto-invalidate on 3 strikes) arrives with `update_proof` CPI in W5.
+
 **Error codes**
 
 | Code | Condition |
 |---|---|
 | `ZeroAmount` | `amount == 0` |
 | `InvalidTimeRange` | `end_ts <= start_ts` |
+| `InvalidCliff` | `cliff_ts` not in `[start_ts, end_ts]` |
 | `NothingToWithdraw` | `unlocked − withdrawn == 0` |
-| `Unauthorized` | Signer is not the stream beneficiary |
+| `Unauthorized` | Signer is not the stream beneficiary / authority |
 | `StreamCancelled` | Stream was already cancelled |
+| `Overflow` | Arithmetic overflow |
+| `VelocityViolation` | Reserved for W5 VGPV enforcement |
 
 ---
 
 ### Tests: `tests/vesting.ts`
 
-9 tests covering all acceptance criteria, including the four unlock checkpoints (0 %, 25 %, 50 %, 100 %):
+11 tests covering all W4 acceptance criteria plus cliff vesting and VGPV field verification:
 
 | Test | Description |
 |---|---|
-| AC1+AC2 | `create_stream` deposits full amount; creator ATA debited |
+| AC1+AC2 | `create_stream` deposits full amount; creator ATA debited; VGPV fields init |
 | AC3a | 0 % unlocked before `start_ts` |
 | AC3b | ~25 % unlocked at 25 % of duration |
 | AC3d | ~50 % unlocked at 50 % of duration |
 | AC4 | `withdraw` transfers vested tokens to beneficiary |
 | AC5 | Partial withdrawal: second claim increases `amount_withdrawn` |
-| AC6 | `NothingToWithdraw` error when nothing new has vested |
-| AC7 | `Unauthorized` error when wrong user calls `withdraw` |
+| AC6 | `NothingToWithdraw` when nothing new has vested |
+| AC7 | `Unauthorized` when wrong user calls `withdraw` |
 | AC3c | 100 % unlocked after `end_ts`; full amount withdrawable |
+| Cliff | Blocked before `cliff_ts`; normal vesting after cliff passes |
+| VGPV | `velocity_strikes` and `last_action_ts` fields exist on-chain |
 
-**Run tests**
+**Run tests (uses local validator — no devnet SOL required)**
 
 ```bash
 anchor test
-# or against a running localnet:
-anchor test --skip-local-validator
+```
+
+> **Do NOT** use `yarn test:anchor` directly — that skips `anchor build` and will crash
+> because `target/idl/blockbite_vesting.json` is generated at build time.
+
+To run against devnet explicitly:
+
+```bash
+anchor test --provider.cluster devnet
+# requires ~/.config/solana/id.json to be funded with devnet SOL
 ```
 
 ---
@@ -100,7 +130,7 @@ Live: **https://blockbite.vercel.app/waitlist**
 
 ### Prerequisites
 
-- Node ≥ 18, Rust, Anchor CLI 0.32.x, Solana CLI ≥ 1.18
+- Node ≥ 18, Rust (stable), Anchor CLI 0.32.x, Solana CLI ≥ 1.18
 
 ### Frontend
 
@@ -113,9 +143,14 @@ npm run build      # production build
 ### Smart contract
 
 ```bash
+# Build the program and generate IDL
 anchor build
-anchor test                                    # local validator
-anchor deploy --provider.cluster devnet        # requires funded keypair
+
+# Run all 11 tests against local validator (no SOL needed)
+anchor test
+
+# Deploy to devnet (requires funded keypair)
+anchor deploy --provider.cluster devnet
 ```
 
 ### Environment variables (Vercel)
@@ -144,8 +179,8 @@ blockbite/
 │   ├── leaderboard/page.tsx
 │   └── api/
 │       ├── waitlist/            # POST signup · GET count
-│       ├── session/             # Game session start / submit (HMAC-signed)
-│       ├── score/sign/          # Server-side score signing (Ed25519)
+│       ├── session/             # Game session HMAC-signed start / submit
+│       ├── score/sign/          # Server-side Ed25519 score signing
 │       ├── profile/             # User profile KV CRUD
 │       └── state/               # SSE live state stream
 ├── components/
@@ -157,9 +192,9 @@ blockbite/
 │   └── useApp.tsx               # Lang / theme context
 ├── programs/
 │   └── blockbite-vesting/
-│       └── src/lib.rs           # Anchor vesting program
+│       └── src/lib.rs           # Anchor vesting program (W4)
 ├── tests/
-│   └── vesting.ts               # 9 Anchor unit tests
+│   └── vesting.ts               # 11 Anchor unit tests
 └── styles/
     └── globals.css              # Design tokens (--ds-* CSS vars)
 ```
@@ -190,6 +225,18 @@ blockbite/
 | `LARGE_PIECE_BONUS` | 25 | Piece with ≥ 5 blocks |
 | Mystery box multiplier | up to ×10 | Random reward |
 | `MAX_GAME_LEVEL` | 40 000 | Engine maximum; content cycles 1–4 000 |
+
+---
+
+## W5 Roadmap (next)
+
+| Feature | Status |
+|---|---|
+| `update_proof` CPI instruction (game → vesting) | Planned |
+| VGPV enforcement: 3-strike auto-invalidation | Planned |
+| Milestone-based vesting (ProofCache tiers) | Planned |
+| 24h cooldown between claims | Planned |
+| Admin `invalidate_player` instruction | Planned |
 
 ---
 

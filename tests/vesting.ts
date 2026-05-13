@@ -36,7 +36,8 @@ function sleep(ms: number) {
 describe("blockbite-vesting — Week 4 acceptance criteria", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
-  const program = new Program(IDL, PROGRAM_ID, provider);
+  // Anchor 0.32.x: programId is read from IDL.address, not a constructor arg
+  const program = new Program(IDL, provider);
 
   let mint: PublicKey;
   let creatorAta: PublicKey;

@@ -7,160 +7,190 @@
 
 ---
 
-## Project Status: Week 4 of 10
+## Progress
 
 | Week | Deliverable | Status | Score |
-|------|------------|--------|-------|
-| **W1** | Technical Research | ✅ Complete | 43/50 |
-| **W2** | System Design | ✅ Complete | 48/50 |
-| **W3** | Project Setup | ✅ Complete | 20/50 |
-| **W4** | Core Smart Contract + Waitlist | 🔄 In Progress (due 2026-05-16) | — |
+|------|-------------|--------|-------|
+| W1 | Technical Research | ✅ Complete | 43 / 50 |
+| W2 | System Design | ✅ Complete | 48 / 50 |
+| W3 | Project Setup | ✅ Complete | 20 / 50 |
+| **W4** | **Core Smart Contract + Waitlist** | **🔄 In Progress — due 2026-05-16** | — |
 
 ---
 
-## Week 4 Deliverables — Core Smart Contract
+## Week 4 — Smart Contract
 
-### Smart Contract: `programs/blockbite-vesting/src/lib.rs`
+### Program: `programs/blockbite-vesting/src/lib.rs`
 
-**Instructions:**
-- `create_stream(stream_id, amount, start_ts, end_ts)` — locks tokens into PDA vault
-- `withdraw()` — beneficiary claims linearly unlocked tokens (partial supported)
-- `cancel_stream()` — authority cancels, remaining tokens returned to creator
+Linear token vesting with PDA-controlled vault, deployed to Solana devnet.
 
-**Linear vesting formula:**
+**Instructions**
+
+| Instruction | Description |
+|---|---|
+| `create_stream(stream_id, amount, start_ts, end_ts)` | Locks tokens into PDA vault; initialises vesting schedule |
+| `withdraw()` | Beneficiary claims linearly unlocked tokens; partial withdrawals supported |
+| `cancel_stream()` | Authority cancels; unvested remainder returned to creator |
+
+**Vesting formula**
+
 ```
-unlocked = total * elapsed / duration
+unlocked = total_amount × elapsed / duration
 ```
 
-**PDA seeds:**
+where `elapsed = clamp(now − start_ts, 0, duration)`.
+
+**PDA derivation**
+
 ```
-stream PDA: ["stream", authority_pubkey, stream_id_le8]
-vault  PDA: ["vault",  authority_pubkey, stream_id_le8]
+stream: ["stream", authority_pubkey, stream_id_le8]
+vault:  ["vault",  authority_pubkey, stream_id_le8]
 ```
 
-**Error codes:**
-- `ZeroAmount` — amount must be > 0
-- `InvalidTimeRange` — end_ts must be > start_ts
-- `NothingToWithdraw` — cannot withdraw more than unlocked
-- `Unauthorized` — caller is not stream beneficiary
-- `StreamCancelled` — stream already cancelled
+**Error codes**
+
+| Code | Condition |
+|---|---|
+| `ZeroAmount` | `amount == 0` |
+| `InvalidTimeRange` | `end_ts <= start_ts` |
+| `NothingToWithdraw` | `unlocked − withdrawn == 0` |
+| `Unauthorized` | Signer is not the stream beneficiary |
+| `StreamCancelled` | Stream was already cancelled |
+
+---
 
 ### Tests: `tests/vesting.ts`
 
-All 7 acceptance criteria covered:
+9 tests covering all acceptance criteria, including the four unlock checkpoints (0 %, 25 %, 50 %, 100 %):
 
-| Test | Acceptance Criterion | Result |
-|------|---------------------|--------|
-| AC1+AC2 | `create_stream` deposits tokens; creator cannot take back | Pass |
-| AC3a | 0% unlocked before start_ts | Pass |
-| AC4 | `withdraw` transfers tokens to recipient | Pass |
-| AC5 | Partial withdrawals work | Pass |
-| AC6 | Cannot withdraw > unlocked → `NothingToWithdraw` | Pass |
-| AC7 | Unauthorized user cannot withdraw → `Unauthorized` | Pass |
-| AC3c | 100% unlocked after end_ts | Pass |
+| Test | Description |
+|---|---|
+| AC1+AC2 | `create_stream` deposits full amount; creator ATA debited |
+| AC3a | 0 % unlocked before `start_ts` |
+| AC3b | ~25 % unlocked at 25 % of duration |
+| AC3d | ~50 % unlocked at 50 % of duration |
+| AC4 | `withdraw` transfers vested tokens to beneficiary |
+| AC5 | Partial withdrawal: second claim increases `amount_withdrawn` |
+| AC6 | `NothingToWithdraw` error when nothing new has vested |
+| AC7 | `Unauthorized` error when wrong user calls `withdraw` |
+| AC3c | 100 % unlocked after `end_ts`; full amount withdrawable |
 
-**Run:**
+**Run tests**
+
 ```bash
 anchor test
+# or against a running localnet:
+anchor test --skip-local-validator
 ```
-
-### Week 4 Marketing: Waitlist Page ✅
-
-Live: **https://blockbite.vercel.app/waitlist**
-
-- Email signup → `/api/waitlist` (Vercel KV)
-- Live counter → `/api/waitlist/count`
-- Floating blocks canvas animation
-- Tokenomics (70% prize · 15% team · 10% dev · 5% referral)
-- 6 feature cards, 4-step how-it-works
-- Bilingual EN/ID, dark/light theme
 
 ---
 
-## Design System: BLOCKBITEbandinghukum ✅
+## Week 4 Marketing — Waitlist
 
-Applied from `E:\CLAUDE DESIGN\BLOCKBITEbandinghukum`:
+Live: **https://blockbite.vercel.app/waitlist**
 
-| File | Status |
-|------|--------|
-| `app/globals.css` | Exact copy of design globals |
-| `app/admin/page.tsx` | Identical to design |
-| `app/onboarding/page.tsx` | Identical to design |
-| `app/settings/page.tsx` | Identical to design |
-| `lib/useApp.tsx` | Same palette `#a78bfa` / `#5eead4` |
-| `components/Navbar.module.css` | Space Grotesk + CSS tokens |
-| `app/map/map.module.css` | Space Grotesk + CSS tokens |
-
-Font: **Space Grotesk 400–900** | Primary: `#a78bfa` | Secondary: `#5eead4` | BG: `#08081a`
+- Email signup → `POST /api/waitlist` (Vercel KV)
+- Live counter → `GET /api/waitlist/count`
+- Floating canvas animation, tokenomics breakdown
+- Bilingual EN / ID, dark / light theme
 
 ---
 
 ## Dev Setup
 
+### Prerequisites
+
+- Node ≥ 18, Rust, Anchor CLI 0.32.x, Solana CLI ≥ 1.18
+
+### Frontend
+
 ```bash
-# Frontend
 npm install
-npm run dev          # http://localhost:3000
+npm run dev        # http://localhost:3000
+npm run build      # production build
+```
 
-# Smart contract
+### Smart contract
+
+```bash
 anchor build
-anchor test
-anchor deploy --provider.cluster devnet
+anchor test                                    # local validator
+anchor deploy --provider.cluster devnet        # requires funded keypair
 ```
 
-**Env vars (Vercel dashboard):**
+### Environment variables (Vercel)
+
 ```
-KV_URL, KV_REST_API_URL, KV_REST_API_TOKEN, KV_REST_API_READ_ONLY_TOKEN
+KV_URL
+KV_REST_API_URL
+KV_REST_API_TOKEN
+KV_REST_API_READ_ONLY_TOKEN
 NEXT_PUBLIC_APP_URL=https://blockbite.vercel.app
+ADMIN_SECRET=<strong-random-secret>
 ```
 
 ---
 
-## Repo Structure
+## Repository Structure
 
 ```
 blockbite/
-├── app/                      # Next.js 14 App Router
-│   ├── waitlist/page.tsx     # Waitlist landing (Week 4 Marketing)
-│   ├── map/page.tsx          # 8-act level map
-│   ├── game/page.tsx         # Match-3 gameplay
-│   ├── shop/page.tsx         # Ticket purchase
-│   ├── profile/page.tsx      # Player stats
+├── app/                         # Next.js 14 App Router
+│   ├── waitlist/page.tsx        # Waitlist landing (W4 marketing)
+│   ├── map/page.tsx             # 8-act level map
+│   ├── game/page.tsx            # Match-3 gameplay
+│   ├── shop/page.tsx            # Ticket shop
+│   ├── profile/page.tsx         # Player stats
 │   ├── leaderboard/page.tsx
 │   └── api/
-│       ├── waitlist/         # POST email signup, GET count
-│       ├── session/          # Game session start/submit
-│       ├── score/sign        # Server-side score signing (Ed25519)
-│       └── state             # SSE live state stream
+│       ├── waitlist/            # POST signup · GET count
+│       ├── session/             # Game session start / submit (HMAC-signed)
+│       ├── score/sign/          # Server-side score signing (Ed25519)
+│       ├── profile/             # User profile KV CRUD
+│       └── state/               # SSE live state stream
+├── components/
+│   ├── Navbar.tsx
+│   └── game/GameCanvas.tsx      # 8×8 match-3 engine
+├── lib/
+│   ├── game/constants.ts        # POINTS_PER_BLOCK, MAX_GAME_LEVEL, etc.
+│   ├── store.ts                 # Vercel KV helpers
+│   └── useApp.tsx               # Lang / theme context
 ├── programs/
 │   └── blockbite-vesting/
-│       └── src/lib.rs        # Anchor vesting smart contract
+│       └── src/lib.rs           # Anchor vesting program
 ├── tests/
-│   └── vesting.ts            # Week 4 unit tests (7 tests)
-└── components/
-    ├── Navbar.tsx
-    └── GameCanvas.tsx
+│   └── vesting.ts               # 9 Anchor unit tests
+└── styles/
+    └── globals.css              # Design tokens (--ds-* CSS vars)
 ```
 
 ---
 
-## Week 1–3 Summary
+## Design System
 
-**W1 — Technical Research (43/50)**
-- 8,100+ words, 7 sections, 26 subsections
-- 5 platforms analysed with 14-feature coverage matrix
-- 7 ecosystem gaps identified (2 CRITICAL)
-
-**W2 — System Design (48/50)**
-- 5 PDA account types, 4 MVP + 4 V2 instructions
-- 8 critical + 25 extended edge cases
-- Rust function signatures with named error codes
-
-**W3 — Project Setup (20/50)**
-- Anchor program compiles, 5 account structs
-- CI pipeline (GitHub Actions)
-- Reviewer note: Week 4 must fix fabricated CI/test claims
+| Token | Value |
+|---|---|
+| Primary accent | `#a78bfa` |
+| Secondary accent | `#5eead4` |
+| Background (dark) | `#08081a` |
+| Font | Space Grotesk · JetBrains Mono · Orbitron |
+| Theme switching | `data-theme="dark"` / `data-theme="light"` on `<html>` |
 
 ---
 
-*Bryan Kwandou — Token Distribution Protocol — Mancer Work Trial × Solana Superteam 2026*
+## Game Engine — Key Parameters
+
+| Constant | Value | Notes |
+|---|---|---|
+| `POINTS_PER_BLOCK` | 10 | Base score per cleared block |
+| `BLOCKS_PER_LINE` | 8 | Board width |
+| `LINE_MULTIPLIERS` | ×1 / ×1.5 / ×2 / ×3 | 1 / 2 / 3 / 4+ simultaneous lines |
+| `PENTA_MULTIPLIER` | ×5 | 5+ simultaneous lines |
+| `PERFECT_BOARD_BONUS` | 5 000 | Board fully cleared |
+| `LARGE_PIECE_BONUS` | 25 | Piece with ≥ 5 blocks |
+| Mystery box multiplier | up to ×10 | Random reward |
+| `MAX_GAME_LEVEL` | 40 000 | Engine maximum; content cycles 1–4 000 |
+
+---
+
+*Bryan Kwandou — Mancer Work Trial × Solana Superteam 2026*

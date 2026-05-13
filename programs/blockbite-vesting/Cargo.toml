@@ -1,7 +1,7 @@
 [package]
 name = "blockbite-vesting"
 version = "0.1.0"
-description = "Week 3 Anchor skeleton for BlockBite token distribution"
+description = "BlockBite token vesting — linear unlock with partial withdrawal on Solana devnet"
 edition = "2021"
 
 [lib]

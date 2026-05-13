@@ -22,7 +22,7 @@ import { assert } from "chai";
 
 // Load IDL
 const IDL = require("../target/idl/blockbite_vesting.json");
-const PROGRAM_ID = new PublicKey("Fg6PaFpoGXkYsidMpWxTWqzXY6vSAQ6sMmBm4o9mpU3");
+const PROGRAM_ID = new PublicKey("GrWHUoeu8STsXh7Dy2gyMmQsaujjTux6qU6BS7119SfH");
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -202,6 +202,114 @@ describe("blockbite-vesting — Week 4 acceptance criteria", () => {
     // Verify via on-chain state: now < start, nothing unlocked
     assert(now < stream.startTs.toNumber(), "Should be before start");
     console.log("  ✓ 0% unlocked before start_ts confirmed via state");
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // AC3b: Linear unlock at ~25%
+  // ──────────────────────────────────────────────────────────────────────────
+  it("AC3b: ~25% unlocked at 25% of duration", async () => {
+    const streamId25 = new BN(10);
+    const now = Math.floor(Date.now() / 1000);
+    // duration=1000s, elapsed=250s → 25% through
+    const startTs = new BN(now - 250);
+    const endTs = new BN(now + 750);
+    const [streamPDA25] = await deriveStreamPDA(creator.publicKey, streamId25);
+    const [vaultPDA25] = await deriveVaultPDA(creator.publicKey, streamId25);
+
+    await program.methods
+      .createStream(streamId25, AMOUNT, startTs, endTs)
+      .accounts({
+        authority: creator.publicKey,
+        beneficiary: recipient.publicKey,
+        mint,
+        stream: streamPDA25,
+        vault: vaultPDA25,
+        authorityAta: creatorAta,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([creator])
+      .rpc();
+
+    const recipientBefore = await getAccount(provider.connection, recipientAta);
+    await program.methods
+      .withdraw()
+      .accounts({
+        beneficiary: recipient.publicKey,
+        stream: streamPDA25,
+        vault: vaultPDA25,
+        beneficiaryAta: recipientAta,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([recipient])
+      .rpc();
+
+    const recipientAfter = await getAccount(provider.connection, recipientAta);
+    const received = Number(
+      BigInt(recipientAfter.amount.toString()) - BigInt(recipientBefore.amount.toString())
+    );
+    const expected25 = AMOUNT.toNumber() * 0.25;
+    const tolerance = AMOUNT.toNumber() * 0.05; // ±5%
+    assert(
+      received >= expected25 - tolerance && received <= expected25 + tolerance,
+      `Expected ~25% (${expected25}) ± ${tolerance}, got ${received}`
+    );
+    console.log(`  ✓ AC3b: ~25% unlocked = ${received} tokens (expected ~${expected25})`);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // AC3d: Linear unlock at ~50%
+  // ──────────────────────────────────────────────────────────────────────────
+  it("AC3d: ~50% unlocked at 50% of duration", async () => {
+    const streamId50 = new BN(11);
+    const now = Math.floor(Date.now() / 1000);
+    // duration=1000s, elapsed=500s → 50% through
+    const startTs = new BN(now - 500);
+    const endTs = new BN(now + 500);
+    const [streamPDA50] = await deriveStreamPDA(creator.publicKey, streamId50);
+    const [vaultPDA50] = await deriveVaultPDA(creator.publicKey, streamId50);
+
+    await program.methods
+      .createStream(streamId50, AMOUNT, startTs, endTs)
+      .accounts({
+        authority: creator.publicKey,
+        beneficiary: recipient.publicKey,
+        mint,
+        stream: streamPDA50,
+        vault: vaultPDA50,
+        authorityAta: creatorAta,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([creator])
+      .rpc();
+
+    const recipientBefore = await getAccount(provider.connection, recipientAta);
+    await program.methods
+      .withdraw()
+      .accounts({
+        beneficiary: recipient.publicKey,
+        stream: streamPDA50,
+        vault: vaultPDA50,
+        beneficiaryAta: recipientAta,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([recipient])
+      .rpc();
+
+    const recipientAfter = await getAccount(provider.connection, recipientAta);
+    const received = Number(
+      BigInt(recipientAfter.amount.toString()) - BigInt(recipientBefore.amount.toString())
+    );
+    const expected50 = AMOUNT.toNumber() * 0.50;
+    const tolerance = AMOUNT.toNumber() * 0.05; // ±5%
+    assert(
+      received >= expected50 - tolerance && received <= expected50 + tolerance,
+      `Expected ~50% (${expected50}) ± ${tolerance}, got ${received}`
+    );
+    console.log(`  ✓ AC3d: ~50% unlocked = ${received} tokens (expected ~${expected50})`);
   });
 
   // ──────────────────────────────────────────────────────────────────────────

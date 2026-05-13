@@ -4,10 +4,10 @@
   left: 0;
   right: 0;
   z-index: 100;
-  background: rgba(10, 10, 26, 0.85);
+  background: rgba(8, 8, 26, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border, #1f1f3a);
 }
 
 .inner {
@@ -43,23 +43,23 @@
 }
 
 .logoText {
-  font-family: 'Orbitron', monospace;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 18px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.02em;
+  font-weight: 900;
+  color: var(--text, #fff);
+  letter-spacing: -0.5px;
 }
 
 .logoAccent {
-  color: #00F5FF;
+  color: var(--accent, #a78bfa);
 }
 
 .logoBadge {
-  font-family: 'Orbitron', monospace;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 9px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #FF00FF, #AA0066);
-  color: #fff;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent, #a78bfa), var(--accent2, #5eead4));
+  color: #0a0a14;
   padding: 2px 6px;
   border-radius: 99px;
   letter-spacing: 0.08em;
@@ -74,57 +74,52 @@
 }
 
 .link {
-  display: block;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #8888BB;
-  text-decoration: none;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.link:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.link.active {
-  color: #00F5FF;
-  background: rgba(0, 245, 255, 0.08);
-}
-
-.link {
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim, #94a3b8);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+.link:hover {
+  color: var(--text, #fff);
+  background: var(--surface, rgba(255,255,255,0.04));
+}
+
+.link.active {
+  color: var(--accent, #a78bfa);
+  background: rgba(167, 139, 250, 0.08);
 }
 
 .playLink {
-  color: #00FF88 !important;
-  font-weight: 700;
-  font-family: 'Orbitron', monospace;
-  font-size: 12px;
-  letter-spacing: 0.05em;
+  color: var(--accent2, #5eead4) !important;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.03em;
 }
 
 .playLink:hover {
-  background: rgba(0, 255, 136, 0.1) !important;
+  background: rgba(94, 234, 212, 0.1) !important;
 }
 
 .lbMonthlyBadge {
   font-size: 10px;
   margin-left: 4px;
-  color: #FFD700;
   opacity: 0.8;
 }
 
-/* logo block colours */
-.logoBlockPurple { background: #9945FF; }
-.logoBlockCyan   { background: #00F5FF; }
-.logoBlockGold   { background: #FFD700; }
-.logoBlockRed    { background: #FF2244; }
+/* logo block colours — BLOCKBITEbandinghukum palette */
+.logoBlockPurple { background: var(--accent,  #a78bfa); }
+.logoBlockCyan   { background: var(--accent2, #5eead4); }
+.logoBlockGold   { background: #fbbf24; }
+.logoBlockRed    { background: #f472b6; }
 
 /* scrolled shadow */
 .scrolled {
@@ -140,7 +135,7 @@
 
 .mobileLbBadge {
   font-size: 11px;
-  color: #FFD700;
+  color: #fbbf24;
   margin-left: 4px;
 }
 
@@ -149,7 +144,7 @@
   width: 120px;
   height: 36px;
   border-radius: 8px;
-  background: rgba(255,255,255,0.05);
+  background: var(--surface, rgba(255,255,255,0.05));
 }
 
 .mobileWalletWrap {
@@ -169,32 +164,28 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 215, 0, 0.08);
-  border: 1px solid rgba(255, 215, 0, 0.2);
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.2);
   border-radius: 99px;
   padding: 4px 12px;
 }
 
-.prizeIcon {
-  font-size: 14px;
-}
+.prizeIcon { font-size: 14px; }
 
 .prizeLabel {
   font-size: 11px;
-  color: #8888BB;
+  color: var(--text-dim, #94a3b8);
   font-weight: 500;
 }
 
 .prizeValue {
-  font-family: 'Orbitron', monospace;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 12px;
-  font-weight: 700;
-  color: #FFD700;
+  font-weight: 800;
+  color: #fbbf24;
 }
 
-.walletBtn {
-  white-space: nowrap;
-}
+.walletBtn { white-space: nowrap; }
 
 /* ── Lang / Theme toggles ── */
 .iconToggle {
@@ -203,10 +194,10 @@
   justify-content: center;
   width: 34px;
   height: 34px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--surface, rgba(255,255,255,0.05));
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
   border-radius: 8px;
-  color: var(--fg-2, #B8B8D4);
+  color: var(--text-dim, #94a3b8);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   flex-shrink: 0;
@@ -215,13 +206,13 @@
 .iconToggle:hover {
   background: rgba(167, 139, 250, 0.12);
   border-color: rgba(167, 139, 250, 0.3);
-  color: #a78bfa;
+  color: var(--accent, #a78bfa);
 }
 
 .langLabel {
-  font-family: 'Space Grotesk', 'Orbitron', monospace;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.04em;
 }
 
@@ -240,20 +231,20 @@
   display: block;
   width: 22px;
   height: 2px;
-  background: #8888BB;
+  background: var(--text-dim, #94a3b8);
   border-radius: 2px;
   transition: all 0.2s ease;
 }
 
 .menuToggle span.menuOpen {
-  background: #00F5FF;
+  background: var(--accent, #a78bfa);
 }
 
 /* ── Mobile menu ── */
 .mobileMenu {
   display: none;
   flex-direction: column;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--border, rgba(255,255,255,0.06));
   padding: 8px 0 16px;
   animation: slideInDown 0.2s ease-out;
 }
@@ -261,31 +252,21 @@
 .mobileLink {
   display: block;
   padding: 12px 24px;
-  color: #8888BB;
+  color: var(--text-dim, #94a3b8);
   text-decoration: none;
   font-size: 15px;
   transition: color 0.15s;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
 }
 
 .mobileLink:hover,
 .mobileLink.active {
-  color: #00F5FF;
+  color: var(--accent, #a78bfa);
 }
 
 @media (max-width: 768px) {
-  .links {
-    display: none;
-  }
-
-  .prizeChip {
-    display: none;
-  }
-
-  .menuToggle {
-    display: flex;
-  }
-
-  .mobileMenu {
-    display: flex;
-  }
+  .links { display: none; }
+  .prizeChip { display: none; }
+  .menuToggle { display: flex; }
+  .mobileMenu { display: flex; }
 }

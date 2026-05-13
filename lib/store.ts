@@ -52,7 +52,12 @@ export async function setGlobal(patch: Partial<AppState>): Promise<void> {
   const db = await kv();
   if (!db) return;
   const cur = await getGlobal();
-  await db.set('blockbite:global', { ...cur, ...patch });
+  // Deep merge one level to preserve nested fields (vault.lastUpdate, admin.*)
+  const merged: AppState = {
+    vault: { ...cur.vault, ...(patch.vault ?? {}) },
+    admin: { ...cur.admin, ...(patch.admin ?? {}) },
+  };
+  await db.set('blockbite:global', merged);
 }
 
 export async function getUser(addr: string): Promise<UserState> {

@@ -25,8 +25,14 @@ import { createHmac } from 'crypto';
 import { LEADERBOARD } from '@/lib/leaderboard/store';
 
 const SESSION_SECRET = process.env.SESSION_SECRET ?? 'blockbite-dev-secret-changeme';
-// Generous upper-bound: perfect-board bonus (5000) + chain (×2) × 6-block piece (60) × 5 lines
-const MAX_SCORE_PER_MOVE = 5000 + 60 * 5 * 2;
+// True upper-bound per placement:
+//   - max 16 lines (8 rows + 8 cols) × 8 blocks × 10 pts = 1280 base
+//   - PENTA_MULTIPLIER (5.0) × max chain bonus (×2.0) = ×10 total → 12,800
+//   - large piece (6 blocks × 25) = 150
+//   - perfect-board bonus = 5,000
+//   - mystery-box MULTIPLIER can go up to ×10 on any one move
+// Absolute ceiling = (12800 + 150 + 5000) × 10 = 179,500 → round up to 200,000
+const MAX_SCORE_PER_MOVE = 200_000;
 
 function verifyToken(token: string): { walletAddress: string; expiresAt: number } | null {
   try {

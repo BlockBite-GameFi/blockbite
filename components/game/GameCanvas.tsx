@@ -130,8 +130,21 @@ export default function GameCanvas() {
   useEffect(() => {
     if (connected && publicKey) {
       setIsCheckingTicket(true);
-      const saved = localStorage.getItem(`tickets_${publicKey.toBase58()}`);
-      setTicketBalance(saved ? parseInt(saved) : 0);
+      const addr = publicKey.toBase58();
+      const saved = localStorage.getItem(`tickets_${addr}`);
+      if (saved !== null) {
+        setTicketBalance(parseInt(saved));
+      } else {
+        // First-time wallet: auto-gift 5 free starter tickets (bb_free_gifted flag)
+        const giftFlag = `bb_free_gifted_${addr}`;
+        if (!localStorage.getItem(giftFlag)) {
+          localStorage.setItem(`tickets_${addr}`, '5');
+          localStorage.setItem(giftFlag, '1');
+          setTicketBalance(5);
+        } else {
+          setTicketBalance(0);
+        }
+      }
       setIsCheckingTicket(false);
     }
   }, [connected, publicKey]);

@@ -87,11 +87,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const l = localStorage.getItem('bb:lang') as Lang | null;
     const th = localStorage.getItem('bb:theme') as Theme | null;
     if (l === 'en' || l === 'id') setLangState(l);
-    if (th === 'dark' || th === 'light') setThemeState(th);
+    // Apply saved theme immediately to avoid FOUC; default dark
+    const resolvedTheme = (th === 'dark' || th === 'light') ? th : 'dark';
+    if (resolvedTheme !== 'dark') setThemeState(resolvedTheme);
+    document.documentElement.dataset.theme = resolvedTheme;
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -104,10 +107,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('bb:theme', theme);
     document.documentElement.dataset.theme = theme;
   }, [theme, mounted]);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = 'dark';
-  }, []);
 
   const setLang = (l: Lang) => setLangState(l);
   const setTheme = (th: Theme) => setThemeState(th);

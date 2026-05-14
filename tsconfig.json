@@ -37,6 +37,13 @@
     "**/*.mts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "tests",
+    "migrations",
+    "programs",
+    "blockblast",
+    ".surfpool",
+    "test-ledger",
+    "scripts"
   ]
 }

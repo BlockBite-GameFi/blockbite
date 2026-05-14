@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:anchor": "yarn run ts-mocha -p ./tsconfig.anchor.json -t 1000000 tests/**/*.ts"
+    "test:anchor": "yarn run ts-mocha -p ./tsconfig.anchor.json -t 1000000 tests/**/*.ts",
+    "setup:kv": "node scripts/setup-kv.mjs"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",

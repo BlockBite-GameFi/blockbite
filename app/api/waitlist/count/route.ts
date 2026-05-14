@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { memGetCount } from '@/lib/waitlist-store';
 
 async function getKV() {
   try {
@@ -16,8 +17,8 @@ export async function GET() {
       const count = await kv.get<number>('blockbite:waitlist:count');
       return NextResponse.json({ count: count ?? 0 });
     }
-    return NextResponse.json({ count: 0 });
+    return NextResponse.json({ count: memGetCount() });
   } catch {
-    return NextResponse.json({ count: 0 });
+    return NextResponse.json({ count: memGetCount() });
   }
 }

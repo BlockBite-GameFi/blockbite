@@ -7,7 +7,7 @@ import Link from 'next/link';
 const MAGENTA  = '#b12c84';
 const TEAL     = '#3d7c91';
 const GOLD     = '#e1a438';
-const PURPLE   = '#5055a4';
+const PURPLE   = '#7c80e8';
 const CORAL    = '#d94553';
 const BG       = '#08080f';
 const BG_LIGHT = '#f5f1f8';
@@ -23,7 +23,7 @@ const I18N = {
     h1grad: 'Tokens Blindly.',
     sub: 'Secure your assets with automated, milestone-based distribution that eliminates fatal human error while transforming passive claimants into loyal, long-term contributors.',
     target: 'For Solana Ecosystem Builders & Project Founders',
-    cta: 'Get Early Access — Join the Waitlist Now!',
+    cta: 'Join the Waitlist',
     note: 'No spam. Unsubscribe anytime.',
     success: '✓ You\'re on the list! We\'ll notify you when BlockBite launches.',
     stats: [
@@ -58,7 +58,7 @@ const I18N = {
     h1grad: 'Token Sembarangan.',
     sub: 'Amankan asetmu dengan distribusi berbasis milestone yang otomatis — menghilangkan kesalahan manusia yang fatal sekaligus mengubah penerima pasif menjadi kontributor jangka panjang yang loyal.',
     target: 'Untuk Builder & Founder Ekosistem Solana',
-    cta: 'Dapatkan Akses Awal — Daftar Waitlist Sekarang!',
+    cta: 'Daftar Waitlist',
     note: 'Tanpa spam. Bisa berhenti kapan saja.',
     success: '✓ Kamu sudah terdaftar! Kami akan notifikasi saat BlockBite meluncur.',
     stats: [
@@ -254,18 +254,6 @@ export default function WaitlistPage() {
         {/* ── Hero ── */}
         <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '72px 24px 48px', gap: 28, animation: 'bbSlide 0.6s ease both' }}>
 
-          {/* Badge */}
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '8px 18px', borderRadius: 999,
-            border: `1px solid ${MAGENTA}`, background: 'rgba(177,44,132,0.12)',
-            fontSize: 11, fontWeight: 800, color: MAGENTA, letterSpacing: '2px',
-            fontFamily: 'IBM Plex Mono, monospace',
-          }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: MAGENTA, animation: 'bbPulse 2s infinite', flexShrink: 0 }}/>
-            {txt.badge}
-          </div>
-
           {/* Headline */}
           <h1 style={{ fontSize: 'clamp(36px,8vw,90px)', fontWeight: 900, lineHeight: 0.95, letterSpacing: '-2px', maxWidth: 820, margin: 0, fontFamily: 'Montserrat,sans-serif' }}>
             {txt.h1}<br/>
@@ -279,29 +267,30 @@ export default function WaitlistPage() {
             {txt.sub}
           </p>
 
-          {/* Target user pill */}
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '8px 18px', borderRadius: 999,
-            border: `1px solid ${TEAL}44`, background: `${TEAL}11`,
-            fontSize: 12, fontWeight: 600, color: TEAL, letterSpacing: '0.5px',
-            fontFamily: 'Roboto,sans-serif',
-          }}>
-            🎯 {txt.target}
-          </div>
-
           {/* Floating block decorations */}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
             {[
-              { c: MAGENTA, d: '3.1s' }, { c: TEAL,   d: '2.7s' },
-              { c: GOLD,    d: '3.4s' }, { c: PURPLE, d: '2.4s' },
-              { c: CORAL,   d: '3.7s' }, { c: TEAL,   d: '2.9s' },
+              { c1: MAGENTA, c2: '#e0408c', d: '3.1s' },
+              { c1: TEAL,    c2: '#5aa8c0', d: '2.7s' },
+              { c1: GOLD,    c2: '#f5c34a', d: '3.4s' },
+              { c1: PURPLE,  c2: '#a0a4f5', d: '2.4s' },
+              { c1: CORAL,   c2: '#f07080', d: '3.7s' },
+              { c1: TEAL,    c2: '#3d9fb5', d: '2.9s' },
             ].map((b, i) => (
               <div key={i} style={{
-                width: 36, height: 36, borderRadius: 9,
-                background: b.c, animation: `bbFloat ${b.d} ease-in-out infinite`,
+                width: 44, height: 44, borderRadius: 11,
+                background: `linear-gradient(135deg, ${b.c1}, ${b.c2})`,
+                boxShadow: `0 4px 18px ${b.c1}55, inset 0 1px 0 rgba(255,255,255,0.25)`,
+                border: `1.5px solid rgba(255,255,255,0.15)`,
+                animation: `bbFloat ${b.d} ease-in-out infinite`,
                 animationDelay: `${i * 0.18}s`,
-              }}/>
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <svg width="22" height="22" viewBox="0 0 22 22">
+                  <text x="11" y="16.5" textAnchor="middle" fontSize="16" fontWeight="900" fill="rgba(255,255,255,0.92)" fontFamily="Montserrat,sans-serif">B</text>
+                </svg>
+              </div>
             ))}
           </div>
 

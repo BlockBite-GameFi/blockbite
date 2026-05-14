@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// In-memory fallback when KV is not configured (resets on cold start)
-const memList = new Set<string>();
-let memCount = 0;
+import { memAdd } from '@/lib/waitlist-store';
 
 async function getKV() {
   try {
@@ -15,7 +12,8 @@ async function getKV() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { email } = body as { email?: string };
     if (!email || !email.includes('@') || email.length > 254) {
       return NextResponse.json({ error: 'Invalid email' }, { status: 400 });
     }
@@ -29,9 +27,8 @@ export async function POST(req: NextRequest) {
       await kv.set(key, { email: normalized, ts: Date.now() });
       await kv.incr('blockbite:waitlist:count');
     } else {
-      if (memList.has(normalized)) return NextResponse.json({ ok: true, already: true }, { status: 409 });
-      memList.add(normalized);
-      memCount++;
+      const added = memAdd(normalized);
+      if (!added) return NextResponse.json({ ok: true, already: true }, { status: 409 });
     }
 
     return NextResponse.json({ ok: true });

@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useApp } from '@/lib/useApp';
 import Navbar from '@/components/Navbar';
+import { MascotSVG, BRAND_MASCOTS, PALETTES } from '@/components/Mascot';
 
 const BLOCK_COLORS = ['#a78bfa','#5eead4','#fbbf24','#f472b6','#7dd3fc','#fb923c'];
 const BLOCK_ICONS  = ['◆','◈','◉','✦','⬡','◇'];
@@ -49,11 +50,7 @@ const BIOMES = {
 const BIOME_COLORS = ['#a78bfa','#7dd3fc','#fb923c','#86efac','#22d3ee','#fcd34d','#c084fc','#fbbf24'];
 
 export default function Home() {
-  const { lang, t } = useApp();
-  const [email, setEmail]   = useState('');
-  const [done, setDone]     = useState(false);
-  const [busy, setBusy]     = useState(false);
-  const [wlCount, setWlCount] = useState(0);
+  const { lang } = useApp();
   const cvs = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -87,17 +84,6 @@ export default function Home() {
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
   }, []);
 
-  useEffect(() => {
-    fetch('/api/waitlist/count').then(r => r.json()).then(d => setWlCount(d.count ?? 0)).catch(() => {});
-  }, []);
-
-  const join = async () => {
-    if (!email || !email.includes('@')) return;
-    setBusy(true);
-    try { await fetch('/api/waitlist', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email}) }); } catch {}
-    setDone(true); setBusy(false); setWlCount(c => c + 1);
-  };
-
   const F = FEATURES[lang] ?? FEATURES.en;
   const S = STEPS[lang]    ?? STEPS.en;
   const B = BIOMES[lang]   ?? BIOMES.en;
@@ -125,6 +111,16 @@ export default function Home() {
             : 'BlockBite is an on-chain match-3 puzzle game on Solana. Clear Acts, write proofs on-chain, and claim real USDC rewards.'}
         </p>
 
+        {/* Brand mascots */}
+        <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap', alignItems:'flex-end' }}>
+          {BRAND_MASCOTS.map((m, i) => (
+            <Link key={m.id} href="/mascots" style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6, textDecoration:'none', animation:`bbFloat ${2.6+i*.35}s ease-in-out infinite`, animationDelay:`${i*.22}s` }}>
+              <MascotSVG cfg={m} size={90}/>
+              <span style={{ fontSize:10, fontWeight:800, color: PALETTES[m.palKey][0], letterSpacing:'.5px' }}>{m.name}</span>
+            </Link>
+          ))}
+        </div>
+
         <div style={{ display:'flex', gap:10, justifyContent:'center', flexWrap:'wrap' }}>
           {BLOCK_COLORS.map((c,i) => (
             <div key={i} style={{ width:42, height:42, borderRadius:11, background:c, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:900, color:'#0a0a14', animation:`bbFloat ${2.5+i*.3}s ease-in-out infinite`, animationDelay:`${i*.18}s` }}>
@@ -133,28 +129,9 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Waitlist form */}
-        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, width:'100%', maxWidth:480 }}>
-          {done ? (
-            <div style={{ padding:'16px 24px', borderRadius:14, background:'rgba(94,234,212,.15)', border:'1px solid var(--ds-accent2)', color:'var(--ds-accent2)', fontWeight:700, fontSize:14, textAlign:'center' }}>
-              {t('waitlist_success')}
-            </div>
-          ) : (
-            <div style={{ display:'flex', gap:8, width:'100%', flexWrap:'wrap' }}>
-              <input type="email" placeholder="your@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&join()}
-                style={{ flex:1, minWidth:180, padding:'14px 18px', borderRadius:12, background:'var(--ds-surface2)', border:'1px solid var(--ds-border)', color:'var(--ds-text)', fontFamily:'inherit', fontSize:15, outline:'none' }} />
-              <button onClick={join} disabled={busy}
-                style={{ padding:'14px 26px', borderRadius:12, background:'var(--ds-grad)', color:'#0a0a14', fontWeight:900, fontSize:15, border:'none', cursor:'pointer', whiteSpace:'nowrap', boxShadow:'0 0 24px rgba(167,139,250,.4)' }}>
-                {busy ? '…' : t('join_waitlist')}
-              </button>
-            </div>
-          )}
-          <div style={{ fontSize:11, color:'var(--ds-text-dim)', letterSpacing:'.5px' }}>{t('waitlist_note')}</div>
-        </div>
-
         {/* Stats */}
-        <div style={{ display:'flex', gap:36, flexWrap:'wrap', justifyContent:'center', marginTop:8 }}>
-          {[{v:'4,000',l:lang==='id'?'LEVEL':'LEVELS'},{v:'8',l:lang==='id'?'BABAK':'ACTS'},{v:'100%',l:'ON-CHAIN'},{v:wlCount>0?wlCount.toLocaleString():'—',l:'WAITLIST'}].map((s,i)=>(
+        <div style={{ display:'flex', gap:36, flexWrap:'wrap', justifyContent:'center' }}>
+          {[{v:'4,000',l:lang==='id'?'LEVEL':'LEVELS'},{v:'8',l:lang==='id'?'BABAK':'ACTS'},{v:'100%',l:'ON-CHAIN'}].map((s,i)=>(
             <div key={i} style={{ textAlign:'center' }}>
               <div style={{ fontSize:28, fontWeight:900 }}>{s.v}</div>
               <div style={{ fontSize:11, color:'var(--ds-text-dim)', letterSpacing:'1.5px', marginTop:2 }}>{s.l}</div>
@@ -163,9 +140,12 @@ export default function Home() {
         </div>
 
         {/* CTAs */}
-        <div style={{ display:'flex', gap:12, flexWrap:'wrap', justifyContent:'center', marginTop:8 }}>
+        <div style={{ display:'flex', gap:12, flexWrap:'wrap', justifyContent:'center' }}>
           <Link href="/game" style={{ padding:'14px 32px', borderRadius:12, background:'var(--ds-grad)', color:'#0a0a14', fontWeight:900, fontSize:16, textDecoration:'none', boxShadow:'0 0 28px rgba(167,139,250,.45)' }}>
             ▶ {lang==='id'?'MAIN SEKARANG':'PLAY NOW'}
+          </Link>
+          <Link href="/waitlist" style={{ padding:'14px 28px', borderRadius:12, background:'transparent', border:'1px solid var(--ds-border)', color:'var(--ds-text)', fontWeight:700, fontSize:16, textDecoration:'none' }}>
+            {lang==='id'?'✉ DAFTAR WAITLIST':'✉ JOIN WAITLIST'}
           </Link>
           <Link href="/map" style={{ padding:'14px 28px', borderRadius:12, background:'transparent', border:'1px solid var(--ds-border)', color:'var(--ds-text)', fontWeight:700, fontSize:16, textDecoration:'none' }}>
             {lang==='id'?'LIHAT PETA':'VIEW MAP'}

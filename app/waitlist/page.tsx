@@ -3,175 +3,151 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
-/* ── Brand constants ── */
-const P1 = '#a78bfa';
-const P2 = '#5eead4';
-const GRAD = `linear-gradient(135deg,${P1},${P2})`;
-const BG_DARK = '#07060f';
-const BG_LIGHT = '#f4f1ff';
+/* ── BlockBite Brand ── */
+const MAGENTA  = '#b12c84';
+const TEAL     = '#3d7c91';
+const GOLD     = '#e1a438';
+const PURPLE   = '#5055a4';
+const CORAL    = '#d94553';
+const BG       = '#08080f';
+const BG_LIGHT = '#f5f1f8';
+
+const GRAD_MAIN = `linear-gradient(135deg, ${MAGENTA}, ${PURPLE})`;
+const GRAD_ALT  = `linear-gradient(135deg, ${TEAL}, ${GOLD})`;
 
 /* ── I18N ── */
 const I18N = {
   en: {
-    badge: 'COMING SOON · SOLANA DEVNET',
-    h1: 'Play Blocks.',
-    h1grad: 'Earn Real USDC.',
-    sub: 'BlockBite is an on-chain match-3 puzzle game on Solana. Clear Acts, write proofs on-chain, and claim real USDC rewards.',
-    cta: 'Join Waitlist →',
-    note: 'No spam. Unsubscribe anytime. Stored in Vercel KV.',
+    badge: 'SOLANA ECOSYSTEM · EARLY ACCESS',
+    h1: 'Stop Distributing',
+    h1grad: 'Tokens Blindly.',
+    sub: 'Secure your assets with automated, milestone-based distribution that eliminates fatal human error while transforming passive claimants into loyal, long-term contributors.',
+    target: 'For Solana Ecosystem Builders & Project Founders',
+    cta: 'Get Early Access — Join the Waitlist Now!',
+    note: 'No spam. Unsubscribe anytime.',
     success: '✓ You\'re on the list! We\'ll notify you when BlockBite launches.',
     stats: [
-      { v: '4,000', l: 'LEVELS' },
-      { v: '8', l: 'ACTS' },
       { v: '100%', l: 'ON-CHAIN' },
+      { v: 'Multi-sig', l: 'ADMIN CONTROL' },
+      { v: '0', l: 'HUMAN ERROR' },
       { v: '', l: 'WAITLIST', dynamic: true },
     ],
     features: [
-      { ic: '◆', t: 'On-chain Proofs', d: 'Every Act completion writes a ProofCache PDA to Solana. Your progress is permanent and verifiable.' },
-      { ic: '⛁', t: 'Real USDC Rewards', d: '70% of ticket revenue goes to the prize pool. Claim USDC directly to your wallet — no intermediaries.' },
-      { ic: '▦', t: 'Skill-Based Match-3', d: '4,000 levels across 8 biomes. Boards seeded by keccak256 — same level looks identical for every player.' },
-      { ic: '◷', t: 'Vesting Cooldown', d: '24-hour on-chain cooldown between claims. Enforced by the Solana program — not just a UI check.' },
-      { ic: '◈', t: 'Transparent Tokenomics', d: '70% prize · 15% team · 10% dev · 5% referral. All splits happen atomically on-chain.' },
-      { ic: '⛨', t: 'Squads Multisig', d: 'Admin actions require 2-of-3 Squads v4 signatures. The vault is PDA-owned — not a team wallet.' },
+      { color: MAGENTA, t: 'Milestone-Based Distribution', d: 'Set unlock conditions tied to real project milestones — not just time. Contributors receive tokens only when targets are met.' },
+      { color: TEAL,    t: 'Automated & Trustless', d: 'Smart contract enforces all distribution rules on-chain. No manual transfers, no oversight gaps, no rug-pull vectors.' },
+      { color: GOLD,    t: 'Cliff + Linear Vesting', d: 'Configure cliff periods and linear unlock schedules. On-chain enforcement means even the team can\'t bypass the rules.' },
+      { color: PURPLE,  t: 'Squads Multisig Admin', d: 'All admin actions require 2-of-3 Squads v4 signatures. Vault is PDA-owned — never a hot wallet.' },
+      { color: CORAL,   t: 'Full Transparency', d: 'Every vesting schedule, unlock event, and claim is recorded on-chain. Auditable by anyone, anytime.' },
+      { color: TEAL,    t: 'Loyal Contributor Incentives', d: 'Transform passive token holders into active contributors by aligning rewards with long-term project success.' },
     ],
     featTitle: 'Why BlockBite?',
     featKicker: 'CORE FEATURES',
-    howTitle: 'Start in 4 steps',
+    howTitle: 'Deploy in 4 steps',
     howKicker: 'HOW IT WORKS',
     steps: [
-      { t: 'Connect Wallet', d: 'Phantom, Solflare, Backpack, or any Solana wallet.' },
-      { t: 'Buy Tickets', d: 'From $1 USDC. Tickets fuel gameplay and unlock reward tiers.' },
-      { t: 'Clear Acts', d: 'Complete 500 levels to finish an Act and write your proof on-chain.' },
-      { t: 'Claim USDC', d: 'After the 24h cooldown, claim your tier reward directly to your wallet.' },
+      { t: 'Connect Wallet', d: 'Connect your Solana wallet — Phantom, Solflare, Backpack, or any compatible wallet.' },
+      { t: 'Define Schedules', d: 'Set cliff periods, vesting durations, and milestone unlock conditions for each recipient group.' },
+      { t: 'Fund the Vault', d: 'Deposit tokens into the PDA-owned vault. Multisig approval required for any admin action.' },
+      { t: 'Automated Distribution', d: 'Recipients claim vested tokens on-chain when conditions are met. Zero manual intervention needed.' },
     ],
-    tokTitle: 'Revenue Split',
-    tokKicker: 'TOKENOMICS',
-    tokenomics: [
-      { pct: '70%', name: 'Prize Pool', desc: 'Paid to winners via vault PDA', color: P2 },
-      { pct: '15%', name: 'Team', desc: 'Operations & marketing', color: P1 },
-      { pct: '10%', name: 'Dev', desc: 'Protocol development', color: '#fbbf24' },
-      { pct: '5%', name: 'Referral', desc: 'Direct to referrer wallet', color: '#f472b6' },
-    ],
-    footer: '© 2026 BlockBite · Solana Devnet',
+    footer: '© 2026 BlockBite · Built on Solana',
   },
   id: {
-    badge: 'SEGERA HADIR · SOLANA DEVNET',
-    h1: 'Main Blok.',
-    h1grad: 'Dapatkan USDC Asli.',
-    sub: 'BlockBite adalah game puzzle match-3 on-chain di Solana. Selesaikan Babak, tulis bukti on-chain, dan klaim hadiah USDC nyata.',
-    cta: 'Daftar Waitlist →',
-    note: 'Tanpa spam. Bisa berhenti kapan saja. Disimpan di Vercel KV.',
+    badge: 'EKOSISTEM SOLANA · AKSES AWAL',
+    h1: 'Hentikan Distribusi',
+    h1grad: 'Token Sembarangan.',
+    sub: 'Amankan asetmu dengan distribusi berbasis milestone yang otomatis — menghilangkan kesalahan manusia yang fatal sekaligus mengubah penerima pasif menjadi kontributor jangka panjang yang loyal.',
+    target: 'Untuk Builder & Founder Ekosistem Solana',
+    cta: 'Dapatkan Akses Awal — Daftar Waitlist Sekarang!',
+    note: 'Tanpa spam. Bisa berhenti kapan saja.',
     success: '✓ Kamu sudah terdaftar! Kami akan notifikasi saat BlockBite meluncur.',
     stats: [
-      { v: '4.000', l: 'LEVEL' },
-      { v: '8', l: 'BABAK' },
       { v: '100%', l: 'ON-CHAIN' },
+      { v: 'Multi-sig', l: 'KONTROL ADMIN' },
+      { v: '0', l: 'KESALAHAN MANUSIA' },
       { v: '', l: 'WAITLIST', dynamic: true },
     ],
     features: [
-      { ic: '◆', t: 'Bukti On-chain', d: 'Setiap Babak selesai menulis ProofCache PDA ke Solana. Progresmu permanen dan terverifikasi.' },
-      { ic: '⛁', t: 'Hadiah USDC Nyata', d: '70% pendapatan tiket masuk ke pool hadiah. Klaim USDC langsung ke wallet tanpa perantara.' },
-      { ic: '▦', t: 'Match-3 Berbasis Skill', d: '4.000 level di 8 bioma. Papan diacak oleh keccak256 — level yang sama terlihat identik untuk setiap pemain.' },
-      { ic: '◷', t: 'Cooldown Vesting', d: 'Cooldown 24 jam on-chain antara klaim. Dipaksakan oleh program Solana — bukan hanya pemeriksaan UI.' },
-      { ic: '◈', t: 'Tokenomik Transparan', d: '70% hadiah · 15% tim · 10% dev · 5% referral. Semua pembagian terjadi secara atomik on-chain.' },
-      { ic: '⛨', t: 'Multisig Squads', d: 'Aksi admin memerlukan tanda tangan 2-dari-3 Squads v4. Vault dimiliki PDA — bukan wallet tim.' },
+      { color: MAGENTA, t: 'Distribusi Berbasis Milestone', d: 'Tetapkan kondisi unlock yang terikat pada milestone proyek nyata — bukan sekadar waktu. Kontributor menerima token hanya saat target tercapai.' },
+      { color: TEAL,    t: 'Otomatis & Trustless', d: 'Smart contract menegakkan semua aturan distribusi on-chain. Tanpa transfer manual, tanpa celah pengawasan.' },
+      { color: GOLD,    t: 'Cliff + Vesting Linear', d: 'Konfigurasi periode cliff dan jadwal unlock linear. Penegakan on-chain berarti bahkan tim tidak bisa melewatinya.' },
+      { color: PURPLE,  t: 'Admin Multisig Squads', d: 'Semua aksi admin memerlukan tanda tangan 2-dari-3 Squads v4. Vault dimiliki PDA — bukan hot wallet.' },
+      { color: CORAL,   t: 'Transparansi Penuh', d: 'Setiap jadwal vesting, event unlock, dan klaim tercatat on-chain. Dapat diaudit siapa saja, kapan saja.' },
+      { color: TEAL,    t: 'Insentif Kontributor Loyal', d: 'Ubah pemegang token pasif menjadi kontributor aktif dengan menyelaraskan reward dengan kesuksesan proyek jangka panjang.' },
     ],
     featTitle: 'Kenapa BlockBite?',
     featKicker: 'FITUR UTAMA',
-    howTitle: 'Mulai dalam 4 langkah',
+    howTitle: 'Deploy dalam 4 langkah',
     howKicker: 'CARA KERJA',
     steps: [
-      { t: 'Hubungkan Wallet', d: 'Phantom, Solflare, Backpack, atau wallet Solana apapun.' },
-      { t: 'Beli Tiket', d: 'Mulai dari $1 USDC. Tiket untuk bermain dan membuka tingkat hadiah.' },
-      { t: 'Selesaikan Babak', d: 'Selesaikan 500 level untuk menyelesaikan Babak dan tulis bukti on-chain.' },
-      { t: 'Klaim USDC', d: 'Setelah cooldown 24 jam, klaim hadiahmu langsung ke wallet.' },
+      { t: 'Hubungkan Wallet', d: 'Hubungkan wallet Solanamu — Phantom, Solflare, Backpack, atau wallet compatible apapun.' },
+      { t: 'Tentukan Jadwal', d: 'Atur periode cliff, durasi vesting, dan kondisi unlock milestone untuk setiap kelompok penerima.' },
+      { t: 'Dana Vault', d: 'Depositkan token ke vault milik PDA. Persetujuan multisig diperlukan untuk aksi admin apapun.' },
+      { t: 'Distribusi Otomatis', d: 'Penerima mengklaim token yang sudah vested on-chain saat kondisi terpenuhi. Tanpa intervensi manual.' },
     ],
-    tokTitle: 'Pembagian Pendapatan',
-    tokKicker: 'TOKENOMIK',
-    tokenomics: [
-      { pct: '70%', name: 'Pool Hadiah', desc: 'Dibayar ke pemenang via vault PDA', color: P2 },
-      { pct: '15%', name: 'Tim', desc: 'Operasional & pemasaran', color: P1 },
-      { pct: '10%', name: 'Dev', desc: 'Pengembangan protokol', color: '#fbbf24' },
-      { pct: '5%', name: 'Referral', desc: 'Langsung ke wallet referrer', color: '#f472b6' },
-    ],
-    footer: '© 2026 BlockBite · Solana Devnet',
+    footer: '© 2026 BlockBite · Dibangun di Solana',
   },
 };
 
 type Lang = 'en' | 'id';
-type Theme = 'dark' | 'light';
 
 export default function WaitlistPage() {
-  const [lang, setLang] = useState<Lang>('en');
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [lang, setLang]   = useState<Lang>('en');
   const [email, setEmail] = useState('');
-  const [done, setDone] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState(false);
+  const [done, setDone]   = useState(false);
+  const [busy, setBusy]   = useState(false);
+  const [err, setErr]     = useState(false);
   const [count, setCount] = useState<number>(0);
 
   const cvs = useRef<HTMLCanvasElement>(null);
-
   const txt = I18N[lang];
-  const isDark = theme === 'dark';
-  const bg = isDark ? BG_DARK : BG_LIGHT;
-  const textColor = isDark ? '#fff' : '#0a0a14';
-  const dimColor = isDark ? '#94a3b8' : '#475569';
-  const surfaceColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
-  const borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.09)';
 
-  /* Fetch waitlist count */
   useEffect(() => {
     fetch('/api/waitlist/count')
       .then(r => r.json())
-      .then(d => {
-        if (typeof d?.count === 'number') setCount(d.count);
-      })
+      .then(d => { if (typeof d?.count === 'number') setCount(d.count); })
       .catch(() => {});
   }, []);
 
-  /* Canvas animation */
+  /* Floating blocks canvas */
   useEffect(() => {
     const canvas = cvs.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
-    const COLORS = [P1, P2, '#fbbf24', '#f472b6', '#7dd3fc', '#fb923c'];
+    const COLORS = [MAGENTA, TEAL, GOLD, PURPLE, CORAL];
     type Block = { x: number; y: number; size: number; rot: number; vx: number; vy: number; vr: number; color: string; alpha: number };
     let blocks: Block[] = [];
     let rafId: number;
 
     function resize() {
-      canvas!.width = window.innerWidth;
+      canvas!.width  = window.innerWidth;
       canvas!.height = window.innerHeight;
-      blocks = Array.from({ length: 28 }, () => ({
+      blocks = Array.from({ length: 30 }, () => ({
         x: Math.random() * canvas!.width,
         y: Math.random() * canvas!.height,
-        size: Math.random() * 48 + 16,
+        size: Math.random() * 52 + 14,
         rot: Math.random() * Math.PI * 2,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        vr: (Math.random() - 0.5) * 0.012,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        vr: (Math.random() - 0.5) * 0.01,
         color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        alpha: Math.random() * 0.45 + 0.06,
+        alpha: Math.random() * 0.3 + 0.04,
       }));
     }
 
     function draw() {
       ctx.clearRect(0, 0, canvas!.width, canvas!.height);
       blocks.forEach(b => {
-        b.x += b.vx;
-        b.y += b.vy;
-        b.rot += b.vr;
-        if (b.x < -70) b.x = canvas!.width + 70;
-        if (b.x > canvas!.width + 70) b.x = -70;
-        if (b.y < -70) b.y = canvas!.height + 70;
-        if (b.y > canvas!.height + 70) b.y = -70;
+        b.x += b.vx; b.y += b.vy; b.rot += b.vr;
+        if (b.x < -80)                b.x = canvas!.width  + 80;
+        if (b.x > canvas!.width  + 80) b.x = -80;
+        if (b.y < -80)                b.y = canvas!.height + 80;
+        if (b.y > canvas!.height + 80) b.y = -80;
         ctx.save();
         ctx.globalAlpha = b.alpha;
         ctx.translate(b.x, b.y);
         ctx.rotate(b.rot);
-        const r = b.size * 0.22;
-        const s = b.size / 2;
+        const r = b.size * 0.2, s = b.size / 2;
         ctx.beginPath();
         ctx.moveTo(-s + r, -s);
         ctx.arcTo(s, -s, s, s, r);
@@ -190,10 +166,7 @@ export default function WaitlistPage() {
     resize();
     window.addEventListener('resize', resize);
     draw();
-    return () => {
-      cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', resize);
-    };
+    return () => { cancelAnimationFrame(rafId); window.removeEventListener('resize', resize); };
   }, []);
 
   async function submit() {
@@ -219,241 +192,305 @@ export default function WaitlistPage() {
     setBusy(false);
   }
 
-  const styles = `
-    @keyframes wlPulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
-    }
-    @keyframes wlFloat {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-10px) rotate(5deg); }
-    }
-    input:focus { border-color: ${P1} !important; box-shadow: 0 0 0 3px rgba(167,139,250,0.2) !important; }
-  `;
+  const border = 'rgba(255,255,255,0.08)';
+  const surface = 'rgba(255,255,255,0.04)';
+  const dim = '#8892a4';
 
   return (
-    <div style={{ minHeight: '100vh', background: bg, color: textColor, fontFamily: "'Space Grotesk', system-ui, sans-serif", transition: 'background 0.3s, color 0.3s', overflowX: 'hidden' }}>
-      <style>{styles}</style>
+    <div style={{ minHeight: '100vh', background: BG, color: '#fff', fontFamily: "'Montserrat', 'Roboto', system-ui, sans-serif", overflowX: 'hidden' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+        @keyframes bbPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+        @keyframes bbFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        @keyframes bbSlide { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+        .wl-feature:hover { border-color: ${MAGENTA} !important; background: rgba(177,44,132,0.07) !important; }
+        .wl-input:focus { border-color: ${MAGENTA} !important; box-shadow: 0 0 0 3px rgba(177,44,132,0.2) !important; outline:none; }
+        .wl-btn:hover { filter: brightness(1.1); }
+        .wl-btn:active { transform: translateY(2px); }
+      `}</style>
 
-      {/* Canvas background */}
-      <canvas ref={cvs} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, opacity: isDark ? 0.18 : 0.08 }} />
+      {/* BG canvas */}
+      <canvas ref={cvs} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.22 }} />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
+
         {/* Nav */}
         <nav style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 28px', borderBottom: `1px solid ${borderColor}`,
-          background: isDark ? 'rgba(7,6,15,0.7)' : 'rgba(244,241,255,0.85)',
-          backdropFilter: 'blur(16px)', position: 'sticky', top: 0, zIndex: 100,
+          padding: '16px 32px', borderBottom: `1px solid ${border}`,
+          background: 'rgba(8,8,15,0.75)', backdropFilter: 'blur(20px)',
+          position: 'sticky', top: 0, zIndex: 100,
         }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: textColor }}>
-            <svg width="36" height="36" viewBox="0 0 36 36">
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: '#fff' }}>
+            {/* Stacked B-block logo mark */}
+            <svg width="38" height="38" viewBox="0 0 38 38">
               <defs>
-                <linearGradient id="nlg" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor={P1} />
-                  <stop offset="100%" stopColor={P2} />
+                <linearGradient id="lgNav" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor={MAGENTA}/>
+                  <stop offset="100%" stopColor={PURPLE}/>
                 </linearGradient>
               </defs>
-              <rect width="36" height="36" rx="9" fill="url(#nlg)" />
-              <text x="18" y="26" textAnchor="middle" fontSize="22" fontWeight="900" fill="#0a0a14">◆</text>
+              <rect width="38" height="38" rx="10" fill="url(#lgNav)"/>
+              <text x="19" y="27" textAnchor="middle" fontSize="22" fontWeight="900" fill="#fff" fontFamily="Montserrat,sans-serif">B</text>
             </svg>
-            <span style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '-0.5px' }}>BlockBite</span>
+            <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.5px', fontFamily: 'Montserrat,sans-serif' }}>BlockBite</span>
           </Link>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <SegBtn value={lang} onChange={setLang} options={['en', 'id']} />
-            <SegBtn value={theme} onChange={setTheme} options={['dark', 'light']} />
+
+          {/* Lang switcher */}
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', border: `1px solid ${border}`, borderRadius: 999, padding: 3, gap: 3 }}>
+            {(['en','id'] as Lang[]).map(l => (
+              <button key={l} onClick={() => setLang(l)} style={{
+                border: 'none', background: lang === l ? MAGENTA : 'transparent',
+                color: lang === l ? '#fff' : dim,
+                padding: '6px 14px', borderRadius: 999, fontWeight: 700, fontSize: 11,
+                cursor: 'pointer', fontFamily: 'Montserrat,sans-serif', transition: '0.15s', letterSpacing: '0.5px',
+              }}>
+                {l.toUpperCase()}
+              </button>
+            ))}
           </div>
         </nav>
 
-        {/* Hero */}
-        <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '60px 24px 40px', gap: '28px' }}>
-          
+        {/* ── Hero ── */}
+        <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '72px 24px 48px', gap: 28, animation: 'bbSlide 0.6s ease both' }}>
+
           {/* Badge */}
           <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '8px',
-            padding: '8px 16px', borderRadius: 999,
-            border: `1px solid ${P1}`, background: 'rgba(167,139,250,0.12)',
-            fontSize: '12px', fontWeight: 800, color: P1, letterSpacing: '1.5px',
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '8px 18px', borderRadius: 999,
+            border: `1px solid ${MAGENTA}`, background: 'rgba(177,44,132,0.12)',
+            fontSize: 11, fontWeight: 800, color: MAGENTA, letterSpacing: '2px',
+            fontFamily: 'IBM Plex Mono, monospace',
           }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: P1, animation: 'wlPulse 2s infinite' }} />
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: MAGENTA, animation: 'bbPulse 2s infinite', flexShrink: 0 }}/>
             {txt.badge}
           </div>
 
-          {/* H1 */}
-          <h1 style={{ fontSize: 'clamp(36px,8vw,88px)', fontWeight: 900, lineHeight: 0.95, letterSpacing: '-2px', maxWidth: 800, margin: 0 }}>
-            {txt.h1}<br />
-            <span style={{ background: GRAD, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+          {/* Headline */}
+          <h1 style={{ fontSize: 'clamp(36px,8vw,90px)', fontWeight: 900, lineHeight: 0.95, letterSpacing: '-2px', maxWidth: 820, margin: 0, fontFamily: 'Montserrat,sans-serif' }}>
+            {txt.h1}<br/>
+            <span style={{ background: GRAD_MAIN, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               {txt.h1grad}
             </span>
           </h1>
 
-          {/* Sub */}
-          <p style={{ fontSize: 'clamp(14px,2vw,18px)', color: dimColor, maxWidth: 520, lineHeight: 1.6, margin: 0 }}>
+          {/* Subheadline */}
+          <p style={{ fontSize: 'clamp(15px,2vw,19px)', color: '#c8ccd6', maxWidth: 600, lineHeight: 1.65, margin: 0, fontFamily: 'Roboto,sans-serif', fontWeight: 400 }}>
             {txt.sub}
           </p>
 
-          {/* Floating blocks */}
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '16px' }}>
+          {/* Target user pill */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '8px 18px', borderRadius: 999,
+            border: `1px solid ${TEAL}44`, background: `${TEAL}11`,
+            fontSize: 12, fontWeight: 600, color: TEAL, letterSpacing: '0.5px',
+            fontFamily: 'Roboto,sans-serif',
+          }}>
+            🎯 {txt.target}
+          </div>
+
+          {/* Floating block decorations */}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
             {[
-              { color: P1, icon: '◆', d: '3.2s' },
-              { color: P2, icon: '◈', d: '2.8s' },
-              { color: '#fbbf24', icon: '◉', d: '3.5s' },
-              { color: '#f472b6', icon: '✦', d: '2.5s' },
-              { color: '#7dd3fc', icon: '⬡', d: '3.8s' },
-              { color: '#fb923c', icon: '◇', d: '2.9s' },
+              { c: MAGENTA, d: '3.1s' }, { c: TEAL,   d: '2.7s' },
+              { c: GOLD,    d: '3.4s' }, { c: PURPLE, d: '2.4s' },
+              { c: CORAL,   d: '3.7s' }, { c: TEAL,   d: '2.9s' },
             ].map((b, i) => (
-              <div
-                key={i}
-                style={{
-                  width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 18, fontWeight: 900, color: '#0a0a14', background: b.color,
-                  animation: `wlFloat ${b.d} ease-in-out infinite`,
-                  animationDelay: `${i * 0.2}s`,
-                }}
-              >
-                {b.icon}
-              </div>
+              <div key={i} style={{
+                width: 36, height: 36, borderRadius: 9,
+                background: b.c, animation: `bbFloat ${b.d} ease-in-out infinite`,
+                animationDelay: `${i * 0.18}s`,
+              }}/>
             ))}
           </div>
 
-          {/* Form */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', width: '100%', maxWidth: 480 }}>
-            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-              <input
-                type="email" value={email} onChange={e => setEmail(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && submit()}
-                placeholder={lang === 'en' ? 'your@email.com' : 'email@anda.com'}
-                style={{
-                  flex: 1, padding: '14px 18px', borderRadius: 12, background: surfaceColor, border: `1px solid ${err ? '#ef4444' : borderColor}`,
-                  color: textColor, fontFamily: 'inherit', fontSize: 15, outline: 'none', transition: '0.15s',
-                }}
-              />
-              <button
-                onClick={submit} disabled={busy}
-                style={{
-                  padding: '14px 28px', borderRadius: 12, background: GRAD, color: '#0a0a14', fontWeight: 900, fontSize: 15,
-                  border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                  boxShadow: '0 0 24px rgba(167,139,250,0.4)', transition: 'transform 0.15s, box-shadow 0.15s', letterSpacing: '0.5px',
-                }}
-                onMouseDown={e => (e.currentTarget.style.transform = 'translateY(2px)')}
-                onMouseUp={e => (e.currentTarget.style.transform = 'translateY(0)')}
-              >
-                {busy ? (lang === 'en' ? 'Joining...' : 'Mendaftar...') : txt.cta}
-              </button>
-            </div>
-            {done && <div style={{ padding: '16px 24px', borderRadius: 14, background: `rgba(${P2 === '#5eead4' ? '94,234,212' : '100,100,100'},0.15)`, border: `1px solid ${P2}`, color: P2, fontWeight: 700, fontSize: 14, textAlign: 'center' }}>
-              {txt.success}
-            </div>}
-            <div style={{ fontSize: '11px', color: dimColor, letterSpacing: '0.5px' }}>{txt.note}</div>
+          {/* Email form */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, width: '100%', maxWidth: 500 }}>
+            {!done ? (
+              <>
+                <div style={{ display: 'flex', gap: 8, width: '100%', flexWrap: 'wrap' }}>
+                  <input
+                    className="wl-input"
+                    type="email" value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && submit()}
+                    placeholder={lang === 'en' ? 'your@email.com' : 'email@anda.com'}
+                    style={{
+                      flex: 1, minWidth: 200, padding: '15px 20px', borderRadius: 12,
+                      background: 'rgba(255,255,255,0.05)', border: `1.5px solid ${err ? CORAL : border}`,
+                      color: '#fff', fontFamily: 'Roboto,sans-serif', fontSize: 15,
+                      transition: '0.15s',
+                    }}
+                  />
+                  <button
+                    className="wl-btn"
+                    onClick={submit} disabled={busy}
+                    style={{
+                      padding: '15px 28px', borderRadius: 12,
+                      background: GRAD_MAIN, color: '#fff',
+                      fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer',
+                      fontFamily: 'Montserrat,sans-serif', whiteSpace: 'nowrap',
+                      boxShadow: `0 4px 32px ${MAGENTA}44`, transition: '0.15s', letterSpacing: '0.3px',
+                    }}
+                  >
+                    {busy ? (lang === 'en' ? 'Joining...' : 'Mendaftar...') : txt.cta}
+                  </button>
+                </div>
+                <div style={{ fontSize: 11, color: dim, letterSpacing: '0.5px', fontFamily: 'Roboto,sans-serif' }}>{txt.note}</div>
+              </>
+            ) : (
+              <div style={{
+                padding: '18px 28px', borderRadius: 14,
+                background: `${TEAL}18`, border: `1.5px solid ${TEAL}`,
+                color: TEAL, fontWeight: 700, fontSize: 15, textAlign: 'center',
+                fontFamily: 'Roboto,sans-serif',
+              }}>
+                {txt.success}
+              </div>
+            )}
           </div>
 
-          {/* Stats */}
-          <div style={{ display: 'flex', gap: '32px', marginTop: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {/* Stats row */}
+          <div style={{ display: 'flex', gap: '40px', marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
             {txt.stats.map((s, i) => (
               <div key={i} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 28, fontWeight: 900, color: textColor }}>
+                <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', fontFamily: 'Montserrat,sans-serif', letterSpacing: '-0.5px' }}>
                   {s.dynamic ? count : s.v}
                 </div>
-                <div style={{ fontSize: 11, color: dimColor, letterSpacing: '1.5px', marginTop: 2 }}>{s.l}</div>
+                <div style={{ fontSize: 10, color: dim, letterSpacing: '2px', marginTop: 2, fontFamily: 'IBM Plex Mono,monospace' }}>{s.l}</div>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Features */}
-        <section style={{ padding: '60px 24px', maxWidth: 1100, margin: '0 auto', width: '100%' }}>
-          <div style={{ fontSize: 11, letterSpacing: '2px', color: P1, marginBottom: 10, textAlign: 'center' }}>{txt.featKicker}</div>
-          <div style={{ fontSize: 'clamp(22px,3vw,32px)', fontWeight: 900, textAlign: 'center', marginBottom: 40 }}>{txt.featTitle}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+        {/* ── Divider ── */}
+        <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${MAGENTA}44, transparent)`, margin: '0 40px' }}/>
+
+        {/* ── Features ── */}
+        <section style={{ padding: '72px 24px', maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ fontSize: 11, letterSpacing: '3px', color: MAGENTA, marginBottom: 10, textAlign: 'center', fontFamily: 'IBM Plex Mono,monospace' }}>{txt.featKicker}</div>
+          <div style={{ fontSize: 'clamp(24px,3vw,36px)', fontWeight: 900, textAlign: 'center', marginBottom: 48, fontFamily: 'Montserrat,sans-serif' }}>{txt.featTitle}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
             {txt.features.map((f, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: 24, borderRadius: 20, background: surfaceColor, border: `1px solid ${borderColor}`,
-                  transition: '0.2s', cursor: 'pointer',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = P1;
-                  (e.currentTarget as HTMLDivElement).style.background = 'rgba(167,139,250,0.08)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = borderColor;
-                  (e.currentTarget as HTMLDivElement).style.background = surfaceColor;
-                }}
-              >
-                <div style={{ fontSize: 32, marginBottom: 14, lineHeight: 1 }}>{f.ic}</div>
-                <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>{f.t}</div>
-                <div style={{ fontSize: 13, color: dimColor, lineHeight: 1.6 }}>{f.d}</div>
+              <div className="wl-feature" key={i} style={{
+                padding: '28px 24px', borderRadius: 20,
+                background: surface, border: `1.5px solid ${border}`,
+                transition: '0.2s', cursor: 'default',
+              }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: `${f.color}22`, border: `1.5px solid ${f.color}44`, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 16, height: 16, borderRadius: 4, background: f.color }}/>
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, fontFamily: 'Montserrat,sans-serif', color: '#fff' }}>{f.t}</div>
+                <div style={{ fontSize: 13, color: dim, lineHeight: 1.65, fontFamily: 'Roboto,sans-serif' }}>{f.d}</div>
               </div>
             ))}
           </div>
         </section>
 
-        {/* How */}
-        <section style={{ padding: '60px 24px', maxWidth: 1100, margin: '0 auto', width: '100%' }}>
-          <div style={{ fontSize: 11, letterSpacing: '2px', color: P1, marginBottom: 10, textAlign: 'center' }}>{txt.howKicker}</div>
-          <div style={{ fontSize: 'clamp(22px,3vw,32px)', fontWeight: 900, textAlign: 'center', marginBottom: 40 }}>{txt.howTitle}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginTop: 32 }}>
+        {/* ── Divider ── */}
+        <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${TEAL}44, transparent)`, margin: '0 40px' }}/>
+
+        {/* ── How it works ── */}
+        <section style={{ padding: '72px 24px', maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ fontSize: 11, letterSpacing: '3px', color: TEAL, marginBottom: 10, textAlign: 'center', fontFamily: 'IBM Plex Mono,monospace' }}>{txt.howKicker}</div>
+          <div style={{ fontSize: 'clamp(24px,3vw,36px)', fontWeight: 900, textAlign: 'center', marginBottom: 48, fontFamily: 'Montserrat,sans-serif' }}>{txt.howTitle}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
             {txt.steps.map((s, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: 20, borderRadius: 16, background: surfaceColor, border: `1px solid ${borderColor}`,
-                  position: 'relative', overflow: 'hidden',
-                }}
-              >
-                <div style={{ fontSize: 48, fontWeight: 900, color: P1, opacity: 0.15, position: 'absolute', top: 8, right: 14, lineHeight: 1 }}>
+              <div key={i} style={{
+                padding: '24px 20px', borderRadius: 18,
+                background: surface, border: `1.5px solid ${border}`,
+                position: 'relative', overflow: 'hidden',
+              }}>
+                <div style={{
+                  position: 'absolute', top: 10, right: 16,
+                  fontSize: 64, fontWeight: 900, color: MAGENTA, opacity: 0.1, lineHeight: 1,
+                  fontFamily: 'Montserrat,sans-serif',
+                }}>
                   {i + 1}
                 </div>
-                <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6, position: 'relative' }}>{s.t}</div>
-                <div style={{ fontSize: 12, color: dimColor, lineHeight: 1.6, position: 'relative' }}>{s.d}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Tokenomics */}
-        <section style={{ padding: '60px 24px 80px', maxWidth: 1100, margin: '0 auto', width: '100%' }}>
-          <div style={{ fontSize: 11, letterSpacing: '2px', color: P1, marginBottom: 10, textAlign: 'center' }}>{txt.tokKicker}</div>
-          <div style={{ fontSize: 'clamp(22px,3vw,32px)', fontWeight: 900, textAlign: 'center', marginBottom: 40 }}>{txt.tokTitle}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginTop: 24, maxWidth: 500, marginLeft: 'auto', marginRight: 'auto' }}>
-            {txt.tokenomics.map((tok, i) => (
-              <div key={i} style={{ padding: 16, borderRadius: 14, background: surfaceColor, border: `1px solid ${borderColor}`, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ fontSize: 24, fontWeight: 900, color: tok.color }}>{tok.pct}</div>
-                <div>
-                  <div style={{ fontWeight: 800 }}>{tok.name}</div>
-                  <div style={{ fontSize: 12, color: dimColor }}>{tok.desc}</div>
+                {/* Step number badge */}
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%', background: GRAD_MAIN,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 14,
+                  fontFamily: 'Montserrat,sans-serif',
+                }}>
+                  {i + 1}
                 </div>
+                <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8, fontFamily: 'Montserrat,sans-serif' }}>{s.t}</div>
+                <div style={{ fontSize: 13, color: dim, lineHeight: 1.6, fontFamily: 'Roboto,sans-serif' }}>{s.d}</div>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Footer */}
-        <footer style={{ borderTop: `1px solid ${borderColor}`, padding: '28px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, fontSize: 12, color: dimColor }}>
+        {/* ── Bottom CTA ── */}
+        <section style={{ padding: '60px 24px 80px', textAlign: 'center' }}>
+          <div style={{
+            maxWidth: 600, margin: '0 auto',
+            padding: '48px 32px', borderRadius: 24,
+            background: 'rgba(177,44,132,0.08)', border: `1.5px solid ${MAGENTA}33`,
+          }}>
+            <div style={{ fontSize: 'clamp(22px,3vw,32px)', fontWeight: 900, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>
+              Ready to secure your token distribution?
+            </div>
+            <p style={{ color: dim, fontSize: 15, marginBottom: 28, lineHeight: 1.6, fontFamily: 'Roboto,sans-serif' }}>
+              {lang === 'en'
+                ? 'Join the waitlist and be first to automate trust-minimized vesting on Solana.'
+                : 'Daftar waitlist dan jadilah yang pertama mengotomasi vesting berbasis kepercayaan di Solana.'}
+            </p>
+            {!done ? (
+              <div style={{ display: 'flex', gap: 8, maxWidth: 440, margin: '0 auto', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <input
+                  className="wl-input"
+                  type="email" value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && submit()}
+                  placeholder={lang === 'en' ? 'your@email.com' : 'email@anda.com'}
+                  style={{
+                    flex: 1, minWidth: 180, padding: '14px 18px', borderRadius: 12,
+                    background: 'rgba(255,255,255,0.06)', border: `1.5px solid ${border}`,
+                    color: '#fff', fontFamily: 'Roboto,sans-serif', fontSize: 14,
+                    transition: '0.15s',
+                  }}
+                />
+                <button
+                  className="wl-btn"
+                  onClick={submit} disabled={busy}
+                  style={{
+                    padding: '14px 24px', borderRadius: 12,
+                    background: GRAD_MAIN, color: '#fff',
+                    fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer',
+                    fontFamily: 'Montserrat,sans-serif', boxShadow: `0 4px 24px ${MAGENTA}44`, transition: '0.15s',
+                  }}
+                >
+                  {busy ? '...' : txt.cta}
+                </button>
+              </div>
+            ) : (
+              <div style={{ padding: '16px 24px', borderRadius: 12, background: `${TEAL}18`, border: `1.5px solid ${TEAL}`, color: TEAL, fontWeight: 700, fontFamily: 'Roboto,sans-serif' }}>
+                {txt.success}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── Footer ── */}
+        <footer style={{
+          borderTop: `1px solid ${border}`, padding: '28px 32px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexWrap: 'wrap', gap: 12, fontSize: 12, color: dim,
+          fontFamily: 'IBM Plex Mono,monospace',
+        }}>
           <div>{txt.footer}</div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            {[MAGENTA, TEAL, GOLD, PURPLE, CORAL].map((c, i) => (
+              <div key={i} style={{ width: 10, height: 10, borderRadius: 3, background: c }}/>
+            ))}
+          </div>
         </footer>
       </div>
-    </div>
-  );
-}
-
-function SegBtn({ value, onChange, options }: { value: string; onChange: (v: any) => void; options: string[] }) {
-  return (
-    <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, padding: 3, gap: 3 }}>
-      {options.map(opt => (
-        <button
-          key={opt}
-          onClick={() => onChange(opt)}
-          style={{
-            border: 'none', background: value === opt ? P1 : 'transparent', color: value === opt ? '#0a0a14' : '#94a3b8',
-            padding: '6px 12px', borderRadius: 999, fontWeight: 700, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
-            transition: '0.15s', letterSpacing: '0.5px',
-          }}
-        >
-          {opt === 'en' ? 'EN' : opt === 'id' ? 'ID' : opt === 'dark' ? '🌙' : '☀'}
-        </button>
-      ))}
     </div>
   );
 }

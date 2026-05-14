@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Biome } from '@/lib/game/biomes';
 import { levelConfig } from '@/lib/game/levelConfig';
 import { getLevelTier } from '@/lib/game/constants';
-import { ART, buildPathD, generateNodes } from '@/lib/components/MapArt';
+import { buildPathD, generateNodes } from '@/lib/components/MapArt';
 
 export type Layout = 'mobile' | 'tablet' | 'desktop';
 
@@ -16,24 +16,28 @@ interface Props {
   onEnterLevel: (lvl: number) => void;
 }
 
+const NODE_COUNT = 20;
+const SVG_W     = 400;
+const SVG_H     = NODE_COUNT * 160; // 3 200 px tall — fully scrollable
+
 function romanize(n: number) {
   return ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][n] ?? String(n);
 }
 
-// ── Real data hooks ──────────────────────────────────────────────────
+// ── Real-data hooks ──────────────────────────────────────────────────
 
 function usePlayerData(currentLevel: number) {
-  const [username, setUsername] = useState('Explorer');
-  const [tickets, setTickets] = useState(0);
+  const [username, setUsername]       = useState('Explorer');
+  const [tickets, setTickets]         = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const u = localStorage.getItem('bb_username') || 'Explorer';
+    const u      = localStorage.getItem('bb_username') || 'Explorer';
     const wallet = localStorage.getItem('bb_wallet') || '';
-    const raw = wallet ? localStorage.getItem(`tickets_${wallet}`) : null;
-    const t = parseInt(raw ?? '0');
-    const g = parseInt(localStorage.getItem('bb_games_played') ?? '0');
+    const raw    = wallet ? localStorage.getItem(`tickets_${wallet}`) : null;
+    const t      = parseInt(raw ?? '0');
+    const g      = parseInt(localStorage.getItem('bb_games_played') ?? '0');
     setUsername(u || 'Explorer');
     setTickets(isNaN(t) ? 0 : t);
     setGamesPlayed(isNaN(g) ? 0 : g);
@@ -53,7 +57,7 @@ function usePrizePool() {
   return pool;
 }
 
-// ── Sub-components ───────────────────────────────────────────────────
+// ── Shared sub-components ────────────────────────────────────────────
 
 function Avatar({ biome, small }: { biome: Biome; small?: boolean }) {
   const size = small ? 36 : 48;
@@ -68,7 +72,9 @@ function Avatar({ biome, small }: { biome: Biome; small?: boolean }) {
   );
 }
 
-function Stat({ icon, value, color, block: isBlock }: { icon: string; value: string; color: string; block?: boolean }) {
+function Stat({ icon, value, color, block: isBlock }: {
+  icon: string; value: string; color: string; block?: boolean;
+}) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 6,
@@ -82,7 +88,9 @@ function Stat({ icon, value, color, block: isBlock }: { icon: string; value: str
   );
 }
 
-function Pill({ label, value, biome, small }: { label: string; value: string | number; biome: Biome; small?: boolean }) {
+function Pill({ label, value, biome, small }: {
+  label: string; value: string | number; biome: Biome; small?: boolean;
+}) {
   return (
     <div style={{
       padding: small ? '6px 10px' : '8px 12px', borderRadius: 12,
@@ -90,10 +98,14 @@ function Pill({ label, value, biome, small }: { label: string; value: string | n
       display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0,
     }}>
       <div style={{ fontSize: 9, letterSpacing: 1.5, color: biome.glow, opacity: 0.85 }}>{label}</div>
-      <div style={{ fontSize: small ? 12 : 14, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
+      <div style={{ fontSize: small ? 12 : 14, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {value}
+      </div>
     </div>
   );
 }
+
+// ── Map node ─────────────────────────────────────────────────────────
 
 function NodeDot({
   n, active, biome, unlocked, onClick,
@@ -104,47 +116,81 @@ function NodeDot({
   unlocked: boolean;
   onClick: () => void;
 }) {
-  const r = active ? 22 : 18;
+  const r = active ? 24 : 18;
   return (
-    <g
-      onClick={unlocked ? onClick : undefined}
-      style={{ cursor: unlocked ? 'pointer' : 'default' }}
-    >
-      {/* invisible hit-target padding */}
-      <circle cx={n.x} cy={n.y} r={r + 10} fill="transparent" />
+    <g onClick={unlocked ? onClick : undefined} style={{ cursor: unlocked ? 'pointer' : 'default' }}>
+      {/* large invisible hit area */}
+      <circle cx={n.x} cy={n.y} r={r + 14} fill="transparent" />
+
+      {/* outer ring for active */}
+      {active && (
+        <>
+          <circle cx={n.x} cy={n.y} r={r + 10} fill="none"
+            stroke={biome.glow} strokeWidth="1.5" opacity="0.5">
+            <animate attributeName="r" values={`${r};${r + 16};${r}`} dur="2s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.6;0;0.6" dur="2s" repeatCount="indefinite" />
+          </circle>
+          <circle cx={n.x} cy={n.y} r={r + 4} fill="none"
+            stroke={biome.glow} strokeWidth="2" opacity="0.7" />
+        </>
+      )}
+
+      {/* main circle */}
       <circle
         cx={n.x} cy={n.y} r={r}
-        fill={active ? biome.accent : unlocked ? 'rgba(30,28,60,0.9)' : 'rgba(15,14,36,0.5)'}
-        stroke={active ? biome.glow : unlocked ? biome.accent : '#334155'}
-        strokeWidth={active ? 3 : 1.6}
-        opacity={unlocked ? 1 : 0.4}
+        fill={
+          active    ? biome.accent :
+          unlocked  ? `${biome.rock}ee` :
+                      'rgba(10,10,20,0.5)'
+        }
+        stroke={
+          active   ? biome.glow :
+          unlocked ? `${biome.accent}cc` :
+                     '#334155'
+        }
+        strokeWidth={active ? 3.5 : 2}
+        opacity={unlocked ? 1 : 0.38}
       />
-      {active && (
-        <circle cx={n.x} cy={n.y} r={32} fill="none" stroke={biome.glow} strokeWidth="1.5" opacity="0.6">
-          <animate attributeName="r" values="22;36;22" dur="2s" repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0.7;0;0.7" dur="2s" repeatCount="indefinite" />
-        </circle>
-      )}
+
+      {/* label */}
       {unlocked ? (
         <text
-          x={n.x} y={n.y + 4} textAnchor="middle"
-          fontSize={active ? 13 : 11} fontWeight={active ? 800 : 600}
+          x={n.x} y={n.y + 5}
+          textAnchor="middle"
+          fontSize={active ? 14 : 11}
+          fontWeight={active ? 900 : 700}
           fill={active ? '#0a0a14' : biome.glow}
           style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
           {n.level}
         </text>
       ) : (
+        /* lock emoji renders in modern browsers as padlock icon */
         <text
-          x={n.x} y={n.y + 4} textAnchor="middle" fontSize="11"
-          fill="#475569" style={{ pointerEvents: 'none', userSelect: 'none' }}
+          x={n.x} y={n.y + 5}
+          textAnchor="middle" fontSize="14"
+          fill="#475569"
+          style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
           🔒
+        </text>
+      )}
+
+      {/* replay badge for completed (unlocked but not active) */}
+      {unlocked && !active && (
+        <text
+          x={n.x + r + 2} y={n.y - r + 2}
+          fontSize="9" fill={biome.glow} opacity="0.7"
+          style={{ pointerEvents: 'none', userSelect: 'none' }}
+        >
+          ↩
         </text>
       )}
     </g>
   );
 }
+
+// ── Finish flag ───────────────────────────────────────────────────────
 
 function FinishFlag({ x, y, biome }: { x: number; y: number; biome: Biome }) {
   return (
@@ -158,10 +204,13 @@ function FinishFlag({ x, y, biome }: { x: number; y: number; biome: Biome }) {
   );
 }
 
+// ── Side card (tablet/desktop) ────────────────────────────────────────
+
 function SideCards({
   biome, level, layout, onEnterLevel, prizePool,
 }: {
-  biome: Biome; level: number; layout: Layout; onEnterLevel: (l: number) => void; prizePool: number;
+  biome: Biome; level: number; layout: Layout;
+  onEnterLevel: (l: number) => void; prizePool: number;
 }) {
   const cfg = levelConfig(level);
   return (
@@ -170,16 +219,18 @@ function SideCards({
       background: 'rgba(8,8,22,0.65)', backdropFilter: 'blur(12px)',
       borderLeft: `1px solid ${biome.accent}33`,
       display: 'flex', flexDirection: 'column', gap: 14,
+      overflowY: 'auto',
     }}>
       <div style={{ fontSize: 11, letterSpacing: 2, color: biome.glow }}>ONGOING JOURNEY</div>
-      <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.05 }}>
-        Level {level}:<br /><span style={{ color: biome.glow }}>{cfg.title}</span>
+      <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.1 }}>
+        Level {level}:<br />
+        <span style={{ color: biome.glow }}>{cfg.title}</span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <Pill label="DIFFICULTY" value={cfg.rarity} biome={biome} />
-        <Pill label="REWARD" value={`◆ ${cfg.reward}`} biome={biome} />
-        <Pill label="GOAL" value={`${cfg.goal} blocks`} biome={biome} small />
-        <Pill label="MOVES" value={cfg.moves} biome={biome} small />
+        <Pill label="REWARD"     value={`◆ ${cfg.reward}`} biome={biome} />
+        <Pill label="GOAL"       value={`${cfg.goal} blocks`} biome={biome} small />
+        <Pill label="MOVES"      value={cfg.moves} biome={biome} small />
       </div>
       <button
         onClick={() => onEnterLevel(level)}
@@ -211,51 +262,57 @@ function SideCards({
   );
 }
 
+// ── Bottom card (mobile) ──────────────────────────────────────────────
+
 function BottomCard({
   biome, level, onEnterLevel, prizePool,
 }: {
-  biome: Biome; level: number; onEnterLevel: (l: number) => void; prizePool: number;
+  biome: Biome; level: number;
+  onEnterLevel: (l: number) => void; prizePool: number;
 }) {
   const cfg = levelConfig(level);
   return (
     <div style={{
-      margin: 16, padding: 20, borderRadius: 22,
-      background: 'rgba(8,8,22,0.78)', backdropFilter: 'blur(12px)',
-      border: `1px solid ${biome.accent}55`,
-      position: 'absolute', left: 0, right: 0, bottom: 80,
+      padding: '16px 16px 0',
+      background: 'rgba(8,8,22,0.85)', backdropFilter: 'blur(14px)',
+      borderTop: `1px solid ${biome.accent}44`,
+      flexShrink: 0,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <div style={{ fontSize: 10, letterSpacing: 2, color: biome.glow }}>ONGOING JOURNEY</div>
-          <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.1, marginTop: 4 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.1, marginTop: 4 }}>
             Level {level}: <span style={{ color: biome.glow }}>{cfg.title}</span>
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
+        <div style={{ textAlign: 'right', paddingLeft: 8 }}>
           <div style={{ fontSize: 9, letterSpacing: 1, color: biome.glow, opacity: 0.7 }}>PRIZE POOL</div>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>
-            {prizePool.toLocaleString()}<span style={{ fontSize: 10, opacity: 0.6 }}> USDC</span>
+          <div style={{ fontSize: 15, fontWeight: 800 }}>
+            {prizePool.toLocaleString()}<span style={{ fontSize: 9, opacity: 0.6 }}> USDC</span>
           </div>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 14, alignItems: 'center' }}>
-        <Pill label="DIFFICULTY" value={cfg.rarity} biome={biome} />
-        <Pill label="REWARD" value={`◆ ${cfg.reward}`} biome={biome} />
+      <div style={{ display: 'flex', gap: 8, margin: '12px 0', alignItems: 'center' }}>
+        <Pill label="DIFFICULTY" value={cfg.rarity}         biome={biome} small />
+        <Pill label="REWARD"     value={`◆ ${cfg.reward}`}  biome={biome} small />
+        <Pill label="MOVES"      value={cfg.moves}           biome={biome} small />
         <button
           onClick={() => onEnterLevel(level)}
           style={{
-            marginLeft: 'auto', padding: '12px 22px', borderRadius: 999,
+            marginLeft: 'auto', padding: '10px 20px', borderRadius: 999, flexShrink: 0,
             background: `linear-gradient(135deg, ${biome.accent}, ${biome.glow})`,
-            color: '#0a0a14', fontWeight: 900, fontSize: 14, border: 'none',
+            color: '#0a0a14', fontWeight: 900, fontSize: 13, border: 'none',
             boxShadow: `0 0 16px ${biome.accent}88`, cursor: 'pointer',
           }}
         >
-          ENTER
+          PLAY
         </button>
       </div>
     </div>
   );
 }
+
+// ── Mobile tab bar ────────────────────────────────────────────────────
 
 function MobileTabBar({ biome }: { biome: Biome }) {
   const router = useRouter();
@@ -267,11 +324,11 @@ function MobileTabBar({ biome }: { biome: Biome }) {
   ];
   return (
     <div style={{
-      position: 'absolute', left: 0, right: 0, bottom: 0,
-      padding: '12px 18px 18px',
-      background: 'rgba(8,8,22,0.92)', backdropFilter: 'blur(14px)',
+      flexShrink: 0,
+      padding: '10px 16px 16px',
+      background: 'rgba(8,8,22,0.96)', backdropFilter: 'blur(16px)',
       borderTop: `1px solid ${biome.accent}33`,
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      display: 'flex', justifyContent: 'space-around', alignItems: 'center',
     }}>
       {tabs.map((t, i) => (
         <div
@@ -279,40 +336,47 @@ function MobileTabBar({ biome }: { biome: Biome }) {
           onClick={() => router.push(t.href)}
           style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-            padding: i === 0 ? '8px 18px' : '8px 12px', borderRadius: 18,
-            background: i === 0 ? `linear-gradient(135deg, ${biome.accent}, ${biome.glow})` : 'transparent',
-            color: i === 0 ? '#0a0a14' : '#cbd5e1',
+            padding: i === 0 ? '7px 16px' : '7px 10px', borderRadius: 16,
+            background: i === 0
+              ? `linear-gradient(135deg, ${biome.accent}, ${biome.glow})`
+              : 'transparent',
+            color:      i === 0 ? '#0a0a14' : '#cbd5e1',
             fontWeight: i === 0 ? 800 : 500,
-            boxShadow: i === 0 ? `0 0 18px ${biome.accent}88` : 'none',
+            boxShadow:  i === 0 ? `0 0 16px ${biome.accent}88` : 'none',
             cursor: 'pointer',
           }}
         >
           <span style={{ fontSize: 18 }}>{t.i}</span>
-          <span style={{ fontSize: 11 }}>{t.n}</span>
+          <span style={{ fontSize: 10 }}>{t.n}</span>
         </div>
       ))}
     </div>
   );
 }
 
+// ── Desktop rail ──────────────────────────────────────────────────────
+
 function DesktopRail({
   biome, username, tickets, gamesPlayed, tier, currentLevel,
 }: {
-  biome: Biome; username: string; tickets: number; gamesPlayed: number; tier: string; currentLevel: number;
+  biome: Biome; username: string; tickets: number;
+  gamesPlayed: number; tier: string; currentLevel: number;
 }) {
   const router = useRouter();
-  const cfg = levelConfig(currentLevel);
-  const items = [
+  const cfg    = levelConfig(currentLevel);
+  const items  = [
     { i: '◉', n: 'Leaderboard', href: '/leaderboard' },
     { i: '⚔', n: 'How to Play', href: '/how-to-play' },
     { i: '★', n: 'Expedition',  href: `/map/${biome.act}`, active: true },
     { i: '⌂', n: 'Shop',        href: '/shop' },
-    { i: '⚙', n: 'Settings',   href: '/settings' },
+    { i: '⚙', n: 'Settings',    href: '/settings' },
   ];
   return (
     <div style={{
-      width: 240, padding: 24, background: 'rgba(8,8,22,0.55)', backdropFilter: 'blur(16px)',
-      borderRight: `1px solid ${biome.accent}33`, display: 'flex', flexDirection: 'column', gap: 6,
+      width: 240, padding: 24,
+      background: 'rgba(8,8,22,0.55)', backdropFilter: 'blur(16px)',
+      borderRight: `1px solid ${biome.accent}33`,
+      display: 'flex', flexDirection: 'column', gap: 6,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
         <Avatar biome={biome} small />
@@ -327,41 +391,45 @@ function DesktopRail({
           key={i}
           onClick={() => router.push(it.href)}
           style={{
-            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10,
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '12px 14px', borderRadius: 10,
             background: it.active ? `${biome.accent}22` : 'transparent',
-            border: it.active ? `1px solid ${biome.accent}55` : '1px solid transparent',
-            color: it.active ? biome.glow : '#cbd5e1',
-            fontSize: 14, fontWeight: it.active ? 700 : 500, textAlign: 'left', cursor: 'pointer',
+            border:     it.active ? `1px solid ${biome.accent}55` : '1px solid transparent',
+            color:      it.active ? biome.glow : '#cbd5e1',
+            fontSize: 14, fontWeight: it.active ? 700 : 500,
+            textAlign: 'left', cursor: 'pointer',
           }}
         >
           <span style={{ fontSize: 18, opacity: 0.9 }}>{it.i}</span>{it.n}
         </button>
       ))}
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Stat icon="◆" value={`${cfg.reward} / level`} color={biome.glow} block />
-        <Stat icon="🎫" value={`${tickets} ticket${tickets !== 1 ? 's' : ''}`} color="#fde047" block />
+        <Stat icon="◆" value={`${cfg.reward} / level`}                     color={biome.glow}  block />
+        <Stat icon="🎫" value={`${tickets} ticket${tickets !== 1 ? 's' : ''}`} color="#fde047"  block />
       </div>
     </div>
   );
 }
 
+// ── Top header (mobile/tablet) ────────────────────────────────────────
+
 function TopHeader({ biome, layout, username, tickets, tier }: {
   biome: Biome; layout: Layout; username: string; tickets: number; tier: string;
 }) {
-  const pad = layout === 'mobile' ? 16 : 24;
+  const pad = layout === 'mobile' ? 14 : 22;
   return (
     <div style={{
-      padding: `${pad}px ${pad}px 12px`,
-      display: 'flex', alignItems: 'center', gap: 14,
-      background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%)',
-      position: 'relative', zIndex: 2,
+      padding: `${pad}px ${pad}px 10px`,
+      display: 'flex', alignItems: 'center', gap: 12,
+      background: 'linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%)',
+      position: 'relative', zIndex: 2, flexShrink: 0,
     }}>
       <Avatar biome={biome} />
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 11, letterSpacing: 2, color: biome.glow, opacity: 0.8 }}>
+        <div style={{ fontSize: 10, letterSpacing: 2, color: biome.glow, opacity: 0.8 }}>
           ACT {romanize(biome.act)} · {biome.cohort} · {tier.toUpperCase()}
         </div>
-        <div style={{ fontSize: layout === 'mobile' ? 20 : 28, fontWeight: 800, lineHeight: 1.1, color: '#fff' }}>
+        <div style={{ fontSize: layout === 'mobile' ? 18 : 24, fontWeight: 800, lineHeight: 1.1 }}>
           {username}
         </div>
       </div>
@@ -371,35 +439,56 @@ function TopHeader({ biome, layout, username, tickets, tier }: {
   );
 }
 
-// ── Main map component ───────────────────────────────────────────────
+// ── Main map component ────────────────────────────────────────────────
 
 export function MapScreen({ biome, currentLevel, layout, onEnterLevel }: Props) {
-  const Art = ART[biome.id];
-  const player = usePlayerData(currentLevel);
+  const player    = usePlayerData(currentLevel);
   const prizePool = usePrizePool();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Generate 6 nodes centered just before the current level
-  const NODE_COUNT = 6;
-  const nodeStart = Math.max(
-    biome.range[0],
-    Math.min(biome.range[1] - NODE_COUNT + 1, currentLevel - 1),
-  );
-  const nodeEnd = Math.min(biome.range[1], nodeStart + NODE_COUNT - 1);
-  const nodes = generateNodes(nodeStart, nodeEnd, NODE_COUNT, 400, 600);
+  // 20 milestone nodes spread across the full biome level range
+  const nodes    = generateNodes(biome.range[0], biome.range[1], NODE_COUNT, SVG_W, SVG_H);
+  const pathD    = buildPathD(nodes);
 
-  // Active node = the one matching currentLevel (clamped)
-  const activeIdx = Math.max(0, Math.min(NODE_COUNT - 1, currentLevel - nodeStart));
-  const pathD = buildPathD(nodes);
+  // Active = highest node whose level ≤ currentLevel
+  let activeIdx = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    if (nodes[i].level <= currentLevel) activeIdx = i;
+  }
+
+  // Auto-scroll so the active node is centered in the viewport
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const run = () => {
+      const svg = el.querySelector('svg');
+      if (!svg) return;
+      const svgPxH = svg.getBoundingClientRect().height;
+      if (!svgPxH) return;
+      const scale   = svgPxH / SVG_H;
+      const nodeY   = nodes[activeIdx].y * scale;
+      el.scrollTop  = Math.max(0, nodeY - el.clientHeight * 0.42);
+    };
+    // Two attempts: once synchronously, once after paint
+    run();
+    const t = setTimeout(run, 120);
+    return () => clearTimeout(t);
+  }, [currentLevel, activeIdx]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const isDesktop = layout === 'desktop';
-  const isMobile = layout === 'mobile';
+  const isTablet  = layout === 'tablet';
+  const isMobile  = layout === 'mobile';
 
   return (
     <div style={{
-      width: '100%', minHeight: '100vh', background: biome.sky, color: '#fff',
+      width: '100%', height: '100vh',
+      background: biome.sky, color: '#fff',
       fontFamily: '"Space Grotesk", system-ui, sans-serif',
-      display: 'flex', flexDirection: isDesktop ? 'row' : 'column',
-      overflow: 'hidden', position: 'relative',
+      display: 'flex',
+      flexDirection: isDesktop ? 'row' : 'column',
+      overflow: 'hidden',
     }}>
+      {/* ── Left rail (desktop only) ── */}
       {isDesktop && (
         <DesktopRail
           biome={biome}
@@ -410,6 +499,8 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel }: Props) 
           currentLevel={currentLevel}
         />
       )}
+
+      {/* ── Top header (mobile / tablet) ── */}
       {!isDesktop && (
         <TopHeader
           biome={biome}
@@ -420,19 +511,60 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel }: Props) 
         />
       )}
 
-      <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: layout === 'tablet' ? 'row' : 'column' }}>
-        {/* Scene */}
-        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: isMobile ? 400 : undefined }}>
+      {/* ── Content area ── */}
+      <div style={{
+        flex: 1, display: 'flex',
+        flexDirection: isTablet ? 'row' : 'column',
+        overflow: 'hidden',
+      }}>
+
+        {/* ── Scrollable map canvas ── */}
+        <div
+          ref={scrollRef}
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch',
+            position: 'relative',
+          }}
+        >
           <svg
-            viewBox="0 0 400 600"
-            preserveAspectRatio="xMidYMid slice"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+            viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+            preserveAspectRatio="xMidYMin meet"
+            style={{ width: '100%', height: 'auto', display: 'block' }}
           >
-            {Art && <Art b={biome} />}
-            <rect width="400" height="600" fill={biome.fog} />
-            {/* path glow */}
-            <path d={pathD} stroke={biome.path} strokeWidth="14" fill="none" opacity="0.25" strokeLinecap="round" />
-            <path d={pathD} stroke={biome.path} strokeWidth="6" fill="none" strokeDasharray="4 8" strokeLinecap="round" />
+            {/* Background fog tint */}
+            <rect width={SVG_W} height={SVG_H} fill={biome.fog} />
+
+            {/* Level range label at top */}
+            <text
+              x={SVG_W / 2} y={40}
+              textAnchor="middle" fontSize="11" fontWeight="700"
+              fill={biome.glow} opacity="0.7" letterSpacing="2"
+            >
+              ACT {romanize(biome.act)} · LVL {biome.range[0]}–{biome.range[1]}
+            </text>
+
+            {/* Path glow + dashed line */}
+            <path d={pathD} stroke={biome.path} strokeWidth="18" fill="none"
+              opacity="0.18" strokeLinecap="round" />
+            <path d={pathD} stroke={biome.path} strokeWidth="7" fill="none"
+              strokeDasharray="6 10" strokeLinecap="round" opacity="0.9" />
+
+            {/* Milestone connector dots between nodes */}
+            {nodes.map((n, i) => {
+              if (i === 0) return null;
+              const prev = nodes[i - 1];
+              const midX = (prev.x + n.x) / 2;
+              const midY = (prev.y + n.y) / 2;
+              return (
+                <circle key={`mid-${i}`} cx={midX} cy={midY} r="3"
+                  fill={biome.path} opacity="0.4" />
+              );
+            })}
+
+            {/* All map nodes */}
             {nodes.map((n, i) => (
               <NodeDot
                 key={i}
@@ -443,12 +575,27 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel }: Props) 
                 onClick={() => onEnterLevel(n.level)}
               />
             ))}
-            <FinishFlag x={nodes[nodes.length - 1].x} y={nodes[nodes.length - 1].y - 40} biome={biome} />
+
+            {/* Finish flag at top */}
+            <FinishFlag
+              x={nodes[nodes.length - 1].x}
+              y={nodes[nodes.length - 1].y - 50}
+              biome={biome}
+            />
+
+            {/* Bottom label */}
+            <text
+              x={SVG_W / 2} y={SVG_H - 20}
+              textAnchor="middle" fontSize="10"
+              fill={biome.glow} opacity="0.4"
+            >
+              LEVEL {biome.range[0]} · ORIGIN
+            </text>
           </svg>
         </div>
 
-        {/* Cards */}
-        {layout !== 'mobile' ? (
+        {/* ── Side panel or bottom card ── */}
+        {!isMobile ? (
           <SideCards
             biome={biome}
             level={currentLevel}
@@ -466,6 +613,7 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel }: Props) 
         )}
       </div>
 
+      {/* ── Mobile tab bar ── */}
       {isMobile && <MobileTabBar biome={biome} />}
     </div>
   );

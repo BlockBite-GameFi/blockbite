@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { sbGetList, sbGetCount, supabaseReady } from '@/lib/supabase-rest';
 import { memGetList } from '@/lib/waitlist-store';
 
 const ADMIN_TOKEN = 'nayrbryanGaming_admin_2025';
-
-async function getKV() {
-  try {
-    const { kv } = await import('@vercel/kv');
-    return kv;
-  } catch {
-    return null;
-  }
-}
 
 export async function GET(req: NextRequest) {
   const token =
@@ -21,24 +13,23 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const kv = await getKV();
-    if (kv) {
-      const allKeys: string[] = await kv.keys('blockbite:waitlist:*');
-      const emailKeys = allKeys.filter((k) => k !== 'blockbite:waitlist:count');
-      const count = (await kv.get<number>('blockbite:waitlist:count')) ?? 0;
-
-      const entries: { email: string; ts: number }[] = [];
-      for (const key of emailKeys) {
-        const val = await kv.get<{ email: string; ts: number }>(key);
-        if (val) entries.push(val);
+    if (supabaseReady()) {
+      const [entries, count] = await Promise.all([sbGetList(), sbGetCount()]);
+      if (entries !== null) {
+        return NextResponse.json({
+          count: count ?? entries.length,
+          entries: entries.map(e => ({
+            email: e.email,
+            ts: new Date(e.created_at).getTime(),
+            created_at: e.created_at,
+          })),
+          source: 'supabase',
+        });
       }
-      entries.sort((a, b) => b.ts - a.ts);
-
-      return NextResponse.json({ count, entries });
     }
 
-    const memEntries = memGetList();
-    return NextResponse.json({ count: memEntries.length, entries: memEntries });
+    const mem = memGetList();
+    return NextResponse.json({ count: mem.length, entries: mem, source: 'memory' });
   } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }

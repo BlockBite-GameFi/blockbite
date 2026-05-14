@@ -97,10 +97,11 @@ function NodeDot({
   onClick: () => void;
   depth: number;
 }) {
-  const baseR = Math.round(12 + depth * 10);
-  const r = active ? baseR + 5 : baseR;
-  const fz = Math.round(8 + depth * 6);
-  const nodeOpacity = unlocked ? (0.5 + depth * 0.5) : 0.28;
+  // Near nodes (bottom) are larger/brighter; far nodes (top) are smaller/dimmer — strong 3D effect
+  const baseR = Math.round(10 + depth * 14); // 10 (far top) → 24 (near bottom)
+  const r = active ? baseR + 6 : baseR;
+  const fz = Math.round(7 + depth * 8);      // 7 (far) → 15 (near)
+  const nodeOpacity = unlocked ? (0.35 + depth * 0.65) : 0.22; // 0.35 far → 1.0 near
 
   return (
     <g
@@ -481,11 +482,10 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
             overflowX: 'hidden',
             WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
             position: 'relative',
-            display: 'flex',
-            justifyContent: 'center',
           }}
         >
-          <div style={{ width: '100%', maxWidth: 400 }}>
+          {/* margin:0 auto centers without display:flex (flex would stretch height and break scroll) */}
+          <div style={{ width: '100%', maxWidth: 400, margin: '0 auto' }}>
             <svg
               viewBox={`0 0 ${SVG_W} ${SVG_H}`}
               preserveAspectRatio="xMidYMin meet"

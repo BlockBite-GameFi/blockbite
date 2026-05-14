@@ -89,6 +89,10 @@ const I18N = {
 
 type Lang = 'en' | 'id';
 
+const LS_DONE  = 'bb_wl_done';
+const LS_COUNT = 'bb_wl_count';
+const LS_EMAIL = 'bb_wl_email';
+
 export default function WaitlistPage() {
   const [lang, setLang]   = useState<Lang>('en');
   const [email, setEmail] = useState('');
@@ -100,11 +104,27 @@ export default function WaitlistPage() {
   const cvs = useRef<HTMLCanvasElement>(null);
   const txt = I18N[lang];
 
+  // Restore done state and local count from localStorage
   useEffect(() => {
-    fetch('/api/waitlist/count')
-      .then(r => r.json())
-      .then(d => { if (typeof d?.count === 'number') setCount(d.count); })
-      .catch(() => {});
+    try {
+      if (localStorage.getItem(LS_DONE) === '1') setDone(true);
+      const saved = localStorage.getItem(LS_EMAIL);
+      if (saved) setEmail(saved);
+      const localCount = parseInt(localStorage.getItem(LS_COUNT) || '0');
+      // Fetch API count, then show max(api, local)
+      fetch('/api/waitlist/count')
+        .then(r => r.json())
+        .then(d => {
+          const api = typeof d?.count === 'number' ? d.count : 0;
+          setCount(Math.max(api, localCount));
+        })
+        .catch(() => setCount(localCount));
+    } catch {
+      fetch('/api/waitlist/count')
+        .then(r => r.json())
+        .then(d => { if (typeof d?.count === 'number') setCount(d.count); })
+        .catch(() => {});
+    }
   }, []);
 
   /* Floating blocks canvas */
@@ -182,10 +202,19 @@ export default function WaitlistPage() {
       });
       if (res.ok || res.status === 409) {
         setDone(true);
-        setCount(c => c + 1);
+        setCount(c => {
+          const next = c + (res.status === 409 ? 0 : 1);
+          try {
+            localStorage.setItem(LS_COUNT, String(next));
+            localStorage.setItem(LS_DONE, '1');
+            localStorage.setItem(LS_EMAIL, email);
+          } catch { /* ignore */ }
+          return next;
+        });
       }
     } catch {
       setDone(true);
+      try { localStorage.setItem(LS_DONE, '1'); } catch { /* ignore */ }
     }
     setBusy(false);
   }

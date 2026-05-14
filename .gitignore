@@ -41,6 +41,18 @@ programs/*/Cargo.lock
 # ─── Temp / logs ─────────────────────────────────────────────────────────────
 anchor-build.log
 *.claude-temp
+*.log
+
+# ─── Surfpool / local validator simulation artifacts ─────────────────────────
+.surfpool/
+test-ledger/
+
+# ─── Unrelated subproject dirs that must never be committed ──────────────────
+blockblast/
+
+# ─── AI agent / skills lock files ────────────────────────────────────────────
+skills-lock.json
+.agents/
 
 # ─── AI dev tool session data (Claude Code internal) ─────────────────────────
 # CLAUDE.md and AGENTS.md are kept (transparent AI tool disclosure).

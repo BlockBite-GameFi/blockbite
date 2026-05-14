@@ -18,7 +18,8 @@ interface Props {
 
 const NODE_COUNT = 20;
 const SVG_W     = 400;
-const SVG_H     = NODE_COUNT * 160; // 3 200 px tall — fully scrollable
+const SVG_H     = NODE_COUNT * 150; // 3 000 px tall — fully scrollable
+const SVG_MARGIN = 80;
 
 function romanize(n: number) {
   return ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][n] ?? String(n);
@@ -108,19 +109,29 @@ function Pill({ label, value, biome, small }: {
 // ── Map node ─────────────────────────────────────────────────────────
 
 function NodeDot({
-  n, active, biome, unlocked, onClick,
+  n, active, biome, unlocked, onClick, depth,
 }: {
   n: { x: number; y: number; level: number };
   active: boolean;
   biome: Biome;
   unlocked: boolean;
   onClick: () => void;
+  depth: number; // 0=far/top  1=near/bottom
 }) {
-  const r = active ? 24 : 18;
+  // Near nodes are larger and brighter; far nodes are smaller and dimmer
+  const baseR = Math.round(12 + depth * 10); // 12 (far) → 22 (near)
+  const r = active ? baseR + 5 : baseR;
+  const fz = Math.round(8 + depth * 6);      // 8 (far) → 14 (near)
+  const nodeOpacity = unlocked ? (0.5 + depth * 0.5) : 0.28;
+
   return (
     <g onClick={unlocked ? onClick : undefined} style={{ cursor: unlocked ? 'pointer' : 'default' }}>
       {/* large invisible hit area */}
       <circle cx={n.x} cy={n.y} r={r + 14} fill="transparent" />
+
+      {/* depth shadow disc */}
+      <ellipse cx={n.x} cy={n.y + r * 0.7} rx={r * 0.8} ry={r * 0.22}
+        fill="#000" opacity={depth * 0.35} />
 
       {/* outer ring for active */}
       {active && (
@@ -149,15 +160,24 @@ function NodeDot({
                      '#334155'
         }
         strokeWidth={active ? 3.5 : 2}
-        opacity={unlocked ? 1 : 0.38}
+        opacity={nodeOpacity}
       />
+
+      {/* highlight glint (top-left of sphere) */}
+      {unlocked && (
+        <ellipse
+          cx={n.x - r * 0.28} cy={n.y - r * 0.3}
+          rx={r * 0.22} ry={r * 0.14}
+          fill="#fff" opacity={0.18 + depth * 0.22}
+        />
+      )}
 
       {/* label */}
       {unlocked ? (
         <text
-          x={n.x} y={n.y + 5}
+          x={n.x} y={n.y + fz * 0.38}
           textAnchor="middle"
-          fontSize={active ? 14 : 11}
+          fontSize={fz}
           fontWeight={active ? 900 : 700}
           fill={active ? '#0a0a14' : biome.glow}
           style={{ pointerEvents: 'none', userSelect: 'none' }}
@@ -165,10 +185,9 @@ function NodeDot({
           {n.level}
         </text>
       ) : (
-        /* lock emoji renders in modern browsers as padlock icon */
         <text
           x={n.x} y={n.y + 5}
-          textAnchor="middle" fontSize="14"
+          textAnchor="middle" fontSize={fz}
           fill="#475569"
           style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
@@ -527,30 +546,49 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel }: Props) 
             overflowX: 'hidden',
             WebkitOverflowScrolling: 'touch',
             position: 'relative',
+            display: 'flex',
+            justifyContent: 'center',
           }}
         >
+          {/* Fixed-width wrapper so SVG never scales beyond 400px */}
+          <div style={{ width: '100%', maxWidth: 400 }}>
           <svg
             viewBox={`0 0 ${SVG_W} ${SVG_H}`}
             preserveAspectRatio="xMidYMin meet"
             style={{ width: '100%', height: 'auto', display: 'block' }}
           >
+            <defs>
+              {/* Depth gradient: dim at top (far), bright at bottom (near) */}
+              <linearGradient id="bb-path-depth" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor={biome.path} stopOpacity="0.15"/>
+                <stop offset="100%" stopColor={biome.path} stopOpacity="1"/>
+              </linearGradient>
+              {/* Fog gradient: bottom clear, top foggy */}
+              <linearGradient id="bb-fog-depth" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor="#000" stopOpacity="0.55"/>
+                <stop offset="60%"  stopColor="#000" stopOpacity="0"/>
+              </linearGradient>
+            </defs>
+
             {/* Background fog tint */}
             <rect width={SVG_W} height={SVG_H} fill={biome.fog} />
+            {/* Depth fog overlay — fades far (top) to dim */}
+            <rect width={SVG_W} height={SVG_H} fill="url(#bb-fog-depth)" />
 
             {/* Level range label at top */}
             <text
               x={SVG_W / 2} y={40}
               textAnchor="middle" fontSize="11" fontWeight="700"
-              fill={biome.glow} opacity="0.7" letterSpacing="2"
+              fill={biome.glow} opacity="0.6" letterSpacing="2"
             >
               ACT {romanize(biome.act)} · LVL {biome.range[0]}–{biome.range[1]}
             </text>
 
-            {/* Path glow + dashed line */}
-            <path d={pathD} stroke={biome.path} strokeWidth="18" fill="none"
-              opacity="0.18" strokeLinecap="round" />
-            <path d={pathD} stroke={biome.path} strokeWidth="7" fill="none"
-              strokeDasharray="6 10" strokeLinecap="round" opacity="0.9" />
+            {/* Path glow + dashed line — depth-graded */}
+            <path d={pathD} stroke="url(#bb-path-depth)" strokeWidth="22" fill="none"
+              strokeLinecap="round" opacity="0.22" />
+            <path d={pathD} stroke="url(#bb-path-depth)" strokeWidth="7" fill="none"
+              strokeDasharray="6 10" strokeLinecap="round" />
 
             {/* Milestone connector dots between nodes */}
             {nodes.map((n, i) => {
@@ -558,23 +596,30 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel }: Props) 
               const prev = nodes[i - 1];
               const midX = (prev.x + n.x) / 2;
               const midY = (prev.y + n.y) / 2;
+              const d = (midY - SVG_MARGIN) / (SVG_H - SVG_MARGIN * 2);
               return (
-                <circle key={`mid-${i}`} cx={midX} cy={midY} r="3"
-                  fill={biome.path} opacity="0.4" />
+                <circle key={`mid-${i}`} cx={midX} cy={midY} r={2 + d * 2}
+                  fill={biome.path} opacity={0.2 + d * 0.5} />
               );
             })}
 
-            {/* All map nodes */}
-            {nodes.map((n, i) => (
-              <NodeDot
-                key={i}
-                n={n}
-                biome={biome}
-                active={i === activeIdx}
-                unlocked={n.level <= currentLevel}
-                onClick={() => onEnterLevel(n.level)}
-              />
-            ))}
+            {/* All map nodes — depth drives size + brightness */}
+            {nodes.map((n, i) => {
+              const depth = Math.max(0, Math.min(1,
+                (n.y - SVG_MARGIN) / (SVG_H - SVG_MARGIN * 2)
+              ));
+              return (
+                <NodeDot
+                  key={i}
+                  n={n}
+                  biome={biome}
+                  active={i === activeIdx}
+                  unlocked={n.level <= currentLevel}
+                  onClick={() => onEnterLevel(n.level)}
+                  depth={depth}
+                />
+              );
+            })}
 
             {/* Finish flag at top */}
             <FinishFlag
@@ -592,6 +637,7 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel }: Props) 
               LEVEL {biome.range[0]} · ORIGIN
             </text>
           </svg>
+          </div>
         </div>
 
         {/* ── Side panel or bottom card ── */}

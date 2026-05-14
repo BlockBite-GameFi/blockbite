@@ -6,13 +6,15 @@
  * NOTE: This resets on cold start. Configure Vercel KV for true persistence.
  */
 export const memEmails = new Set<string>();
+export const memEntries: { email: string; ts: number }[] = [];
 export let memCount = 0;
+
 export function memAdd(email: string): boolean {
   if (memEmails.has(email)) return false;
   memEmails.add(email);
+  memEntries.push({ email, ts: Date.now() });
   memCount++;
   return true;
 }
-export function memGetCount(): number {
-  return memCount;
-}
+export function memGetCount(): number { return memCount; }
+export function memGetList(): { email: string; ts: number }[] { return [...memEntries]; }

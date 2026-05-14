@@ -189,14 +189,15 @@ export function buildPathD(nodes: { x: number; y: number }[]): string {
   return d;
 }
 
-export function generateNodes(startLevel: number, count: number, w = 400, h = 600) {
+export function generateNodes(startLevel: number, endLevel: number, count: number, w = 400, h = 600) {
   const out: { x: number; y: number; level: number }[] = [];
   const margin = 80, usable = h - margin * 2;
   for (let i = 0; i < count; i++) {
     const t = i / Math.max(count - 1, 1);
     const y = h - margin - t * usable;
     const x = w / 2 + Math.sin(t * Math.PI * 2.2) * (w * 0.28);
-    out.push({ x, y, level: startLevel + i });
+    const level = Math.round(startLevel + t * (endLevel - startLevel));
+    out.push({ x, y, level });
   }
   return out;
 }

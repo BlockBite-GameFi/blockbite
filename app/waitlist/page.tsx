@@ -24,11 +24,10 @@ const I18N = {
     sub: 'Secure your assets with automated, milestone-based distribution that eliminates fatal human error while transforming passive claimants into loyal, long-term contributors.',
     target: 'For Solana Ecosystem Builders & Project Founders',
     cta: 'Join the Waitlist',
-    note: 'No spam. Unsubscribe anytime.',
     success: '✓ You\'re on the list! We\'ll notify you when BlockBite launches.',
     stats: [
       { v: '100%', l: 'ON-CHAIN' },
-      { v: 'Multi-sig', l: 'ADMIN CONTROL' },
+      { v: 'Auto', l: 'SMART CONTRACT' },
       { v: '0', l: 'HUMAN ERROR' },
       { v: '', l: 'WAITLIST', dynamic: true },
     ],
@@ -36,7 +35,7 @@ const I18N = {
       { color: MAGENTA, t: 'Milestone-Based Distribution', d: 'Set unlock conditions tied to real project milestones — not just time. Contributors receive tokens only when targets are met.' },
       { color: TEAL,    t: 'Automated & Trustless', d: 'Smart contract enforces all distribution rules on-chain. No manual transfers, no oversight gaps, no rug-pull vectors.' },
       { color: GOLD,    t: 'Cliff + Linear Vesting', d: 'Configure cliff periods and linear unlock schedules. On-chain enforcement means even the team can\'t bypass the rules.' },
-      { color: PURPLE,  t: 'Squads Multisig Admin', d: 'All admin actions require 2-of-3 Squads v4 signatures. Vault is PDA-owned — never a hot wallet.' },
+      { color: PURPLE,  t: 'Hardcoded Smart Contract', d: 'Distribution logic is immutably encoded in the program. No admin key can alter or bypass vesting schedules after deployment.' },
       { color: CORAL,   t: 'Full Transparency', d: 'Every vesting schedule, unlock event, and claim is recorded on-chain. Auditable by anyone, anytime.' },
       { color: TEAL,    t: 'Loyal Contributor Incentives', d: 'Transform passive token holders into active contributors by aligning rewards with long-term project success.' },
     ],
@@ -47,7 +46,7 @@ const I18N = {
     steps: [
       { t: 'Connect Wallet', d: 'Connect your Solana wallet — Phantom, Solflare, Backpack, or any compatible wallet.' },
       { t: 'Define Schedules', d: 'Set cliff periods, vesting durations, and milestone unlock conditions for each recipient group.' },
-      { t: 'Fund the Vault', d: 'Deposit tokens into the PDA-owned vault. Multisig approval required for any admin action.' },
+      { t: 'Fund the Vault', d: 'Deposit tokens into the PDA-owned vault. The smart contract autonomously enforces all rules — no admin override possible.' },
       { t: 'Automated Distribution', d: 'Recipients claim vested tokens on-chain when conditions are met. Zero manual intervention needed.' },
     ],
     footer: '© 2026 BlockBite · Built on Solana',
@@ -59,11 +58,10 @@ const I18N = {
     sub: 'Amankan asetmu dengan distribusi berbasis milestone yang otomatis — menghilangkan kesalahan manusia yang fatal sekaligus mengubah penerima pasif menjadi kontributor jangka panjang yang loyal.',
     target: 'Untuk Builder & Founder Ekosistem Solana',
     cta: 'Daftar Waitlist',
-    note: 'Tanpa spam. Bisa berhenti kapan saja.',
     success: '✓ Kamu sudah terdaftar! Kami akan notifikasi saat BlockBite meluncur.',
     stats: [
       { v: '100%', l: 'ON-CHAIN' },
-      { v: 'Multi-sig', l: 'KONTROL ADMIN' },
+      { v: 'Otomatis', l: 'SMART CONTRACT' },
       { v: '0', l: 'KESALAHAN MANUSIA' },
       { v: '', l: 'WAITLIST', dynamic: true },
     ],
@@ -71,7 +69,7 @@ const I18N = {
       { color: MAGENTA, t: 'Distribusi Berbasis Milestone', d: 'Tetapkan kondisi unlock yang terikat pada milestone proyek nyata — bukan sekadar waktu. Kontributor menerima token hanya saat target tercapai.' },
       { color: TEAL,    t: 'Otomatis & Trustless', d: 'Smart contract menegakkan semua aturan distribusi on-chain. Tanpa transfer manual, tanpa celah pengawasan.' },
       { color: GOLD,    t: 'Cliff + Vesting Linear', d: 'Konfigurasi periode cliff dan jadwal unlock linear. Penegakan on-chain berarti bahkan tim tidak bisa melewatinya.' },
-      { color: PURPLE,  t: 'Admin Multisig Squads', d: 'Semua aksi admin memerlukan tanda tangan 2-dari-3 Squads v4. Vault dimiliki PDA — bukan hot wallet.' },
+      { color: PURPLE,  t: 'Smart Contract Hardcoded', d: 'Logika distribusi dikodekan secara permanen dalam program. Tidak ada kunci admin yang dapat mengubah atau melewati jadwal vesting setelah deploy.' },
       { color: CORAL,   t: 'Transparansi Penuh', d: 'Setiap jadwal vesting, event unlock, dan klaim tercatat on-chain. Dapat diaudit siapa saja, kapan saja.' },
       { color: TEAL,    t: 'Insentif Kontributor Loyal', d: 'Ubah pemegang token pasif menjadi kontributor aktif dengan menyelaraskan reward dengan kesuksesan proyek jangka panjang.' },
     ],
@@ -82,7 +80,7 @@ const I18N = {
     steps: [
       { t: 'Hubungkan Wallet', d: 'Hubungkan wallet Solanamu — Phantom, Solflare, Backpack, atau wallet compatible apapun.' },
       { t: 'Tentukan Jadwal', d: 'Atur periode cliff, durasi vesting, dan kondisi unlock milestone untuk setiap kelompok penerima.' },
-      { t: 'Dana Vault', d: 'Depositkan token ke vault milik PDA. Persetujuan multisig diperlukan untuk aksi admin apapun.' },
+      { t: 'Dana Vault', d: 'Depositkan token ke vault milik PDA. Smart contract secara otomatis menegakkan semua aturan — tanpa intervensi admin.' },
       { t: 'Distribusi Otomatis', d: 'Penerima mengklaim token yang sudah vested on-chain saat kondisi terpenuhi. Tanpa intervensi manual.' },
     ],
     footer: '© 2026 BlockBite · Dibangun di Solana',
@@ -270,12 +268,12 @@ export default function WaitlistPage() {
           {/* Floating block decorations */}
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
             {[
-              { c1: MAGENTA, c2: '#e0408c', d: '3.1s' },
-              { c1: TEAL,    c2: '#5aa8c0', d: '2.7s' },
-              { c1: GOLD,    c2: '#f5c34a', d: '3.4s' },
-              { c1: PURPLE,  c2: '#a0a4f5', d: '2.4s' },
-              { c1: CORAL,   c2: '#f07080', d: '3.7s' },
-              { c1: TEAL,    c2: '#3d9fb5', d: '2.9s' },
+              { c1: MAGENTA, c2: '#e0408c', d: '3.1s', icon: '◆' },
+              { c1: TEAL,    c2: '#5aa8c0', d: '2.7s', icon: '◈' },
+              { c1: GOLD,    c2: '#f5c34a', d: '3.4s', icon: '◉' },
+              { c1: PURPLE,  c2: '#a0a4f5', d: '2.4s', icon: '✦' },
+              { c1: CORAL,   c2: '#f07080', d: '3.7s', icon: '⬡' },
+              { c1: TEAL,    c2: '#3d9fb5', d: '2.9s', icon: '◇' },
             ].map((b, i) => (
               <div key={i} style={{
                 width: 44, height: 44, borderRadius: 11,
@@ -286,47 +284,44 @@ export default function WaitlistPage() {
                 animationDelay: `${i * 0.18}s`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
+                fontSize: 18, color: 'rgba(255,255,255,0.92)',
               }}>
-                <svg width="22" height="22" viewBox="0 0 22 22">
-                  <text x="11" y="16.5" textAnchor="middle" fontSize="16" fontWeight="900" fill="rgba(255,255,255,0.92)" fontFamily="Montserrat,sans-serif">B</text>
-                </svg>
+                {b.icon}
               </div>
             ))}
           </div>
 
           {/* Email form */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, width: '100%', maxWidth: 500 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, width: '100%', maxWidth: 440 }}>
             {!done ? (
               <>
-                <div style={{ display: 'flex', gap: 8, width: '100%', flexWrap: 'wrap' }}>
-                  <input
-                    className="wl-input"
-                    type="email" value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && submit()}
-                    placeholder={lang === 'en' ? 'your@email.com' : 'email@anda.com'}
-                    style={{
-                      flex: 1, minWidth: 200, padding: '15px 20px', borderRadius: 12,
-                      background: 'rgba(255,255,255,0.05)', border: `1.5px solid ${err ? CORAL : border}`,
-                      color: '#fff', fontFamily: 'Roboto,sans-serif', fontSize: 15,
-                      transition: '0.15s',
-                    }}
-                  />
-                  <button
-                    className="wl-btn"
-                    onClick={submit} disabled={busy}
-                    style={{
-                      padding: '15px 28px', borderRadius: 12,
-                      background: GRAD_MAIN, color: '#fff',
-                      fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer',
-                      fontFamily: 'Montserrat,sans-serif', whiteSpace: 'nowrap',
-                      boxShadow: `0 4px 32px ${MAGENTA}44`, transition: '0.15s', letterSpacing: '0.3px',
-                    }}
-                  >
-                    {busy ? (lang === 'en' ? 'Joining...' : 'Mendaftar...') : txt.cta}
-                  </button>
-                </div>
-                <div style={{ fontSize: 11, color: dim, letterSpacing: '0.5px', fontFamily: 'Roboto,sans-serif' }}>{txt.note}</div>
+                <input
+                  className="wl-input"
+                  type="email" value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && submit()}
+                  placeholder={lang === 'en' ? 'your@email.com' : 'email@anda.com'}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: '15px 20px', borderRadius: 12,
+                    background: 'rgba(255,255,255,0.05)', border: `1.5px solid ${err ? CORAL : border}`,
+                    color: '#fff', fontFamily: 'Roboto,sans-serif', fontSize: 15,
+                    transition: '0.15s',
+                  }}
+                />
+                <button
+                  className="wl-btn"
+                  onClick={submit} disabled={busy}
+                  style={{
+                    width: '100%', padding: '15px 28px', borderRadius: 12,
+                    background: GRAD_MAIN, color: '#fff',
+                    fontWeight: 800, fontSize: 15, border: 'none', cursor: 'pointer',
+                    fontFamily: 'Montserrat,sans-serif',
+                    boxShadow: `0 4px 32px ${MAGENTA}44`, transition: '0.15s', letterSpacing: '0.5px',
+                  }}
+                >
+                  {busy ? (lang === 'en' ? 'Joining...' : 'Mendaftar...') : txt.cta}
+                </button>
               </>
             ) : (
               <div style={{
@@ -430,7 +425,7 @@ export default function WaitlistPage() {
                 : 'Daftar waitlist dan jadilah yang pertama mengotomasi vesting berbasis kepercayaan di Solana.'}
             </p>
             {!done ? (
-              <div style={{ display: 'flex', gap: 8, maxWidth: 440, margin: '0 auto', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 400, margin: '0 auto', width: '100%' }}>
                 <input
                   className="wl-input"
                   type="email" value={email}
@@ -438,7 +433,8 @@ export default function WaitlistPage() {
                   onKeyDown={e => e.key === 'Enter' && submit()}
                   placeholder={lang === 'en' ? 'your@email.com' : 'email@anda.com'}
                   style={{
-                    flex: 1, minWidth: 180, padding: '14px 18px', borderRadius: 12,
+                    width: '100%', boxSizing: 'border-box',
+                    padding: '14px 18px', borderRadius: 12,
                     background: 'rgba(255,255,255,0.06)', border: `1.5px solid ${border}`,
                     color: '#fff', fontFamily: 'Roboto,sans-serif', fontSize: 14,
                     transition: '0.15s',
@@ -448,7 +444,7 @@ export default function WaitlistPage() {
                   className="wl-btn"
                   onClick={submit} disabled={busy}
                   style={{
-                    padding: '14px 24px', borderRadius: 12,
+                    width: '100%', padding: '14px 24px', borderRadius: 12,
                     background: GRAD_MAIN, color: '#fff',
                     fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer',
                     fontFamily: 'Montserrat,sans-serif', boxShadow: `0 4px 24px ${MAGENTA}44`, transition: '0.15s',

@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Biome } from '@/lib/game/biomes';
 import { levelConfig } from '@/lib/game/levelConfig';
+import { getLevelTier } from '@/lib/game/constants';
 import { ART, buildPathD, generateNodes } from '@/lib/components/MapArt';
 
 export type Layout = 'mobile' | 'tablet' | 'desktop';
@@ -15,8 +17,43 @@ interface Props {
 }
 
 function romanize(n: number) {
-  return ['','I','II','III','IV','V','VI','VII','VIII'][n] ?? String(n);
+  return ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][n] ?? String(n);
 }
+
+// ── Real data hooks ──────────────────────────────────────────────────
+
+function usePlayerData(currentLevel: number) {
+  const [username, setUsername] = useState('Explorer');
+  const [tickets, setTickets] = useState(0);
+  const [gamesPlayed, setGamesPlayed] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const u = localStorage.getItem('bb_username') || 'Explorer';
+    const wallet = localStorage.getItem('bb_wallet') || '';
+    const raw = wallet ? localStorage.getItem(`tickets_${wallet}`) : null;
+    const t = parseInt(raw ?? '0');
+    const g = parseInt(localStorage.getItem('bb_games_played') ?? '0');
+    setUsername(u || 'Explorer');
+    setTickets(isNaN(t) ? 0 : t);
+    setGamesPlayed(isNaN(g) ? 0 : g);
+  }, [currentLevel]);
+
+  return { username, tickets, gamesPlayed, tier: getLevelTier(currentLevel) };
+}
+
+function usePrizePool() {
+  const [pool, setPool] = useState(0);
+  useEffect(() => {
+    fetch('/api/prizepool')
+      .then(r => r.json())
+      .then(d => setPool(typeof d.balance === 'number' ? d.balance : 0))
+      .catch(() => {});
+  }, []);
+  return pool;
+}
+
+// ── Sub-components ───────────────────────────────────────────────────
 
 function Avatar({ biome, small }: { biome: Biome; small?: boolean }) {
   const size = small ? 36 : 48;
@@ -27,7 +64,7 @@ function Avatar({ biome, small }: { biome: Biome; small?: boolean }) {
       border: `2px solid ${biome.glow}`,
       boxShadow: `0 0 ${small ? 8 : 14}px ${biome.accent}88`,
       flexShrink: 0,
-    }}/>
+    }} />
   );
 }
 
@@ -58,19 +95,53 @@ function Pill({ label, value, biome, small }: { label: string; value: string | n
   );
 }
 
-function NodeDot({ n, active, biome }: { n: { x: number; y: number; level: number }; active: boolean; biome: Biome }) {
+function NodeDot({
+  n, active, biome, unlocked, onClick,
+}: {
+  n: { x: number; y: number; level: number };
+  active: boolean;
+  biome: Biome;
+  unlocked: boolean;
+  onClick: () => void;
+}) {
+  const r = active ? 22 : 18;
   return (
-    <g>
-      <circle cx={n.x} cy={n.y} r={active ? 22 : 18}
-        fill={active ? biome.accent : 'rgba(15,14,36,0.7)'}
-        stroke={biome.glow} strokeWidth={active ? 3 : 1.6} opacity={active ? 1 : 0.85}/>
+    <g
+      onClick={unlocked ? onClick : undefined}
+      style={{ cursor: unlocked ? 'pointer' : 'default' }}
+    >
+      {/* invisible hit-target padding */}
+      <circle cx={n.x} cy={n.y} r={r + 10} fill="transparent" />
+      <circle
+        cx={n.x} cy={n.y} r={r}
+        fill={active ? biome.accent : unlocked ? 'rgba(30,28,60,0.9)' : 'rgba(15,14,36,0.5)'}
+        stroke={active ? biome.glow : unlocked ? biome.accent : '#334155'}
+        strokeWidth={active ? 3 : 1.6}
+        opacity={unlocked ? 1 : 0.4}
+      />
       {active && (
         <circle cx={n.x} cy={n.y} r={32} fill="none" stroke={biome.glow} strokeWidth="1.5" opacity="0.6">
-          <animate attributeName="r" values="22;36;22" dur="2s" repeatCount="indefinite"/>
-          <animate attributeName="opacity" values="0.7;0;0.7" dur="2s" repeatCount="indefinite"/>
+          <animate attributeName="r" values="22;36;22" dur="2s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.7;0;0.7" dur="2s" repeatCount="indefinite" />
         </circle>
       )}
-      <text x={n.x} y={n.y+4} textAnchor="middle" fontSize={active?13:11} fontWeight={active?800:600} fill={active?'#0a0a14':biome.glow}>{n.level}</text>
+      {unlocked ? (
+        <text
+          x={n.x} y={n.y + 4} textAnchor="middle"
+          fontSize={active ? 13 : 11} fontWeight={active ? 800 : 600}
+          fill={active ? '#0a0a14' : biome.glow}
+          style={{ pointerEvents: 'none', userSelect: 'none' }}
+        >
+          {n.level}
+        </text>
+      ) : (
+        <text
+          x={n.x} y={n.y + 4} textAnchor="middle" fontSize="11"
+          fill="#475569" style={{ pointerEvents: 'none', userSelect: 'none' }}
+        >
+          🔒
+        </text>
+      )}
     </g>
   );
 }
@@ -78,14 +149,20 @@ function NodeDot({ n, active, biome }: { n: { x: number; y: number; level: numbe
 function FinishFlag({ x, y, biome }: { x: number; y: number; biome: Biome }) {
   return (
     <g>
-      <line x1={x} y1={y} x2={x} y2={y+50} stroke={biome.glow} strokeWidth="2"/>
-      <polygon points={`${x},${y} ${x+22},${y+6} ${x},${y+14}`} fill={biome.accent}/>
-      <text x={x+32} y={y+12} fontSize="11" fontWeight="700" fill={biome.glow}>ACT {romanize(biome.act)} END</text>
+      <line x1={x} y1={y} x2={x} y2={y + 50} stroke={biome.glow} strokeWidth="2" />
+      <polygon points={`${x},${y} ${x + 22},${y + 6} ${x},${y + 14}`} fill={biome.accent} />
+      <text x={x + 32} y={y + 12} fontSize="11" fontWeight="700" fill={biome.glow}>
+        ACT {romanize(biome.act)} END
+      </text>
     </g>
   );
 }
 
-function SideCards({ biome, level, layout, onEnterLevel }: { biome: Biome; level: number; layout: Layout; onEnterLevel: (l: number) => void }) {
+function SideCards({
+  biome, level, layout, onEnterLevel, prizePool,
+}: {
+  biome: Biome; level: number; layout: Layout; onEnterLevel: (l: number) => void; prizePool: number;
+}) {
   const cfg = levelConfig(level);
   return (
     <div style={{
@@ -96,31 +173,49 @@ function SideCards({ biome, level, layout, onEnterLevel }: { biome: Biome; level
     }}>
       <div style={{ fontSize: 11, letterSpacing: 2, color: biome.glow }}>ONGOING JOURNEY</div>
       <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.05 }}>
-        Level {level}:<br/><span style={{ color: biome.glow }}>{cfg.title}</span>
+        Level {level}:<br /><span style={{ color: biome.glow }}>{cfg.title}</span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <Pill label="DIFFICULTY" value={cfg.rarity} biome={biome}/>
-        <Pill label="REWARD" value={`◆ ${cfg.reward}`} biome={biome}/>
-        <Pill label="GOAL" value={`${cfg.goal} blocks`} biome={biome} small/>
-        <Pill label="MOVES" value={cfg.moves} biome={biome} small/>
+        <Pill label="DIFFICULTY" value={cfg.rarity} biome={biome} />
+        <Pill label="REWARD" value={`◆ ${cfg.reward}`} biome={biome} />
+        <Pill label="GOAL" value={`${cfg.goal} blocks`} biome={biome} small />
+        <Pill label="MOVES" value={cfg.moves} biome={biome} small />
       </div>
-      <button onClick={() => onEnterLevel(level)} style={{
-        marginTop: 6, padding: '14px 20px', borderRadius: 14,
-        background: `linear-gradient(135deg, ${biome.accent}, ${biome.glow})`,
-        color: '#0a0a14', fontWeight: 900, fontSize: 16, border: 'none',
-        boxShadow: `0 0 24px ${biome.accent}77`, cursor: 'pointer',
-      }}>
+      <button
+        onClick={() => onEnterLevel(level)}
+        style={{
+          marginTop: 6, padding: '14px 20px', borderRadius: 14,
+          background: `linear-gradient(135deg, ${biome.accent}, ${biome.glow})`,
+          color: '#0a0a14', fontWeight: 900, fontSize: 16, border: 'none',
+          boxShadow: `0 0 24px ${biome.accent}77`, cursor: 'pointer',
+        }}
+      >
         START EXPEDITION →
       </button>
-      <div style={{ marginTop: 'auto', padding: 14, borderRadius: 14, background: 'rgba(0,0,0,0.4)', border: `1px solid ${biome.accent}33` }}>
-        <div style={{ fontSize: 10, letterSpacing: 1.5, color: biome.glow, opacity: 0.8 }}>PRIZE POOL · ON-CHAIN</div>
-        <div style={{ fontSize: 22, fontWeight: 800 }}>0 <span style={{ fontSize: 11, opacity: 0.7 }}>USDC</span></div>
+      <div style={{
+        marginTop: 'auto', padding: 14, borderRadius: 14,
+        background: 'rgba(0,0,0,0.4)', border: `1px solid ${biome.accent}33`,
+      }}>
+        <div style={{ fontSize: 10, letterSpacing: 1.5, color: biome.glow, opacity: 0.8 }}>
+          PRIZE POOL · ON-CHAIN
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 800, marginTop: 4 }}>
+          {prizePool.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+          <span style={{ fontSize: 11, opacity: 0.7, marginLeft: 6 }}>USDC</span>
+        </div>
+        <div style={{ fontSize: 10, color: biome.glow, opacity: 0.55, marginTop: 2 }}>
+          devnet · live on-chain balance
+        </div>
       </div>
     </div>
   );
 }
 
-function BottomCard({ biome, level, onEnterLevel }: { biome: Biome; level: number; onEnterLevel: (l: number) => void }) {
+function BottomCard({
+  biome, level, onEnterLevel, prizePool,
+}: {
+  biome: Biome; level: number; onEnterLevel: (l: number) => void; prizePool: number;
+}) {
   const cfg = levelConfig(level);
   return (
     <div style={{
@@ -129,26 +224,47 @@ function BottomCard({ biome, level, onEnterLevel }: { biome: Biome; level: numbe
       border: `1px solid ${biome.accent}55`,
       position: 'absolute', left: 0, right: 0, bottom: 80,
     }}>
-      <div style={{ fontSize: 10, letterSpacing: 2, color: biome.glow }}>ONGOING JOURNEY</div>
-      <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.1, marginTop: 4 }}>
-        Level {level}:<br/><span style={{ color: biome.glow }}>{cfg.title}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <div style={{ fontSize: 10, letterSpacing: 2, color: biome.glow }}>ONGOING JOURNEY</div>
+          <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.1, marginTop: 4 }}>
+            Level {level}: <span style={{ color: biome.glow }}>{cfg.title}</span>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 9, letterSpacing: 1, color: biome.glow, opacity: 0.7 }}>PRIZE POOL</div>
+          <div style={{ fontSize: 16, fontWeight: 800 }}>
+            {prizePool.toLocaleString()}<span style={{ fontSize: 10, opacity: 0.6 }}> USDC</span>
+          </div>
+        </div>
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 14, alignItems: 'center' }}>
-        <Pill label="DIFFICULTY" value={cfg.rarity} biome={biome}/>
-        <Pill label="REWARD" value={`◆ ${cfg.reward}`} biome={biome}/>
-        <button onClick={() => onEnterLevel(level)} style={{
-          marginLeft: 'auto', padding: '12px 22px', borderRadius: 999,
-          background: `linear-gradient(135deg, ${biome.accent}, ${biome.glow})`,
-          color: '#0a0a14', fontWeight: 900, fontSize: 14, border: 'none',
-          boxShadow: `0 0 16px ${biome.accent}88`, cursor: 'pointer',
-        }}>ENTER</button>
+        <Pill label="DIFFICULTY" value={cfg.rarity} biome={biome} />
+        <Pill label="REWARD" value={`◆ ${cfg.reward}`} biome={biome} />
+        <button
+          onClick={() => onEnterLevel(level)}
+          style={{
+            marginLeft: 'auto', padding: '12px 22px', borderRadius: 999,
+            background: `linear-gradient(135deg, ${biome.accent}, ${biome.glow})`,
+            color: '#0a0a14', fontWeight: 900, fontSize: 14, border: 'none',
+            boxShadow: `0 0 16px ${biome.accent}88`, cursor: 'pointer',
+          }}
+        >
+          ENTER
+        </button>
       </div>
     </div>
   );
 }
 
 function MobileTabBar({ biome }: { biome: Biome }) {
-  const tabs = [{ i: '⌂', n: 'Home', active: true }, { i: '⚔', n: 'Heroes' }, { i: '★', n: 'Quests' }, { i: '◫', n: 'Shop' }];
+  const router = useRouter();
+  const tabs = [
+    { i: '⌂', n: 'Home',        href: '/' },
+    { i: '⚔', n: 'Leaderboard', href: '/leaderboard' },
+    { i: '★', n: 'How to Play', href: '/how-to-play' },
+    { i: '◫', n: 'Shop',        href: '/shop' },
+  ];
   return (
     <div style={{
       position: 'absolute', left: 0, right: 0, bottom: 0,
@@ -158,15 +274,19 @@ function MobileTabBar({ biome }: { biome: Biome }) {
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     }}>
       {tabs.map((t, i) => (
-        <div key={i} style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-          padding: t.active ? '8px 18px' : '8px 12px', borderRadius: 18,
-          background: t.active ? `linear-gradient(135deg, ${biome.accent}, ${biome.glow})` : 'transparent',
-          color: t.active ? '#0a0a14' : '#cbd5e1',
-          fontWeight: t.active ? 800 : 500,
-          boxShadow: t.active ? `0 0 18px ${biome.accent}88` : 'none',
-          cursor: 'pointer',
-        }}>
+        <div
+          key={i}
+          onClick={() => router.push(t.href)}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+            padding: i === 0 ? '8px 18px' : '8px 12px', borderRadius: 18,
+            background: i === 0 ? `linear-gradient(135deg, ${biome.accent}, ${biome.glow})` : 'transparent',
+            color: i === 0 ? '#0a0a14' : '#cbd5e1',
+            fontWeight: i === 0 ? 800 : 500,
+            boxShadow: i === 0 ? `0 0 18px ${biome.accent}88` : 'none',
+            cursor: 'pointer',
+          }}
+        >
           <span style={{ fontSize: 18 }}>{t.i}</span>
           <span style={{ fontSize: 11 }}>{t.n}</span>
         </div>
@@ -175,10 +295,19 @@ function MobileTabBar({ biome }: { biome: Biome }) {
   );
 }
 
-function DesktopRail({ biome }: { biome: Biome }) {
+function DesktopRail({
+  biome, username, tickets, gamesPlayed, tier, currentLevel,
+}: {
+  biome: Biome; username: string; tickets: number; gamesPlayed: number; tier: string; currentLevel: number;
+}) {
+  const router = useRouter();
+  const cfg = levelConfig(currentLevel);
   const items = [
-    { i: '◉', n: 'Nexus' }, { i: '⚔', n: 'Quests' }, { i: '★', n: 'Expedition', active: true },
-    { i: '⌂', n: 'Vault' }, { i: '⚙', n: 'Settings' },
+    { i: '◉', n: 'Leaderboard', href: '/leaderboard' },
+    { i: '⚔', n: 'How to Play', href: '/how-to-play' },
+    { i: '★', n: 'Expedition',  href: `/map/${biome.act}`, active: true },
+    { i: '⌂', n: 'Shop',        href: '/shop' },
+    { i: '⚙', n: 'Settings',   href: '/settings' },
   ];
   return (
     <div style={{
@@ -186,32 +315,39 @@ function DesktopRail({ biome }: { biome: Biome }) {
       borderRight: `1px solid ${biome.accent}33`, display: 'flex', flexDirection: 'column', gap: 6,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-        <Avatar biome={biome} small/>
+        <Avatar biome={biome} small />
         <div>
-          <div style={{ fontSize: 10, letterSpacing: 1.5, color: biome.glow }}>COMMANDER</div>
-          <div style={{ fontSize: 13, fontWeight: 700 }}>Player</div>
+          <div style={{ fontSize: 10, letterSpacing: 1.5, color: biome.glow }}>{tier.toUpperCase()}</div>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>{username}</div>
+          <div style={{ fontSize: 10, opacity: 0.55, color: '#94a3b8' }}>{gamesPlayed} games played</div>
         </div>
       </div>
       {items.map((it, i) => (
-        <button key={i} style={{
-          display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10,
-          background: it.active ? `${biome.accent}22` : 'transparent',
-          border: it.active ? `1px solid ${biome.accent}55` : '1px solid transparent',
-          color: it.active ? biome.glow : '#cbd5e1',
-          fontSize: 14, fontWeight: it.active ? 700 : 500, textAlign: 'left', cursor: 'pointer',
-        }}>
+        <button
+          key={i}
+          onClick={() => router.push(it.href)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10,
+            background: it.active ? `${biome.accent}22` : 'transparent',
+            border: it.active ? `1px solid ${biome.accent}55` : '1px solid transparent',
+            color: it.active ? biome.glow : '#cbd5e1',
+            fontSize: 14, fontWeight: it.active ? 700 : 500, textAlign: 'left', cursor: 'pointer',
+          }}
+        >
           <span style={{ fontSize: 18, opacity: 0.9 }}>{it.i}</span>{it.n}
         </button>
       ))}
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Stat icon="◆" value="0" color={biome.glow} block/>
-        <Stat icon="⚡" value="50/100" color="#fde047" block/>
+        <Stat icon="◆" value={`${cfg.reward} / level`} color={biome.glow} block />
+        <Stat icon="🎫" value={`${tickets} ticket${tickets !== 1 ? 's' : ''}`} color="#fde047" block />
       </div>
     </div>
   );
 }
 
-function TopHeader({ biome, layout }: { biome: Biome; layout: Layout }) {
+function TopHeader({ biome, layout, username, tickets, tier }: {
+  biome: Biome; layout: Layout; username: string; tickets: number; tier: string;
+}) {
   const pad = layout === 'mobile' ? 16 : 24;
   return (
     <div style={{
@@ -220,25 +356,39 @@ function TopHeader({ biome, layout }: { biome: Biome; layout: Layout }) {
       background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%)',
       position: 'relative', zIndex: 2,
     }}>
-      <Avatar biome={biome}/>
+      <Avatar biome={biome} />
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 11, letterSpacing: 2, color: biome.glow, opacity: 0.8 }}>
-          ACT {romanize(biome.act)} · {biome.cohort}
+          ACT {romanize(biome.act)} · {biome.cohort} · {tier.toUpperCase()}
         </div>
-        <div style={{ fontSize: layout === 'mobile' ? 22 : 28, fontWeight: 800, lineHeight: 1.1, color: '#fff' }}>
-          {biome.name}
+        <div style={{ fontSize: layout === 'mobile' ? 20 : 28, fontWeight: 800, lineHeight: 1.1, color: '#fff' }}>
+          {username}
         </div>
       </div>
-      <Stat icon="◆" value="0" color={biome.glow}/>
-      <Stat icon="⚡" value="50" color="#fde047"/>
+      <Stat icon="🎫" value={String(tickets)} color="#fde047" />
+      <Stat icon="🌍" value={biome.name.split(' ')[0]} color={biome.glow} />
     </div>
   );
 }
 
+// ── Main map component ───────────────────────────────────────────────
+
 export function MapScreen({ biome, currentLevel, layout, onEnterLevel }: Props) {
   const Art = ART[biome.id];
-  const nodes = generateNodes(biome.range[0], 6, 400, 600);
-  const activeIdx = Math.min(5, Math.max(0, currentLevel - biome.range[0]));
+  const player = usePlayerData(currentLevel);
+  const prizePool = usePrizePool();
+
+  // Generate 6 nodes centered just before the current level
+  const NODE_COUNT = 6;
+  const nodeStart = Math.max(
+    biome.range[0],
+    Math.min(biome.range[1] - NODE_COUNT + 1, currentLevel - 1),
+  );
+  const nodeEnd = Math.min(biome.range[1], nodeStart + NODE_COUNT - 1);
+  const nodes = generateNodes(nodeStart, nodeEnd, NODE_COUNT, 400, 600);
+
+  // Active node = the one matching currentLevel (clamped)
+  const activeIdx = Math.max(0, Math.min(NODE_COUNT - 1, currentLevel - nodeStart));
   const pathD = buildPathD(nodes);
   const isDesktop = layout === 'desktop';
   const isMobile = layout === 'mobile';
@@ -250,33 +400,73 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel }: Props) 
       display: 'flex', flexDirection: isDesktop ? 'row' : 'column',
       overflow: 'hidden', position: 'relative',
     }}>
-      {isDesktop && <DesktopRail biome={biome}/>}
-      {!isDesktop && <TopHeader biome={biome} layout={layout}/>}
+      {isDesktop && (
+        <DesktopRail
+          biome={biome}
+          username={player.username}
+          tickets={player.tickets}
+          gamesPlayed={player.gamesPlayed}
+          tier={player.tier}
+          currentLevel={currentLevel}
+        />
+      )}
+      {!isDesktop && (
+        <TopHeader
+          biome={biome}
+          layout={layout}
+          username={player.username}
+          tickets={player.tickets}
+          tier={player.tier}
+        />
+      )}
 
       <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: layout === 'tablet' ? 'row' : 'column' }}>
         {/* Scene */}
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: isMobile ? 400 : undefined }}>
-          <svg viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-            {Art && <Art b={biome}/>}
-            <rect width="400" height="600" fill={biome.fog}/>
+          <svg
+            viewBox="0 0 400 600"
+            preserveAspectRatio="xMidYMid slice"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+          >
+            {Art && <Art b={biome} />}
+            <rect width="400" height="600" fill={biome.fog} />
             {/* path glow */}
-            <path d={pathD} stroke={biome.path} strokeWidth="14" fill="none" opacity="0.25" strokeLinecap="round"/>
-            <path d={pathD} stroke={biome.path} strokeWidth="6" fill="none" strokeDasharray="4 8" strokeLinecap="round"/>
-            {nodes.map((n, i) => <NodeDot key={i} n={n} biome={biome} active={i === activeIdx}/>)}
-            <FinishFlag x={nodes[nodes.length-1].x} y={nodes[nodes.length-1].y-40} biome={biome}/>
+            <path d={pathD} stroke={biome.path} strokeWidth="14" fill="none" opacity="0.25" strokeLinecap="round" />
+            <path d={pathD} stroke={biome.path} strokeWidth="6" fill="none" strokeDasharray="4 8" strokeLinecap="round" />
+            {nodes.map((n, i) => (
+              <NodeDot
+                key={i}
+                n={n}
+                biome={biome}
+                active={i === activeIdx}
+                unlocked={n.level <= currentLevel}
+                onClick={() => onEnterLevel(n.level)}
+              />
+            ))}
+            <FinishFlag x={nodes[nodes.length - 1].x} y={nodes[nodes.length - 1].y - 40} biome={biome} />
           </svg>
         </div>
 
         {/* Cards */}
         {layout !== 'mobile' ? (
-          <SideCards biome={biome} level={currentLevel} layout={layout} onEnterLevel={onEnterLevel}/>
+          <SideCards
+            biome={biome}
+            level={currentLevel}
+            layout={layout}
+            onEnterLevel={onEnterLevel}
+            prizePool={prizePool}
+          />
         ) : (
-          <BottomCard biome={biome} level={currentLevel} onEnterLevel={onEnterLevel}/>
+          <BottomCard
+            biome={biome}
+            level={currentLevel}
+            onEnterLevel={onEnterLevel}
+            prizePool={prizePool}
+          />
         )}
       </div>
 
-      {isMobile && <MobileTabBar biome={biome}/>}
+      {isMobile && <MobileTabBar biome={biome} />}
     </div>
   );
 }

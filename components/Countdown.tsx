@@ -59,7 +59,7 @@ export default function Countdown({ size = 'md', showLabel = true }: CountdownPr
           letterSpacing: '0.08em',
           animation: urgent ? 'countdownPulse 1s infinite' : 'none',
         }}>
-          {urgent ? '⚠️ ENDING SOON' : 'Period Ends In'}
+          {urgent ? 'ENDING SOON' : 'Period Ends In'}
         </span>
       )}
       <div style={{

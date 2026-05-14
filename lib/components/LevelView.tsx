@@ -107,8 +107,8 @@ function LevelFooter({ biome, layout, onSubmit }: { biome: Biome; layout: Layout
       position: 'relative', zIndex: 2,
     }}>
       <Booster icon="↻" label="Shuffle" biome={biome}/>
-      <Booster icon="✱" label="Bomb" biome={biome}/>
-      <Booster icon="⏵" label="Hint" biome={biome}/>
+      <Booster icon="*" label="Bomb" biome={biome}/>
+      <Booster icon=">" label="Hint" biome={biome}/>
       <button onClick={onSubmit} style={{
         marginLeft: 'auto', padding: '12px 22px', borderRadius: 999,
         background: `linear-gradient(135deg, ${biome.accent}, ${biome.glow})`,

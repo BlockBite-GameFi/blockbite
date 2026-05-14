@@ -16,8 +16,8 @@ export default function SettingsPage() {
       <section>
         <label>{t('theme')}</label>
         <div className="seg">
-          <button data-on={theme==='dark'} onClick={() => setTheme('dark')}>🌙 {t('dark')}</button>
-          <button data-on={theme==='light'} onClick={() => setTheme('light')}>☀ {t('light')}</button>
+          <button data-on={theme==='dark'} onClick={() => setTheme('dark')}>{t('dark')}</button>
+          <button data-on={theme==='light'} onClick={() => setTheme('light')}>{t('light')}</button>
         </div>
       </section>
     </main>

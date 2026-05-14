@@ -47,7 +47,7 @@ export default function HowToPlayPage() {
               fontWeight: 900,
               marginBottom: 12,
             }}>
-              📖 <span className="neon-cyan">How to Play</span>
+              <span className="neon-cyan">How to Play</span>
             </h1>
             <p style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -70,33 +70,28 @@ export default function HowToPlayPage() {
               paddingBottom: 12,
               borderBottom: '1px solid rgba(0,245,255,0.15)',
             }}>
-              🎮 Game Mechanics
+              Game Mechanics
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {[
                 {
                   title: '8×8 Grid Board',
-                  icon: '⬛',
                   content: 'The game board is 8 columns × 8 rows = 64 cells. You place pieces on this board.',
                 },
                 {
                   title: '3-Piece Tray',
-                  icon: '🧩',
                   content: 'Three pieces are always available at the bottom. Select one (click or press 1/2/3) then click the board to place it. Pieces cannot be rotated.',
                 },
                 {
                   title: 'Line Clearing',
-                  icon: '💥',
                   content: 'When a full row (8 blocks) or full column (8 blocks) is completed, it gets cleared. Both can happen simultaneously — that\'s a COMBO and earns multiplier bonuses.',
                 },
                 {
                   title: 'No Gravity',
-                  icon: '🚀',
                   content: 'Unlike Tetris, blocks do NOT fall after a clear. Only the cleared row/column disappears. Remaining blocks stay in place.',
                 },
                 {
                   title: 'Game Over',
-                  icon: '💀',
                   content: 'Game over when none of the 3 available pieces can fit anywhere on the board. No more moves = session ends.',
                 },
               ].map(item => (
@@ -108,7 +103,6 @@ export default function HowToPlayPage() {
                   borderRadius: 12,
                   padding: '16px 20px',
                 }}>
-                  <span style={{ fontSize: 28, flexShrink: 0 }}>{item.icon}</span>
                   <div>
                     <div style={{
                       fontFamily: "'Orbitron', monospace",
@@ -142,7 +136,7 @@ export default function HowToPlayPage() {
               paddingBottom: 12,
               borderBottom: '1px solid rgba(0,255,136,0.15)',
             }}>
-              📊 Scoring System
+              Scoring System
             </h2>
             <div style={{
               background: 'rgba(18,18,42,0.8)',
@@ -200,7 +194,7 @@ export default function HowToPlayPage() {
                 fontSize: 12,
                 color: '#00F5FF',
                 marginBottom: 8,
-              }}>🔗 CHAIN BONUS</div>
+              }}>CHAIN BONUS</div>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
                 fontSize: 14,
@@ -226,7 +220,7 @@ export default function HowToPlayPage() {
               paddingBottom: 12,
               borderBottom: '1px solid rgba(255,215,0,0.15)',
             }}>
-              💰 Tokenomics & Prize Pool
+              Tokenomics & Prize Pool
             </h2>
             <div style={{
               background: 'rgba(18,18,42,0.8)',
@@ -297,7 +291,7 @@ export default function HowToPlayPage() {
               paddingBottom: 12,
               borderBottom: '1px solid rgba(255,0,255,0.15)',
             }}>
-              ❓ FAQ
+              FAQ
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {FAQ.map(faq => (
@@ -366,8 +360,8 @@ export default function HowToPlayPage() {
               Try the game for free in Phase 0 preview, or buy tickets to enter the leaderboard.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <a href="/game" className="btn btn-primary btn-lg">▶ Play Free Preview</a>
-              <a href="/shop" className="btn btn-secondary btn-lg">🎟 Buy Tickets</a>
+              <a href="/game" className="btn btn-primary btn-lg">Play Free Preview</a>
+              <a href="/shop" className="btn btn-secondary btn-lg">Buy Tickets</a>
             </div>
           </div>
         </div>

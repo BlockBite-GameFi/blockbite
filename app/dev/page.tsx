@@ -50,12 +50,12 @@ export default function DevDashboard() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
         <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '2px', color: '#FF2244' }}>
-          🛠 DEV DASHBOARD
+          DEV DASHBOARD
         </div>
         <div style={{ fontSize: '12px', color: '#55557A' }}>BlockBite Error Analytics · stored in localStorage</div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
           <button onClick={load} style={btnStyle('#00F5FF')}>↻ Refresh</button>
-          <button onClick={handleClear} style={btnStyle('#FF2244')}>🗑 Clear All</button>
+          <button onClick={handleClear} style={btnStyle('#FF2244')}>Clear All</button>
           <Link href="/" style={{ ...btnStyle('#5533AA'), textDecoration: 'none' }}>← Home</Link>
         </div>
       </div>
@@ -78,7 +78,7 @@ export default function DevDashboard() {
         {/* Top-10 stages with errors */}
         <div style={{ background: '#0D0D22', border: '1px solid #33334488', borderRadius: '12px', padding: '20px' }}>
           <div style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '2px', color: '#8888BB', marginBottom: '16px' }}>
-            🔥 TOP STAGES BY ERRORS
+            TOP STAGES BY ERRORS
           </div>
           {byLevel.length === 0 && <div style={{ color: '#55557A', fontSize: '12px' }}>No data yet — play to generate reports.</div>}
           {byLevel.map(([stage, count]) => {

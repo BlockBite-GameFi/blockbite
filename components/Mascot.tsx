@@ -76,8 +76,8 @@ export const EXPR: Record<string, ExprFn> = {
     <text x={s*.74} y={s*.30} fontSize={s*.10} fill={c[2]} opacity=".7">z</text>
   </>,
   star: (c, s) => <>
-    <text x={s*.28} y={s*.58} fontSize={s*.16} fill="#fff">★</text>
-    <text x={s*.55} y={s*.58} fontSize={s*.16} fill="#fff">★</text>
+    <polygon points={`${s*.34},${s*.46} ${s*.36},${s*.52} ${s*.42},${s*.52} ${s*.37},${s*.56} ${s*.39},${s*.62} ${s*.34},${s*.58} ${s*.29},${s*.62} ${s*.31},${s*.56} ${s*.26},${s*.52} ${s*.32},${s*.52}`} fill="#fff"/>
+    <polygon points={`${s*.61},${s*.46} ${s*.63},${s*.52} ${s*.69},${s*.52} ${s*.64},${s*.56} ${s*.66},${s*.62} ${s*.61},${s*.58} ${s*.56},${s*.62} ${s*.58},${s*.56} ${s*.53},${s*.52} ${s*.59},${s*.52}`} fill="#fff"/>
     <path d={`M${s*.34} ${s*.65} Q${s*.5} ${s*.76} ${s*.66} ${s*.65}`} stroke="#fff" strokeWidth={s*.025} fill="none" strokeLinecap="round"/>
   </>,
 };
@@ -95,8 +95,8 @@ export const ACC: Record<string, AccFn> = {
   bow:       (c, s) => <><polygon points={`${s*.40},${s*.15} ${s*.50},${s*.20} ${s*.40},${s*.25}`} fill={c[0]}/><polygon points={`${s*.60},${s*.15} ${s*.50},${s*.20} ${s*.60},${s*.25}`} fill={c[0]}/><circle cx={s*.5} cy={s*.20} r={s*.03} fill={c[0]}/></>,
   headband:  (c, s) => <rect x={s*.22} y={s*.24} width={s*.56} height={s*.06} rx={s*.03} fill={c[0]} opacity=".9"/>,
   antenna:   (c, s) => <><line x1={s*.5} y1={s*.05} x2={s*.5} y2={s*.20} stroke={c[0]} strokeWidth={s*.025}/><circle cx={s*.5} cy={s*.05} r={s*.04} fill={c[0]}/></>,
-  lightning: (c, s) => <text x={s*.68} y={s*.25} fontSize={s*.18} fill={c[0]}>⚡</text>,
-  star_acc:  (c, s) => <text x={s*.66} y={s*.24} fontSize={s*.15} fill={c[0]}>✦</text>,
+  lightning: (c, s) => <polygon points={`${s*.70},${s*.08} ${s*.62},${s*.20} ${s*.68},${s*.20} ${s*.60},${s*.34} ${s*.72},${s*.19} ${s*.66},${s*.19}`} fill={c[0]}/>,
+  star_acc:  (c, s) => <polygon points={`${s*.66},${s*.10} ${s*.68},${s*.17} ${s*.75},${s*.17} ${s*.70},${s*.21} ${s*.72},${s*.28} ${s*.66},${s*.24} ${s*.60},${s*.28} ${s*.62},${s*.21} ${s*.57},${s*.17} ${s*.64},${s*.17}`} fill={c[0]}/>,
 };
 
 export const ACC_KEYS = Object.keys(ACC);
@@ -128,7 +128,7 @@ type CheekFn = (c: [string, string, string], s: number) => React.ReactNode;
 export const CHEEKS: Record<string, CheekFn> = {
   none:  () => null,
   round: (c, s) => <><ellipse cx={s*.25} cy={s*.60} rx={s*.07} ry={s*.04} fill={c[0]} opacity=".5"/><ellipse cx={s*.75} cy={s*.60} rx={s*.07} ry={s*.04} fill={c[0]} opacity=".5"/></>,
-  heart: (c, s) => <><text x={s*.17} y={s*.64} fontSize={s*.10} fill={c[0]} opacity=".6">♥</text><text x={s*.70} y={s*.64} fontSize={s*.10} fill={c[0]} opacity=".6">♥</text></>,
+  heart: (c, s) => <><ellipse cx={s*.22} cy={s*.62} rx={s*.05} ry={s*.03} fill={c[0]} opacity=".5"/><ellipse cx={s*.75} cy={s*.62} rx={s*.05} ry={s*.03} fill={c[0]} opacity=".5"/></>,
 };
 export const CHEEK_KEYS = Object.keys(CHEEKS);
 
@@ -241,8 +241,8 @@ export function MascotSVG({ cfg, size = 120 }: MascotSVGProps) {
       {EXPR[cfg.exprKey](pal, s)}
 
       {/* Sparkle details */}
-      {cfg.id % 4 === 0 && <text x={s*.72} y={s*.30} fontSize={s*.10} fill={pal[2]} opacity=".7">✦</text>}
-      {cfg.id % 7 === 0 && <text x={s*.10} y={s*.32} fontSize={s*.08} fill={pal[2]} opacity=".5">★</text>}
+      {cfg.id % 4 === 0 && <circle cx={s*.76} cy={s*.26} r={s*.03} fill={pal[2]} opacity=".7"/>}
+      {cfg.id % 7 === 0 && <circle cx={s*.14} cy={s*.30} r={s*.025} fill={pal[2]} opacity=".5"/>}
     </svg>
   );
 }

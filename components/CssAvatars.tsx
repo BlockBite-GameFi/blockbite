@@ -19,13 +19,13 @@ export const AVATAR_CONFIGS: AvatarConfig[] = [
   { id: 1,  name: 'Nova',       bg: 'linear-gradient(135deg, #00F5FF, #0088FF)', symbol: '◆',  symbolColor: '#CCFFFF', glowColor: '#00F5FF' },
   { id: 2,  name: 'Magma',      bg: 'linear-gradient(135deg, #FF6B00, #FF0040)', symbol: '▲',  symbolColor: '#FFE8CC', glowColor: '#FF6B00' },
   { id: 3,  name: 'Jade',       bg: 'linear-gradient(135deg, #00FF88, #00AA44)', symbol: '⬡',  symbolColor: '#CCFFE8', glowColor: '#00FF88' },
-  { id: 4,  name: 'Volt',       bg: 'linear-gradient(135deg, #FFD700, #FF8C00)', symbol: '⚡',  symbolColor: '#FFFFCC', glowColor: '#FFD700' },
-  { id: 5,  name: 'Void',       bg: 'linear-gradient(135deg, #1A1A2E, #333355)', symbol: '✦',  symbolColor: '#8888BB', glowColor: '#AA00FF' },
+  { id: 4,  name: 'Volt',       bg: 'linear-gradient(135deg, #FFD700, #FF8C00)', symbol: '///', symbolColor: '#FFFFCC', glowColor: '#FFD700' },
+  { id: 5,  name: 'Void',       bg: 'linear-gradient(135deg, #1A1A2E, #333355)', symbol: '◆',  symbolColor: '#8888BB', glowColor: '#AA00FF' },
   { id: 6,  name: 'Crystal',    bg: 'linear-gradient(135deg, #FF00FF, #AA0066)', symbol: '◇',  symbolColor: '#FFE0FF', glowColor: '#FF00FF' },
-  { id: 7,  name: 'Glacier',    bg: 'linear-gradient(135deg, #00C3FF, #0040FF)', symbol: '❄',  symbolColor: '#E0F8FF', glowColor: '#00C3FF' },
-  { id: 8,  name: 'Ember',      bg: 'linear-gradient(135deg, #FF4444, #990000)', symbol: '🔥', symbolColor: '#FFD0D0', glowColor: '#FF4444' },
+  { id: 7,  name: 'Glacier',    bg: 'linear-gradient(135deg, #00C3FF, #0040FF)', symbol: '///', symbolColor: '#E0F8FF', glowColor: '#00C3FF' },
+  { id: 8,  name: 'Ember',      bg: 'linear-gradient(135deg, #FF4444, #990000)', symbol: '▲',  symbolColor: '#FFD0D0', glowColor: '#FF4444' },
   { id: 9,  name: 'Prism',      bg: 'linear-gradient(135deg, #00F5FF, #FF00FF)', symbol: '◉',  symbolColor: '#FFFFFF', glowColor: '#00F5FF' },
-  { id: 10, name: 'Nebula',     bg: 'linear-gradient(135deg, #7700FF, #FF00AA)', symbol: '★',  symbolColor: '#EED0FF', glowColor: '#7700FF' },
+  { id: 10, name: 'Nebula',     bg: 'linear-gradient(135deg, #7700FF, #FF00AA)', symbol: '◈',  symbolColor: '#EED0FF', glowColor: '#7700FF' },
   { id: 11, name: 'Stealth',    bg: 'linear-gradient(135deg, #333344, #111122)', symbol: '⬟',  symbolColor: '#6666AA', glowColor: '#4444AA' },
 ];
 

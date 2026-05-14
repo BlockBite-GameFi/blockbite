@@ -7,24 +7,24 @@ import Navbar from '@/components/Navbar';
 import { MascotSVG, BRAND_MASCOTS, PALETTES } from '@/components/Mascot';
 
 const BLOCK_COLORS = ['#a78bfa','#5eead4','#fbbf24','#f472b6','#7dd3fc','#fb923c'];
-const BLOCK_ICONS  = ['◆','◈','◉','✦','⬡','◇'];
+const BLOCK_ICONS: string[] = [];
 
 const FEATURES = {
   en: [
-    { ic:'◆', t:'On-chain Proofs',       d:'Every Act completion writes a ProofCache PDA to Solana. Your progress is permanent and verifiable.' },
-    { ic:'⛁', t:'Real USDC Rewards',      d:'70% of ticket revenue goes to the prize pool. Claim USDC directly to your wallet — no intermediaries.' },
-    { ic:'▦', t:'Skill-Based Match-3',     d:'4,000 levels across 8 biomes. Boards seeded by keccak256 — same level, identical for every player.' },
-    { ic:'◷', t:'Vesting Cooldown',        d:'24-hour on-chain cooldown between claims. Enforced by the Solana program — not just a UI check.' },
-    { ic:'◈', t:'Transparent Tokenomics',  d:'70% prize · 15% team · 10% dev · 5% referral. All splits happen atomically on-chain.' },
-    { ic:'⛨', t:'Squads Multisig',         d:'Admin actions require 2-of-3 Squads v4 signatures. The vault is PDA-owned — not a team wallet.' },
+    { ic:'01', t:'On-chain Proofs',       d:'Every Act completion writes a ProofCache PDA to Solana. Your progress is permanent and verifiable.' },
+    { ic:'02', t:'Real USDC Rewards',      d:'70% of ticket revenue goes to the prize pool. Claim USDC directly to your wallet — no intermediaries.' },
+    { ic:'03', t:'Skill-Based Match-3',    d:'4,000 levels across 8 biomes. Boards seeded by keccak256 — same level, identical for every player.' },
+    { ic:'04', t:'Vesting Cooldown',       d:'24-hour on-chain cooldown between claims. Enforced by the Solana program — not just a UI check.' },
+    { ic:'05', t:'Transparent Tokenomics', d:'70% prize · 15% team · 10% dev · 5% referral. All splits happen atomically on-chain.' },
+    { ic:'06', t:'Squads Multisig',        d:'Admin actions require 2-of-3 Squads v4 signatures. The vault is PDA-owned — not a team wallet.' },
   ],
   id: [
-    { ic:'◆', t:'Bukti On-chain',          d:'Setiap Babak selesai menulis ProofCache PDA ke Solana. Progresmu permanen.' },
-    { ic:'⛁', t:'Hadiah USDC Nyata',       d:'70% pendapatan tiket masuk ke pool hadiah. Klaim USDC langsung ke wallet.' },
-    { ic:'▦', t:'Match-3 Berbasis Skill',   d:'4.000 level di 8 bioma. Papan diacak oleh keccak256.' },
-    { ic:'◷', t:'Cooldown Vesting',         d:'Cooldown 24 jam on-chain dipaksa oleh program Solana.' },
-    { ic:'◈', t:'Tokenomik Transparan',     d:'Pembagian 70/15/10/5 terjadi secara atomik on-chain.' },
-    { ic:'⛨', t:'Multisig Squads',          d:'Aksi admin memerlukan tanda tangan 2-dari-3 Squads v4.' },
+    { ic:'01', t:'Bukti On-chain',         d:'Setiap Babak selesai menulis ProofCache PDA ke Solana. Progresmu permanen.' },
+    { ic:'02', t:'Hadiah USDC Nyata',      d:'70% pendapatan tiket masuk ke pool hadiah. Klaim USDC langsung ke wallet.' },
+    { ic:'03', t:'Match-3 Berbasis Skill', d:'4.000 level di 8 bioma. Papan diacak oleh keccak256.' },
+    { ic:'04', t:'Cooldown Vesting',       d:'Cooldown 24 jam on-chain dipaksa oleh program Solana.' },
+    { ic:'05', t:'Tokenomik Transparan',   d:'Pembagian 70/15/10/5 terjadi secara atomik on-chain.' },
+    { ic:'06', t:'Multisig Squads',        d:'Aksi admin memerlukan tanda tangan 2-dari-3 Squads v4.' },
   ],
 };
 
@@ -123,9 +123,7 @@ export default function Home() {
 
         <div style={{ display:'flex', gap:10, justifyContent:'center', flexWrap:'wrap' }}>
           {BLOCK_COLORS.map((c,i) => (
-            <div key={i} style={{ width:42, height:42, borderRadius:11, background:c, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:900, color:'#0a0a14', animation:`bbFloat ${2.5+i*.3}s ease-in-out infinite`, animationDelay:`${i*.18}s` }}>
-              {BLOCK_ICONS[i]}
-            </div>
+            <div key={i} style={{ width:42, height:42, borderRadius:11, background:c, animation:`bbFloat ${2.5+i*.3}s ease-in-out infinite`, animationDelay:`${i*.18}s` }} />
           ))}
         </div>
 
@@ -142,10 +140,10 @@ export default function Home() {
         {/* CTAs */}
         <div style={{ display:'flex', gap:12, flexWrap:'wrap', justifyContent:'center' }}>
           <Link href="/game" style={{ padding:'14px 32px', borderRadius:12, background:'var(--ds-grad)', color:'#0a0a14', fontWeight:900, fontSize:16, textDecoration:'none', boxShadow:'0 0 28px rgba(167,139,250,.45)' }}>
-            ▶ {lang==='id'?'MAIN SEKARANG':'PLAY NOW'}
+            {lang==='id'?'MAIN SEKARANG':'PLAY NOW'}
           </Link>
           <Link href="/waitlist" style={{ padding:'14px 28px', borderRadius:12, background:'transparent', border:'1px solid var(--ds-border)', color:'var(--ds-text)', fontWeight:700, fontSize:16, textDecoration:'none' }}>
-            {lang==='id'?'✉ DAFTAR WAITLIST':'✉ JOIN WAITLIST'}
+            {lang==='id'?'DAFTAR WAITLIST':'JOIN WAITLIST'}
           </Link>
           <Link href="/map" style={{ padding:'14px 28px', borderRadius:12, background:'transparent', border:'1px solid var(--ds-border)', color:'var(--ds-text)', fontWeight:700, fontSize:16, textDecoration:'none' }}>
             {lang==='id'?'LIHAT PETA':'VIEW MAP'}
@@ -162,7 +160,7 @@ export default function Home() {
             <div key={i} style={{ padding:24, borderRadius:20, background:'var(--ds-surface)', border:'1px solid var(--ds-border)', transition:'.2s' }}
               onMouseEnter={e=>{const d=e.currentTarget as HTMLElement;d.style.borderColor='var(--ds-accent)';d.style.background='rgba(167,139,250,.08)';}}
               onMouseLeave={e=>{const d=e.currentTarget as HTMLElement;d.style.borderColor='var(--ds-border)';d.style.background='var(--ds-surface)';}}>
-              <div style={{ fontSize:32, marginBottom:14 }}>{f.ic}</div>
+              <div style={{ fontSize:11, fontWeight:800, letterSpacing:'2px', color:'var(--ds-accent)', marginBottom:14, fontFamily:'monospace' }}>{f.ic}</div>
               <div style={{ fontSize:16, fontWeight:800, marginBottom:6 }}>{f.t}</div>
               <div style={{ fontSize:13, color:'var(--ds-text-dim)', lineHeight:1.6 }}>{f.d}</div>
             </div>

@@ -505,9 +505,8 @@ export default function GameCanvas() {
           BlockBite runs on <strong style={{ color: '#00FF88' }}>Solana</strong> — supported wallets:
         </p>
         <div className={styles.walletIcons}>
-          {[['👻', 'Phantom'], ['🔥', 'Solflare'], ['🎒', 'Backpack']].map(([icon, name]) => (
+          {['Phantom', 'Solflare', 'Backpack'].map((name) => (
             <div key={name} className={styles.walletChip}>
-              <span>{icon}</span>
               <span>{name}</span>
             </div>
           ))}
@@ -573,7 +572,7 @@ export default function GameCanvas() {
           </div>
           {state.chain > 1 && (
             <div className={styles.chainBadge}>
-              <span className={styles.chainIcon}>⚡</span>
+              <span className={styles.chainIcon}>x</span>
               <span>×{state.chain} CHAIN</span>
             </div>
           )}

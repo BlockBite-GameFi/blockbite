@@ -20,8 +20,8 @@ const TIER_COLORS: Record<string, { from: string; to: string; glow: string }> = 
 };
 
 const TIER_ICONS: Record<string, string> = {
-  starter: '🎟', explorer: '🧭', warrior: '⚔️',
-  hunter: '🎯', champion: '👑', legendary: '🌟', godmode: '💎',
+  starter: '', explorer: '', warrior: '',
+  hunter: '', champion: '', legendary: '', godmode: '',
 };
 
 export default function ShopPage() {
@@ -129,14 +129,14 @@ export default function ShopPage() {
           {connected && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
               <div style={{ background: 'rgba(0,245,255,0.07)', border: '1px solid rgba(0,245,255,0.2)', borderRadius: 10, padding: '8px 20px', fontSize: 13, color: '#8888BB' }}>
-                🎟 Tickets: <b style={{ color: '#00F5FF' }}>{ticketBalance}</b>
+                Tickets: <b style={{ color: '#00F5FF' }}>{ticketBalance}</b>
               </div>
               <div style={{ background: 'rgba(255,215,0,0.07)', border: '1px solid rgba(255,215,0,0.2)', borderRadius: 10, padding: '8px 20px', fontSize: 13, color: '#8888BB' }}>
-                💰 USDC Balance: <b style={{ color: '#FFD700' }}>{usdcBalance !== null ? usdcBalance.toFixed(2) : '...'}</b>
+                USDC Balance: <b style={{ color: '#FFD700' }}>{usdcBalance !== null ? usdcBalance.toFixed(2) : '...'}</b>
               </div>
               {IS_DEVNET && (
                 <div style={{ background: 'rgba(153,69,255,0.1)', border: '1px solid rgba(153,69,255,0.3)', borderRadius: 10, padding: '8px 20px', fontSize: 12, color: '#CC88FF' }}>
-                  🔬 DEVNET — <a href="https://faucet.solana.com" target="_blank" rel="noopener noreferrer" style={{ color: '#9945FF' }}>Get test USDC</a>
+                  DEVNET — <a href="https://faucet.solana.com" target="_blank" rel="noopener noreferrer" style={{ color: '#9945FF' }}>Get test USDC</a>
                 </div>
               )}
             </div>
@@ -145,13 +145,13 @@ export default function ShopPage() {
           {/* Tx feedback */}
           {txSig && (
             <div style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.25)', borderRadius: 10, padding: '12px 20px', marginBottom: 20, textAlign: 'center', fontSize: 14, color: '#00FF88' }}>
-              ✅ Purchase confirmed! Tickets added.{' '}
+              Purchase confirmed! Tickets added.{' '}
               <a href={explorerTx(txSig)} target="_blank" rel="noopener noreferrer" style={{ color: '#00F5FF', textDecoration: 'underline' }}>View on Solana Explorer →</a>
             </div>
           )}
           {txError && (
             <div style={{ background: 'rgba(255,34,68,0.08)', border: '1px solid rgba(255,34,68,0.25)', borderRadius: 10, padding: '12px 20px', marginBottom: 20, textAlign: 'center', fontSize: 14, color: '#FF5577' }}>
-              ❌ {txError}
+              {txError}
             </div>
           )}
 
@@ -167,7 +167,6 @@ export default function ShopPage() {
             gap: 12,
             flexWrap: 'wrap',
           }}>
-            <span style={{ fontSize: 20 }}>⚡</span>
             <div>
               <span style={{
                 fontFamily: "'Orbitron', monospace",
@@ -413,17 +412,14 @@ export default function ShopPage() {
           }}>
             {[
               {
-                icon: '🔒',
                 title: 'Secure Payments',
                 desc: 'All transactions are processed on-chain via Solana. We never hold your funds.',
               },
               {
-                icon: '♻️',
                 title: 'No Expiry',
                 desc: 'Tickets never expire. Buy now, play whenever you want.',
               },
               {
-                icon: '🔗',
                 title: 'Referral Rewards',
                 desc: 'Share your referral link and earn 5% of every ticket your friends buy — forever.',
               },
@@ -436,7 +432,6 @@ export default function ShopPage() {
                 display: 'flex',
                 gap: 12,
               }}>
-                <span style={{ fontSize: 24 }}>{item.icon}</span>
                 <div>
                   <div style={{
                     fontFamily: "'Plus Jakarta Sans', sans-serif",

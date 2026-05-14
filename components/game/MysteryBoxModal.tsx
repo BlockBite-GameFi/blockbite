@@ -52,14 +52,14 @@ export default function MysteryBoxModal({ level, currentScore, picksInSession, o
     <div className={styles.overlay}>
       <div className={styles.modal}>
         <div className={styles.header}>
-          <div className={styles.title}>⚡ MYSTERY BOX</div>
+          <div className={styles.title}>MYSTERY BOX</div>
           <div className={styles.subtitle}>LEVEL {level} MILESTONE — PICK ONE</div>
         </div>
 
         <div className={styles.hintBar}>
-          <span>🎯 Multiplier chance: <b className={styles.multPct}>{multChance}%</b></span>
+          <span>Multiplier chance: <b className={styles.multPct}>{multChance}%</b></span>
           {picksInSession < 5 && <span className={styles.hintSub}>Pick {5 - picksInSession} more times to unlock higher multipliers</span>}
-          {picksInSession >= 5 && <span className={styles.hintMax}>⚡ MAX REWARD MODE — big multipliers active!</span>}
+          {picksInSession >= 5 && <span className={styles.hintMax}>MAX REWARD MODE — big multipliers active!</span>}
         </div>
 
         <div className={styles.boxRow}>

@@ -23,7 +23,7 @@ export default function PrizePoolCounter({ size = 'md' }: PrizePoolCounterProps)
         textTransform: 'uppercase',
         letterSpacing: '0.12em',
       }}>
-        🏆 Prize Pool
+        Prize Pool
       </span>
       <span style={{
         fontFamily: "'Orbitron', monospace",

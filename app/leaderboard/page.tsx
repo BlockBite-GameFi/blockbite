@@ -36,10 +36,10 @@ function shortWallet(addr: string) {
 }
 
 const TAB_ICONS: Record<Tab, string> = {
-  Monthly: '📅',
-  'All-Time': '🏆',
-  Daily: '⚡',
-  'Whale Room': '🐋',
+  Monthly: '',
+  'All-Time': '',
+  Daily: '',
+  'Whale Room': '',
 };
 
 export default function LeaderboardPage() {
@@ -139,7 +139,7 @@ export default function LeaderboardPage() {
 
             {!loading && entries.length === 0 && (
               <div style={{ textAlign: 'center', padding: '80px 24px' }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>🏆</div>
+                <div style={{ fontSize: 14, letterSpacing: 2, fontWeight: 800, color: 'var(--ds-accent)', marginBottom: 16 }}>LEADERBOARD</div>
                 <h3 style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", color: 'var(--ds-accent)', fontSize: 18, marginBottom: 12 }}>
                   NO SCORES YET
                 </h3>

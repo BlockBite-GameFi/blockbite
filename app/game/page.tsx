@@ -102,7 +102,7 @@ export default function GamePage() {
                 fontSize: 11,
                 color: '#00FF88',
               }}>
-                🔗 Consecutive clears: +20%→+50%→+100%
+                Consecutive clears: +20% / +50% / +100%
               </div>
             </div>
           </div>
@@ -169,12 +169,12 @@ export default function GamePage() {
                 QUICK TIPS
               </div>
               {[
-                '🎮 Press 1/2/3 to select a piece',
-                '📍 Click the board to place it',
-                '🔗 Clear lines in sequence for chain bonus',
-                '🎯 Clear rows AND columns simultaneously for combos',
-                '✨ Empty the board for PERFECT BOARD +5000 pts',
-                '⚡ Bigger pieces = more bonus points',
+                'Press 1/2/3 to select a piece',
+                'Click the board to place it',
+                'Clear lines in sequence for chain bonus',
+                'Clear rows AND columns simultaneously for combos',
+                'Empty the board for PERFECT BOARD +5000 pts',
+                'Bigger pieces = more bonus points',
               ].map((tip, i) => (
                 <div key={i} style={{
                   fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -204,7 +204,7 @@ export default function GamePage() {
                 color: '#00F5FF',
                 marginBottom: 8,
               }}>
-                🏆 COMPETE FOR PRIZES
+                COMPETE FOR PRIZES
               </div>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",

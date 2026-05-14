@@ -6,15 +6,15 @@ export default function OnboardingPage() {
   const { t, lang, theme } = useApp();
   const [idx, setIdx] = useState(0);
   const slides = (lang === 'id' ? [
-    ['◆','Selamat Datang','Game match-3 dengan hadiah USDC on-chain.'],
-    ['⛁','Beli Tiket','Mulai dari $1 USDC.'],
-    ['⛨','Selesaikan Babak','500 level → bukti on-chain → klaim USDC.'],
-    ['◷','Cooldown 24h','Dipaksa oleh program Solana.'],
+    ['01','Selamat Datang','Game match-3 dengan hadiah USDC on-chain.'],
+    ['02','Beli Tiket','Mulai dari $1 USDC.'],
+    ['03','Selesaikan Babak','500 level → bukti on-chain → klaim USDC.'],
+    ['04','Cooldown 24h','Dipaksa oleh program Solana.'],
   ] : [
-    ['◆','Welcome','On-chain match-3 with real USDC rewards.'],
-    ['⛁','Buy Tickets','Starts at $1 USDC.'],
-    ['⛨','Clear Acts','500 levels → on-chain proof → claim USDC.'],
-    ['◷','24h Cooldown','Enforced by the Solana program.'],
+    ['01','Welcome','On-chain match-3 with real USDC rewards.'],
+    ['02','Buy Tickets','Starts at $1 USDC.'],
+    ['03','Clear Acts','500 levels → on-chain proof → claim USDC.'],
+    ['04','24h Cooldown','Enforced by the Solana program.'],
   ]);
   const s = slides[idx];
   return (

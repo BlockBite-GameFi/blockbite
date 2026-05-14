@@ -128,7 +128,7 @@ export default function CustomWalletButton() {
                     className={`${styles.copyBtn} ${copied ? styles.copied : ''}`}
                     onClick={handleCopy}
                   >
-                    {copied ? '✓ Copied!' : `📋 ${shortenAddress(base58)}`}
+                    {copied ? 'Copied!' : shortenAddress(base58)}
                   </button>
                   {wallet?.adapter.name && (
                     <div className={styles.walletBadge}>
@@ -144,17 +144,16 @@ export default function CustomWalletButton() {
 
               <nav className={styles.navLinks}>
                 {([
-                  { href: '/profile',     icon: '👤', label: 'My Profile' },
-                  { href: '/shop',        icon: '🎟', label: 'Buy Tickets' },
-                  { href: '/leaderboard', icon: '🏆', label: 'Leaderboard' },
-                ] as const).map(({ href, icon, label }) => (
+                  { href: '/shop',        label: 'Buy Tickets' },
+                  { href: '/leaderboard', label: 'Leaderboard' },
+                ] as const).map(({ href, label }) => (
                   <Link
                     key={href}
                     href={href}
                     className={styles.navLink}
                     onClick={() => setDropdownOpen(false)}
                   >
-                    <span>{icon}</span>{label}
+                    {label}
                   </Link>
                 ))}
                 <button
@@ -162,7 +161,7 @@ export default function CustomWalletButton() {
                   className={styles.navLink}
                   onClick={() => setSubPanel('avatar')}
                 >
-                  <span>🎨</span>Change Avatar
+                  Change Avatar
                 </button>
               </nav>
 

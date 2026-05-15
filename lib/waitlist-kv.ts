@@ -36,39 +36,40 @@ export async function kvAddEmail(email: string): Promise<'inserted' | 'duplicate
 
 /**
  * Get the total waitlist count.
+ * Uses SCARD (set cardinality) as the authoritative count — it can never drift
+ * from the actual email set, unlike an incrementing counter.
  * Returns null if KV is unavailable.
  */
 export async function kvGetCount(): Promise<number | null> {
   try {
     const kv = await getKV();
     if (!kv) return null;
-    const raw = await kv.get<number>(KV_COUNT_KEY);
-    if (raw === null || raw === undefined) {
-      // Counter not yet initialized — derive from set size
-      const size = await kv.scard(KV_EMAIL_SET);
-      if (typeof size === 'number' && size > 0) {
-        await kv.set(KV_COUNT_KEY, size);
-        return size;
-      }
-      return 0;
+    // SCARD is always accurate — the incr counter drifts when emails bypass KV
+    const size = await kv.scard(KV_EMAIL_SET);
+    if (typeof size === 'number') {
+      // Sync counter so it matches the set (repairs any previous drift)
+      await kv.set(KV_COUNT_KEY, size);
+      return size;
     }
-    return typeof raw === 'number' ? raw : parseInt(String(raw));
+    // If SCARD fails, fall back to the plain counter
+    const raw = await kv.get<number>(KV_COUNT_KEY);
+    if (raw !== null && raw !== undefined) {
+      return typeof raw === 'number' ? raw : parseInt(String(raw));
+    }
+    return 0;
   } catch {
     return null;
   }
 }
 
 /**
- * Seed KV counter from a known external count (Supabase bootstrap).
- * Only sets the counter if KV counter is 0 or missing and externalCount > 0.
+ * Sync KV counter to a known external count (e.g. Supabase).
+ * Always overwrites so KV stays aligned with the database truth.
  */
 export async function kvSeedFromExternal(externalCount: number): Promise<void> {
   try {
     const kv = await getKV();
     if (!kv || externalCount <= 0) return;
-    const existing = await kv.get<number>(KV_COUNT_KEY);
-    if (!existing || existing < externalCount) {
-      await kv.set(KV_COUNT_KEY, externalCount);
-    }
+    await kv.set(KV_COUNT_KEY, externalCount);
   } catch { /* non-critical */ }
 }

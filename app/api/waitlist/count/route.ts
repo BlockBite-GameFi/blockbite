@@ -10,27 +10,21 @@ export async function GET() {
   const headers = { 'Cache-Control': 'no-store, max-age=0' };
 
   try {
-    // 1. Primary: Vercel KV — same instance as leaderboard, always available
-    const kvCount = await kvGetCount();
-    if (kvCount !== null) {
-      // Always reconcile with Supabase — KV may have missed signups that fell
-      // through to the Supabase fallback path (e.g. during KV write errors).
-      if (supabaseReady()) {
-        const sbCount = await sbGetCount();
-        if (sbCount && sbCount > kvCount) {
-          await kvSeedFromExternal(sbCount);
-          return NextResponse.json({ count: sbCount, source: 'supabase-sync' }, { headers });
-        }
-      }
-      return NextResponse.json({ count: kvCount, source: 'kv' }, { headers });
-    }
-
-    // 2. Fallback: Supabase
+    // 1. Primary source of truth: Supabase — same store the dashboard reads,
+    //    guarantees public count and admin dashboard always show the same number.
     if (supabaseReady()) {
       const sbCount = await sbGetCount();
       if (sbCount !== null) {
+        // Keep KV counter in sync so future KV-only reads are accurate
+        if (sbCount > 0) await kvSeedFromExternal(sbCount);
         return NextResponse.json({ count: sbCount, source: 'supabase' }, { headers });
       }
+    }
+
+    // 2. Fallback: Vercel KV (use set cardinality — never drifts from incr bugs)
+    const kvCount = await kvGetCount();
+    if (kvCount !== null) {
+      return NextResponse.json({ count: kvCount, source: 'kv' }, { headers });
     }
 
     // 3. Last resort: in-memory (always 0 on cold start, but never hides real data)

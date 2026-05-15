@@ -29,7 +29,8 @@ export async function sbInsertEmail(
       headers: h({ Prefer: 'return=representation' }),
       body: JSON.stringify({ email }),
     });
-    if (res.status === 201 || res.status === 204) return 'inserted';
+    // 200: Prefer:return=representation, 201: default insert, 204: Prefer:return=minimal
+    if (res.status === 200 || res.status === 201 || res.status === 204) return 'inserted';
     if (res.status === 409) return 'duplicate';
     // Return status + body snippet for debugging
     const body = await res.text().catch(() => '');

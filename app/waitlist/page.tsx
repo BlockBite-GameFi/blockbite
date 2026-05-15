@@ -90,7 +90,6 @@ const I18N = {
 type Lang = 'en' | 'id';
 
 const LS_DONE  = 'bb_wl_done';
-const LS_COUNT = 'bb_wl_count';
 const LS_EMAIL = 'bb_wl_email';
 
 export default function WaitlistPage() {
@@ -106,27 +105,37 @@ export default function WaitlistPage() {
   const cvs = useRef<HTMLCanvasElement>(null);
   const txt = I18N[lang];
 
-  // Restore done state and local count from localStorage
+  // Server is the single source of truth. Migrate-out any stale local count.
   useEffect(() => {
     try {
       if (localStorage.getItem(LS_DONE) === '1') setDone(true);
       const saved = localStorage.getItem(LS_EMAIL);
       if (saved) setEmail(saved);
-      const localCount = parseInt(localStorage.getItem(LS_COUNT) || '0');
-      // Fetch API count, then show max(api, local)
-      fetch('/api/waitlist/count')
+      // Purge legacy stale count cache that caused cross-browser inconsistency.
+      localStorage.removeItem('bb_wl_count');
+    } catch { /* ignore */ }
+
+    let cancelled = false;
+    const refresh = () =>
+      fetch('/api/waitlist/count', { cache: 'no-store' })
         .then(r => r.json())
         .then(d => {
-          const api = typeof d?.count === 'number' ? d.count : 0;
-          setCount(Math.max(api, localCount));
+          if (cancelled) return;
+          if (typeof d?.count === 'number') setCount(d.count);
         })
-        .catch(() => setCount(localCount));
-    } catch {
-      fetch('/api/waitlist/count')
-        .then(r => r.json())
-        .then(d => { if (typeof d?.count === 'number') setCount(d.count); })
-        .catch(() => {});
-    }
+        .catch(() => { /* keep prior value */ });
+
+    refresh();
+    // Poll every 20s so every browser converges on the same number.
+    const id = setInterval(refresh, 20_000);
+    // Snap-refresh when tab regains focus.
+    const onVis = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, []);
 
   /* Floating blocks canvas */
@@ -208,15 +217,16 @@ export default function WaitlistPage() {
         setRateLimited(true);
       } else if (res.ok || res.status === 409) {
         setDone(true);
-        setCount(c => {
-          const next = c + (res.status === 409 ? 0 : 1);
-          try {
-            localStorage.setItem(LS_COUNT, String(next));
-            localStorage.setItem(LS_DONE, '1');
-            localStorage.setItem(LS_EMAIL, email);
-          } catch { /* ignore */ }
-          return next;
-        });
+        try {
+          localStorage.setItem(LS_DONE, '1');
+          localStorage.setItem(LS_EMAIL, email);
+        } catch { /* ignore */ }
+        // Re-fetch authoritative count from server (never trust optimistic local +1).
+        try {
+          const cRes = await fetch('/api/waitlist/count', { cache: 'no-store' });
+          const cData = await cRes.json();
+          if (typeof cData?.count === 'number') setCount(cData.count);
+        } catch { /* keep prior value */ }
       } else {
         setServerErr(true);
         setTimeout(() => setServerErr(false), 4000);

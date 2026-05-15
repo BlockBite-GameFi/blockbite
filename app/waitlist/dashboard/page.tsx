@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const BG     = '#0a0a0f';
 const CARD   = '#13131a';
@@ -65,12 +65,13 @@ export default function DashboardPage() {
     }
   }
 
-  async function fetchEntries() {
-    setLoading(true);
+  async function fetchEntries(silent = false) {
+    if (!silent) setLoading(true);
     setFetchError('');
     try {
       const res = await fetch('/api/waitlist/list', {
         headers: { 'x-admin-token': token.trim() },
+        cache: 'no-store',
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -78,11 +79,26 @@ export default function DashboardPage() {
       setEntries(data.entries ?? []);
       setFetched(true);
     } catch (err: unknown) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to fetch');
+      if (!silent) setFetchError(err instanceof Error ? err.message : 'Failed to fetch');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
+
+  // Live-sync: poll every 15s + refresh on tab focus, so the admin number
+  // always matches Supabase truth (no frozen-UI drift across sessions).
+  useEffect(() => {
+    if (!loggedIn) return;
+    const tick = () => { fetchEntries(true); };
+    const id = setInterval(tick, 15_000);
+    const onVis = () => { if (document.visibilityState === 'visible') tick(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedIn]);
 
   async function deleteEntry(email: string) {
     if (!confirm(`Delete ${email} from waitlist?`)) return;
@@ -185,7 +201,7 @@ export default function DashboardPage() {
             )}
             <button
               type="button"
-              onClick={fetchEntries}
+              onClick={() => fetchEntries()}
               disabled={loading}
               style={{
                 background: PURPLE, color: '#fff', border: 'none', borderRadius: '10px',

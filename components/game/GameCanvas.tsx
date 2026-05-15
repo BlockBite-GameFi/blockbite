@@ -160,7 +160,7 @@ export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?
         const res = await fetch('/api/session/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ walletAddress: publicKey.toBase58() }),
+          body: JSON.stringify({ walletAddress: publicKey.toBase58(), level: initialLevel }),
         });
         if (res.ok) {
           const data = await res.json();
@@ -187,7 +187,17 @@ export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?
         walletAddress: publicKey.toBase58(),
         component: 'GameCanvas',
       });
-      // Submit score to leaderboard API
+      // Advance map progress: move to next map level after playing
+      if (state.score > 0) {
+        const prevMapLevel = parseInt(localStorage.getItem('bb_max_level') ?? '1');
+        if (initialLevel >= prevMapLevel) {
+          localStorage.setItem('bb_max_level', String(initialLevel + 1));
+        }
+        const prevGames = parseInt(localStorage.getItem('bb_games_played') ?? '0');
+        localStorage.setItem('bb_games_played', String(prevGames + 1));
+      }
+
+      // Submit score to leaderboard API (placements no longer sent — server-computed)
       if (sessionTokenRef.current) {
         fetch('/api/session/submit', {
           method: 'POST',
@@ -195,8 +205,7 @@ export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?
           body: JSON.stringify({
             token: sessionTokenRef.current,
             score: state.score,
-            level: state.level,
-            placements: state.placements,
+            level: initialLevel,
             walletAddress: publicKey.toBase58(),
           }),
         }).catch(() => { /* best-effort */ });

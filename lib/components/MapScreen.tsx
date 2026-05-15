@@ -574,7 +574,7 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 const prev = nodes[i - 1];
                 const midX = (prev.x + n.x) / 2;
                 const midY = (prev.y + n.y) / 2;
-                const d = (midY - SVG_MARGIN) / (SVG_H - SVG_MARGIN * 2);
+                const d = 1 - (midY - SVG_MARGIN) / (SVG_H - SVG_MARGIN * 2);
                 return (
                   <circle key={`mid-${i}`} cx={midX} cy={midY} r={2 + d * 2}
                     fill={biome.path} opacity={0.2 + d * 0.5} />
@@ -587,14 +587,17 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 const depth = Math.max(0, Math.min(1,
                   1 - (n.y - SVG_MARGIN) / (SVG_H - SVG_MARGIN * 2)
                 ));
+                // Active node displays the actual current level, not the node range start
+                const isActive = i === activeIdx;
+                const displayN = isActive ? { ...n, level: currentLevel } : n;
                 return (
                   <NodeDot
                     key={i}
-                    n={n}
+                    n={displayN}
                     biome={biome}
-                    active={i === activeIdx}
+                    active={isActive}
                     unlocked={n.level <= currentLevel}
-                    onClick={() => onEnterLevel(n.level)}
+                    onClick={() => onEnterLevel(isActive ? currentLevel : n.level)}
                     depth={depth}
                   />
                 );

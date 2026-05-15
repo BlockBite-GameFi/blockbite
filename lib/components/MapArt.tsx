@@ -194,7 +194,9 @@ export function generateNodes(startLevel: number, endLevel: number, count: numbe
   const margin = 80, usable = h - margin * 2;
   for (let i = 0; i < count; i++) {
     const t = i / Math.max(count - 1, 1);
-    const y = h - margin - t * usable;
+    // Level startLevel at TOP (y=margin), endLevel at BOTTOM (y=h-margin)
+    // This makes the starting level immediately visible without scrolling
+    const y = margin + t * usable;
     const x = w / 2 + Math.sin(t * Math.PI * 2.2) * (w * 0.28);
     const level = Math.round(startLevel + t * (endLevel - startLevel));
     out.push({ x, y, level });

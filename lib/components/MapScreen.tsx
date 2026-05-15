@@ -446,24 +446,28 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    // Start at bottom so level-1 players don't see the top of the SVG
-    el.scrollTop = el.scrollHeight;
 
-    let attempts = 0;
-    const run = () => {
+    const doScroll = (): boolean => {
       const svg = el.querySelector('svg');
-      if (!svg) return;
+      if (!svg) return false;
       const svgPxH = svg.getBoundingClientRect().height;
-      if (!svgPxH && attempts < 10) {
-        attempts++;
-        requestAnimationFrame(run);
-        return;
-      }
-      const scale  = svgPxH / SVG_H;
-      const nodeY  = nodes[activeIdx].y * scale;
-      el.scrollTop = Math.max(0, nodeY - el.clientHeight * 0.42);
+      if (!svgPxH) return false;
+      const scale = svgPxH / SVG_H;
+      const nodeY = nodes[activeIdx].y * scale;
+      // For level 1 (activeIdx=0), nodeY ≈ 80px → scrollTop=0, visible immediately
+      el.scrollTop = Math.max(0, nodeY - el.clientHeight * 0.38);
+      return true;
     };
-    requestAnimationFrame(run);
+
+    if (doScroll()) return;
+
+    // SVG not yet painted — observe it until it has a height
+    const svg = el.querySelector('svg');
+    if (!svg) return;
+    const observer = new ResizeObserver(() => { if (doScroll()) observer.disconnect(); });
+    observer.observe(svg);
+    const timer = setTimeout(doScroll, 600);
+    return () => { observer.disconnect(); clearTimeout(timer); };
   }, [currentLevel, activeIdx]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isDesktop = layout === 'desktop';
@@ -527,12 +531,12 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
             >
               <defs>
                 <linearGradient id="bb-path-depth" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor={biome.path} stopOpacity="0.15" />
-                  <stop offset="100%" stopColor={biome.path} stopOpacity="1" />
+                  <stop offset="0%"   stopColor={biome.path} stopOpacity="1" />
+                  <stop offset="100%" stopColor={biome.path} stopOpacity="0.15" />
                 </linearGradient>
                 <linearGradient id="bb-fog-depth" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"  stopColor="#000" stopOpacity="0.55" />
-                  <stop offset="60%" stopColor="#000" stopOpacity="0" />
+                  <stop offset="40%" stopColor="#000" stopOpacity="0" />
+                  <stop offset="100%" stopColor="#000" stopOpacity="0.55" />
                 </linearGradient>
               </defs>
 
@@ -581,7 +585,7 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 // Progressive reveal: only show completed nodes + next 2 upcoming
                 if (i > activeIdx + 2) return null;
                 const depth = Math.max(0, Math.min(1,
-                  (n.y - SVG_MARGIN) / (SVG_H - SVG_MARGIN * 2)
+                  1 - (n.y - SVG_MARGIN) / (SVG_H - SVG_MARGIN * 2)
                 ));
                 return (
                   <NodeDot
@@ -596,11 +600,11 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 );
               })}
 
-              {/* Finish flag only revealed when player reaches last node */}
-              {activeIdx >= nodes.length - 1 && (
+              {/* Finish flag revealed only when player reaches the last node */}
+              {activeIdx >= nodes.length - 2 && (
                 <FinishFlag
                   x={nodes[nodes.length - 1].x}
-                  y={nodes[nodes.length - 1].y - 50}
+                  y={nodes[nodes.length - 1].y + 20}
                   biome={biome}
                 />
               )}
@@ -610,7 +614,7 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 textAnchor="middle" fontSize="10"
                 fill={biome.glow} opacity="0.4"
               >
-                LEVEL {biome.range[0]} · ORIGIN
+                ACT {romanize(biome.act)} END · LVL {biome.range[1]}
               </text>
             </svg>
           </div>

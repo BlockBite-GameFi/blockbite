@@ -19,23 +19,23 @@ export function supabaseReady(): boolean {
   return Boolean(SB_URL && SB_KEY);
 }
 
-/** Insert email. Returns 'inserted' | 'duplicate' | 'error'. */
+/** Insert email. Returns 'inserted' | 'duplicate' | 'error:STATUS'. */
 export async function sbInsertEmail(
   email: string,
-): Promise<'inserted' | 'duplicate' | 'error'> {
+): Promise<'inserted' | 'duplicate' | string> {
   try {
     const res = await fetch(`${SB_URL}/rest/v1/waitlist`, {
       method: 'POST',
-      // No Prefer:return=minimal — that changes success status to 204.
-      // Without it, PostgREST returns 201 Created which is what we check below.
       headers: h({ Prefer: 'return=representation' }),
       body: JSON.stringify({ email }),
     });
     if (res.status === 201 || res.status === 204) return 'inserted';
     if (res.status === 409) return 'duplicate';
-    return 'error';
-  } catch {
-    return 'error';
+    // Return status + body snippet for debugging
+    const body = await res.text().catch(() => '');
+    return `error:${res.status}:${body.slice(0, 120)}`;
+  } catch (e) {
+    return `error:exception:${String(e).slice(0, 80)}`;
   }
 }
 

@@ -12,34 +12,28 @@ export async function POST(req: NextRequest) {
     }
     const normalized = email.toLowerCase().trim();
 
-    // 1. Primary: Vercel KV — persistent, same instance as leaderboard
+    // 1. Primary: Vercel KV
     const kvResult = await kvAddEmail(normalized);
-    if (kvResult === 'duplicate') {
-      return NextResponse.json({ ok: true, already: true }, { status: 409 });
-    }
+    if (kvResult === 'duplicate') return NextResponse.json({ ok: true, already: true, _src: 'kv' }, { status: 409 });
     if (kvResult === 'inserted') {
-      // Mirror to Supabase in background (non-blocking)
-      if (supabaseReady()) {
-        sbInsertEmail(normalized).catch(() => {});
-      }
-      return NextResponse.json({ ok: true });
+      if (supabaseReady()) sbInsertEmail(normalized).catch(() => {});
+      return NextResponse.json({ ok: true, _src: 'kv' });
     }
 
-    // 2. Fallback: Supabase (if KV unavailable)
+    // 2. Fallback: Supabase
     if (supabaseReady()) {
       const result = await sbInsertEmail(normalized);
-      if (result === 'duplicate') {
-        return NextResponse.json({ ok: true, already: true }, { status: 409 });
-      }
-      if (result === 'inserted') {
-        return NextResponse.json({ ok: true });
-      }
+      if (result === 'duplicate') return NextResponse.json({ ok: true, already: true, _src: 'sb-dup' }, { status: 409 });
+      if (result === 'inserted') return NextResponse.json({ ok: true, _src: 'sb' });
+      // Supabase insert failed — expose error in _src for diagnosis
+      console.error('[waitlist] Supabase insert failed:', result);
+      return NextResponse.json({ ok: true, _src: result });
     }
 
-    // 3. Last resort: in-memory
+    // 3. Last resort: in-memory (resets on cold start)
     const added = memAdd(normalized);
-    if (!added) return NextResponse.json({ ok: true, already: true }, { status: 409 });
-    return NextResponse.json({ ok: true });
+    if (!added) return NextResponse.json({ ok: true, already: true, _src: 'mem-dup' }, { status: 409 });
+    return NextResponse.json({ ok: true, _src: 'mem' });
   } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }

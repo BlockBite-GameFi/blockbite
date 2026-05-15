@@ -98,8 +98,9 @@ export default function WaitlistPage() {
   const [email, setEmail] = useState('');
   const [done, setDone]   = useState(false);
   const [busy, setBusy]   = useState(false);
-  const [err, setErr]         = useState(false);
+  const [err, setErr]             = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
+  const [serverErr, setServerErr] = useState(false);
   const [count, setCount]     = useState<number>(0);
 
   const cvs = useRef<HTMLCanvasElement>(null);
@@ -196,6 +197,7 @@ export default function WaitlistPage() {
     }
     setBusy(true);
     setRateLimited(false);
+    setServerErr(false);
     try {
       const res = await fetch('/api/waitlist', {
         method: 'POST',
@@ -204,10 +206,7 @@ export default function WaitlistPage() {
       });
       if (res.status === 429) {
         setRateLimited(true);
-        setBusy(false);
-        return;
-      }
-      if (res.ok || res.status === 409) {
+      } else if (res.ok || res.status === 409) {
         setDone(true);
         setCount(c => {
           const next = c + (res.status === 409 ? 0 : 1);
@@ -218,6 +217,9 @@ export default function WaitlistPage() {
           } catch { /* ignore */ }
           return next;
         });
+      } else {
+        setServerErr(true);
+        setTimeout(() => setServerErr(false), 4000);
       }
     } catch {
       setDone(true);
@@ -351,6 +353,11 @@ export default function WaitlistPage() {
                 {rateLimited && (
                   <div style={{ color: CORAL, fontSize: 13, fontFamily: 'Roboto,sans-serif', textAlign: 'center' }}>
                     {lang === 'en' ? 'Too many attempts. Please wait 60 seconds.' : 'Terlalu banyak percobaan. Tunggu 60 detik.'}
+                  </div>
+                )}
+                {serverErr && (
+                  <div style={{ color: CORAL, fontSize: 13, fontFamily: 'Roboto,sans-serif', textAlign: 'center' }}>
+                    {lang === 'en' ? 'Server error. Please try again in a moment.' : 'Kesalahan server. Coba lagi sebentar lagi.'}
                   </div>
                 )}
               </>

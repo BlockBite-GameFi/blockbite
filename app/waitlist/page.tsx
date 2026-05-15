@@ -98,8 +98,9 @@ export default function WaitlistPage() {
   const [email, setEmail] = useState('');
   const [done, setDone]   = useState(false);
   const [busy, setBusy]   = useState(false);
-  const [err, setErr]     = useState(false);
-  const [count, setCount] = useState<number>(0);
+  const [err, setErr]         = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
+  const [count, setCount]     = useState<number>(0);
 
   const cvs = useRef<HTMLCanvasElement>(null);
   const txt = I18N[lang];
@@ -194,12 +195,18 @@ export default function WaitlistPage() {
       return;
     }
     setBusy(true);
+    setRateLimited(false);
     try {
       const res = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
+      if (res.status === 429) {
+        setRateLimited(true);
+        setBusy(false);
+        return;
+      }
       if (res.ok || res.status === 409) {
         setDone(true);
         setCount(c => {
@@ -341,6 +348,11 @@ export default function WaitlistPage() {
                 >
                   {busy ? (lang === 'en' ? 'Joining...' : 'Mendaftar...') : txt.cta}
                 </button>
+                {rateLimited && (
+                  <div style={{ color: CORAL, fontSize: 13, fontFamily: 'Roboto,sans-serif', textAlign: 'center' }}>
+                    {lang === 'en' ? 'Too many attempts. Please wait 60 seconds.' : 'Terlalu banyak percobaan. Tunggu 60 detik.'}
+                  </div>
+                )}
               </>
             ) : (
               <div style={{

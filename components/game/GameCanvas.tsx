@@ -97,7 +97,7 @@ function drawTrayPiece(
   ctx.restore();
 }
 
-export default function GameCanvas() {
+export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?: number; onBack?: () => void }) {
   const { connected, publicKey } = useWallet();
   const [ticketBalance, setTicketBalance] = useState<number | null>(null);
   const [isCheckingTicket, setIsCheckingTicket] = useState(false);
@@ -115,7 +115,7 @@ export default function GameCanvas() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragPiece, setDragPiece] = useState<{ trayIdx: 0|1|2; mouseX: number; mouseY: number } | null>(null);
 
-  const { state, placePiece, newGame, clearAnimationDone, removeScorePop, mysteryBoxPicked, levelName } = useGameEngine();
+  const { state, placePiece, newGame, newGameAt, clearAnimationDone, removeScorePop, mysteryBoxPicked, levelName } = useGameEngine(initialLevel);
   const sessionTokenRef = useRef<string | null>(null);
 
   // Board origin
@@ -167,7 +167,11 @@ export default function GameCanvas() {
           sessionTokenRef.current = data.token ?? null;
         }
       } catch { /* non-fatal — game proceeds without server session */ }
-      newGame();
+      if (initialLevel > 1) {
+        newGameAt(initialLevel);
+      } else {
+        newGame();
+      }
     }
   };
 
@@ -601,12 +605,18 @@ export default function GameCanvas() {
 
       {(state.isGameOver || (state.score === 0 && ticketBalance! > 0)) && (
         <div className={styles.gameOverActions}>
-          <button className="btn btn-primary btn-lg" onClick={handleStartGame}>
-             {state.isGameOver ? 'PLAY AGAIN (1 TICKET)' : 'START GAME (1 TICKET)'}
+          <button type="button" className="btn btn-primary btn-lg" onClick={handleStartGame}>
+            {state.isGameOver ? 'PLAY AGAIN (1 TICKET)' : 'START GAME (1 TICKET)'}
           </button>
-          <Link href="/leaderboard" className="btn btn-secondary">
-            LEADERBOARD
-          </Link>
+          {onBack ? (
+            <button type="button" className="btn btn-secondary" onClick={onBack}>
+              BACK TO MAP
+            </button>
+          ) : (
+            <Link href="/leaderboard" className="btn btn-secondary">
+              LEADERBOARD
+            </Link>
+          )}
         </div>
       )}
     </div>

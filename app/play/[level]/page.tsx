@@ -1,54 +1,46 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { LevelView, type Layout } from '@/lib/components/LevelView';
-import { levelConfig, type LevelConfig } from '@/lib/game/levelConfig';
-import { startLevel, submitScore } from '@/lib/api/levels';
-
-function useLayout(): Layout {
-  const [layout, setLayout] = useState<Layout>('mobile');
-  useEffect(() => {
-    const compute = () => {
-      const w = window.innerWidth;
-      setLayout(w >= 1280 ? 'desktop' : w >= 768 ? 'tablet' : 'mobile');
-    };
-    compute();
-    window.addEventListener('resize', compute);
-    return () => window.removeEventListener('resize', compute);
-  }, []);
-  return layout;
-}
+import Navbar from '@/components/Navbar';
+import GameCanvas from '@/components/game/GameCanvas';
 
 export default function PlayLevelPage() {
   const params = useParams<{ level: string }>();
-  const level = parseInt(params.level || '1', 10);
-  const layout = useLayout();
+  const level = Math.max(1, parseInt(params.level || '1', 10));
   const router = useRouter();
-  const [cfg, setCfg] = useState<LevelConfig>(() => levelConfig(level));
-
-  useEffect(() => {
-    const player = typeof window !== 'undefined'
-      ? localStorage.getItem('bb_wallet') ?? 'anonymous'
-      : 'anonymous';
-    startLevel(level, player).then(({ seed }) => setCfg(levelConfig(level, seed)));
-  }, [level]);
-
-  const onSubmit = async (score: number) => {
-    const player = localStorage.getItem('bb_wallet') ?? 'anonymous';
-    const msg = `blockbite:score:${player}:${level}:${score}:${Date.now()}`;
-    await submitScore({ level, score, message: msg, signature: '' });
-    const prev = parseInt(localStorage.getItem('bb_max_level') ?? '1');
-    if (level >= prev) localStorage.setItem('bb_max_level', String(level + 1));
-    router.back();
-  };
 
   return (
-    <LevelView
-      cfg={cfg}
-      layout={layout}
-      onSubmit={onSubmit}
-      onBack={() => router.back()}
-    />
+    <>
+      <Navbar />
+      <main style={{ paddingTop: 64, minHeight: '100vh' }}>
+        <div style={{
+          maxWidth: 1100, margin: '0 auto', padding: '12px 24px 0',
+          display: 'flex', alignItems: 'center', gap: 12,
+        }}>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            style={{
+              padding: '7px 16px', borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.12)',
+              background: 'rgba(255,255,255,0.05)', color: '#8888BB',
+              fontFamily: "'Orbitron', monospace", fontSize: 11,
+              cursor: 'pointer', letterSpacing: '0.06em',
+            }}
+          >
+            BACK TO MAP
+          </button>
+          <span style={{
+            fontFamily: "'Orbitron', monospace", fontSize: 13,
+            color: '#00F5FF', fontWeight: 700,
+          }}>
+            LEVEL {level}
+          </span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 24px 40px' }}>
+          <GameCanvas initialLevel={level} onBack={() => router.back()} />
+        </div>
+      </main>
+    </>
   );
 }

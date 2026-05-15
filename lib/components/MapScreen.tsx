@@ -539,7 +539,6 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 ACT {romanize(biome.act)} · LVL {biome.range[0]}-{biome.range[1]}
               </text>
 
-<<<<<<< HEAD
               {/* Candy path — shadow base */}
               <path d={pathD} stroke="rgba(0,0,0,0.42)" strokeWidth="20" fill="none"
                 strokeLinecap="round" />
@@ -555,18 +554,6 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
               {/* Depth fog — fades top nodes into distance */}
               <path d={pathD} stroke="url(#bb-fog-depth)" strokeWidth="16" fill="none"
                 strokeLinecap="round" />
-=======
-              {/* Candy Crush rope-style path */}
-              <path d={pathD} stroke={biome.rock} strokeWidth="38" fill="none"
-                strokeLinecap="round" opacity="0.95" />
-              <path d={pathD} stroke={biome.accent} strokeWidth="28" fill="none"
-                strokeLinecap="round" opacity="0.6" />
-              <path d={pathD} stroke={biome.glow} strokeWidth="10" fill="none"
-                strokeDasharray="16 20" strokeLinecap="round" opacity="0.9" />
-              <path d={pathD} stroke="#fff" strokeWidth="3.5" fill="none"
-                strokeDasharray="7 29" strokeLinecap="round" strokeDashoffset="9"
-                opacity="0.35" />
->>>>>>> 6778621 (feat: Candy Crush map nodes, remove nav icons, waitlist CSV/delete)
 
               {nodes.map((n, i) => {
                 if (i === 0) return null;

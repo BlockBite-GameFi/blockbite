@@ -81,6 +81,7 @@ type Action =
   | { type: 'REMOVE_SCORE_POP'; id: number }
   | { type: 'TOGGLE_PAUSE' }
   | { type: 'NEW_GAME' }
+  | { type: 'NEW_GAME_AT'; level: number }
   | { type: 'NEXT_LEVEL' }
   | { type: 'MYSTERY_BOX_PICKED'; halvScore: boolean; pointsDelta: number; multiplier: number };
 
@@ -337,8 +338,11 @@ function reducer(state: GameState, action: Action): GameState {
       return { ...state, isPaused: !state.isPaused };
     }
 
+    case 'NEW_GAME_AT':
     case 'NEW_GAME': {
-      const level = 1;
+      const level = action.type === 'NEW_GAME_AT'
+        ? Math.max(1, Math.min(MAX_GAME_LEVEL, action.level))
+        : 1;
       const cfg = safeLevelConfig(level);
       return {
         board: createLevelBoard(level),
@@ -356,10 +360,10 @@ function reducer(state: GameState, action: Action): GameState {
         sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2)}`,
         placements: 0,
         pendingMysteryBox: false,
-        mysteryBoxPicks: state.mysteryBoxPicks,
+        mysteryBoxPicks: action.type === 'NEW_GAME_AT' ? 0 : state.mysteryBoxPicks,
         mysteryMultiplier: 1,
         currentLevelConfig: cfg,
-        levelName: cfg?.name ?? 'First Steps',
+        levelName: cfg?.name ?? `Level ${level}`,
         activeMechanics: cfg?.mechanics ?? [],
       };
     }
@@ -390,14 +394,15 @@ function reducer(state: GameState, action: Action): GameState {
 
 // ── Initial State ────────────────────────────────────────────────
 
-function createInitialState(): GameState {
-  const cfg = safeLevelConfig(1);
+function createInitialState(level = 1): GameState {
+  const lvl = Math.max(1, Math.min(MAX_GAME_LEVEL, level));
+  const cfg = safeLevelConfig(lvl);
   return {
-    board: createLevelBoard(1),
-    tray: createLevelTray(1),
+    board: createLevelBoard(lvl),
+    tray: createLevelTray(lvl),
     score: 0,
     bestScore: 0,
-    level: 1,
+    level: lvl,
     chain: 0,
     noClears: 0,
     isGameOver: false,
@@ -411,15 +416,15 @@ function createInitialState(): GameState {
     mysteryBoxPicks: 0,
     mysteryMultiplier: 1,
     currentLevelConfig: cfg,
-    levelName: cfg?.name ?? 'First Steps',
+    levelName: cfg?.name ?? `Level ${lvl}`,
     activeMechanics: cfg?.mechanics ?? [],
   };
 }
 
 // ── Hook ─────────────────────────────────────────────────────────
 
-export function useGameEngine() {
-  const [state, dispatch] = useReducer(reducer, undefined, createInitialState);
+export function useGameEngine(initialLevel = 1) {
+  const [state, dispatch] = useReducer(reducer, initialLevel, createInitialState);
 
   const placePiece = useCallback((trayIndex: 0 | 1 | 2, row: number, col: number) => {
     dispatch({ type: 'PLACE_PIECE', trayIndex, row, col });
@@ -441,6 +446,10 @@ export function useGameEngine() {
     dispatch({ type: 'NEW_GAME' });
   }, []);
 
+  const newGameAt = useCallback((level: number) => {
+    dispatch({ type: 'NEW_GAME_AT', level });
+  }, []);
+
   const nextLevel = useCallback(() => {
     dispatch({ type: 'NEXT_LEVEL' });
   }, []);
@@ -456,6 +465,7 @@ export function useGameEngine() {
     removeScorePop,
     togglePause,
     newGame,
+    newGameAt,
     nextLevel,
     mysteryBoxPicked,
     canPlace,

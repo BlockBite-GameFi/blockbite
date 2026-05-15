@@ -13,10 +13,12 @@ const BORDER = '#1e293b';
 type Entry = { email: string; ts: number };
 
 export default function DashboardPage() {
-  const [token, setToken]         = useState('');
+  const [username, setUsername]   = useState('');
+  const [password, setPassword]   = useState('');
   const [loggedIn, setLoggedIn]   = useState(false);
   const [authError, setAuthError] = useState('');
   const [loading, setLoading]     = useState(false);
+  const token = password;
   const [entries, setEntries]     = useState<Entry[]>([]);
   const [count, setCount]         = useState(0);
   const [fetched, setFetched]     = useState(false);
@@ -24,7 +26,8 @@ export default function DashboardPage() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (!token.trim()) { setAuthError('Enter your admin token'); return; }
+    if (!username.trim() || !password.trim()) { setAuthError('Enter username and password'); return; }
+    if (username.trim() !== 'nayrbryanGaming') { setAuthError('Invalid username'); return; }
     setLoading(true);
     setAuthError('');
     try {
@@ -81,10 +84,21 @@ export default function DashboardPage() {
           </div>
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              style={{
+                background: '#0f172a', border: `1px solid ${BORDER}`, borderRadius: '10px',
+                color: TEXT, padding: '12px 16px', fontSize: '15px', outline: 'none',
+              }}
+            />
+            <input
               type="password"
-              placeholder="Admin token"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               style={{
                 background: '#0f172a', border: `1px solid ${BORDER}`, borderRadius: '10px',

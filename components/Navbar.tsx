@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Rocket, Trophy, ShoppingBag, Info, Moon, Sun } from 'lucide-react';
 import styles from './Navbar.module.css';
 import { useApp } from '@/lib/useApp';
 
@@ -15,10 +14,10 @@ const CustomWalletButton = dynamic(
 );
 
 const NAV_LINKS = [
-  { name: 'PLAY',        href: '/game',        icon: <Rocket      size={15} />, play: true,  lb: false },
-  { name: 'LEADERBOARD', href: '/leaderboard', icon: <Trophy      size={15} />, play: false, lb: false },
-  { name: 'SHOP',        href: '/shop',        icon: <ShoppingBag size={15} />, play: false, lb: false },
-  { name: 'GUIDE',       href: '/how-to-play', icon: <Info        size={15} />, play: false, lb: false },
+  { name: 'PLAY',        href: '/game',        play: true  },
+  { name: 'LEADERBOARD', href: '/leaderboard', play: false },
+  { name: 'SHOP',        href: '/shop',        play: false },
+  { name: 'GUIDE',       href: '/how-to-play', play: false },
 ] as const;
 
 export default function Navbar() {
@@ -60,9 +59,7 @@ export default function Navbar() {
                 href={link.href}
                 className={`${styles.link} ${link.play ? styles.playLink : ''} ${pathname === link.href ? styles.active : ''}`}
               >
-                {link.icon}
                 {link.name}
-                {link.lb && null}
               </Link>
             </li>
           ))}
@@ -86,7 +83,7 @@ export default function Navbar() {
             aria-label="Toggle theme"
             title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            <span className={styles.langLabel}>{theme === 'dark' ? 'LIGHT' : 'DARK'}</span>
           </button>
           <CustomWalletButton />
           <button
@@ -113,9 +110,7 @@ export default function Navbar() {
               onClick={() => setMenuOpen(false)}
             >
               <span className={styles.mobileLinkInner}>
-                {link.icon}
                 {link.name}
-                {link.lb && null}
               </span>
             </Link>
           ))}

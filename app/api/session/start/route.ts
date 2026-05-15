@@ -14,14 +14,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac, randomUUID } from 'crypto';
 
-const SESSION_SECRET = process.env.SESSION_SECRET ?? 'blockbite-dev-secret-changeme';
-const SESSION_TTL_MS = 60 * 60 * 1000; // 1 hour
+const SESSION_SECRET = process.env.SESSION_SECRET;
+const SESSION_TTL_MS = 60 * 60 * 1000;
 
 function signSession(payload: string): string {
-  return createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
+  return createHmac('sha256', SESSION_SECRET!).update(payload).digest('hex');
 }
 
 export async function POST(req: NextRequest) {
+  if (!SESSION_SECRET) {
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 503 });
+  }
+
   let body: { walletAddress?: string };
   try {
     body = await req.json();

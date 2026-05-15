@@ -119,7 +119,7 @@ export default function CustomWalletButton() {
                     style={{ background: avatarCfg.glowColor }}
                     onClick={() => setSubPanel('avatar')}
                     title="Change Avatar"
-                  >✎</button>
+                  >edit</button>
                 </div>
                 <div className={styles.profileMeta}>
                   <div className={styles.profileUsername}>{username || shortenAddress(base58)}</div>

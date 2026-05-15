@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -38,15 +39,16 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link href="/" className={styles.logo}>
-          <div className={styles.logoBlocks}>
-            <span className={styles.logoBlockPurple} />
-            <span className={styles.logoBlockCyan}   />
-            <span className={styles.logoBlockGold}   />
-            <span className={styles.logoBlockRed}    />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="BlockBite"
+            width={40}
+            height={40}
+            style={{ objectFit: 'contain', flexShrink: 0 }}
+            priority
+          />
           <div className={styles.logoText}>
             BLOCK<span className={styles.logoAccent}>BITE</span>
-            <span className={styles.logoBadge}>WEB3</span>
           </div>
         </Link>
 

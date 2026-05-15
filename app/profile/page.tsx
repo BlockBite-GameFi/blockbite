@@ -222,7 +222,7 @@ export default function ProfilePage() {
                   }
                 }}
               >
-                {refCopied ? '✓ COPIED' : 'COPY'}
+                {refCopied ? 'COPIED' : 'COPY'}
               </button>
             </div>
 

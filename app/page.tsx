@@ -223,12 +223,9 @@ export default function Home() {
       <footer style={{ position:'relative', zIndex:1, borderTop:'1px solid var(--ds-border)', padding:'28px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12, fontSize:12, color:'var(--ds-text-dim)' }}>
         <div>© 2026 BlockBite · Solana Devnet</div>
         <div style={{ display:'flex', gap:20 }}>
-          {['Twitter / X','Discord','GitHub'].map(lnk=>(
-            <a key={lnk} href="#" style={{ color:'var(--ds-text-dim)', textDecoration:'none' }}
-              onMouseEnter={e=>(e.currentTarget.style.color='var(--ds-accent)')}
-              onMouseLeave={e=>(e.currentTarget.style.color='var(--ds-text-dim)')}
-            >{lnk}</a>
-          ))}
+          <a href="https://x.com/blockbite_gg" target="_blank" rel="noopener noreferrer" style={{ color:'var(--ds-text-dim)', textDecoration:'none' }}>Twitter / X</a>
+          <a href="https://discord.gg/blockbite" target="_blank" rel="noopener noreferrer" style={{ color:'var(--ds-text-dim)', textDecoration:'none' }}>Discord</a>
+          <a href="https://github.com/nayrbryanGaming/blockblast" target="_blank" rel="noopener noreferrer" style={{ color:'var(--ds-text-dim)', textDecoration:'none' }}>GitHub</a>
         </div>
       </footer>
 

@@ -29,19 +29,6 @@
   flex-shrink: 0;
 }
 
-.logoBlocks {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  width: 24px;
-  height: 24px;
-}
-
-.logoBlocks span {
-  border-radius: 2px;
-  display: block;
-}
-
 .logoText {
   font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 18px;
@@ -54,16 +41,6 @@
   color: var(--accent, #a78bfa);
 }
 
-.logoBadge {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  font-size: 9px;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--accent, #a78bfa), var(--accent2, #5eead4));
-  color: #0a0a14;
-  padding: 2px 6px;
-  border-radius: 99px;
-  letter-spacing: 0.08em;
-}
 
 /* ── Links ── */
 .links {
@@ -114,12 +91,6 @@
   margin-left: 4px;
   opacity: 0.8;
 }
-
-/* logo block colours — BLOCKBITEbandinghukum palette */
-.logoBlockPurple { background: var(--accent,  #a78bfa); }
-.logoBlockCyan   { background: var(--accent2, #5eead4); }
-.logoBlockGold   { background: #fbbf24; }
-.logoBlockRed    { background: #f472b6; }
 
 /* scrolled shadow */
 .scrolled {

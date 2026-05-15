@@ -95,13 +95,13 @@ export function generateMysteryBoxes(event: MysteryBoxEvent): MysteryBox[] {
 
   // Add bombs
   for (let i = 0; i < Math.min(pool.bombs, count - 1); i++) {
-    slots.push({ id: id++, type: 'BOMB', value: 0, label: '💣 BOMB!', icon: '💣' });
+    slots.push({ id: id++, type: 'BOMB', value: 0, label: 'BOMB!', icon: 'X' });
   }
 
   // Add bonus_pts (at least 1 if room allows)
   if (slots.length < count) {
     const bpValue = bonusPtsValue(level);
-    slots.push({ id: id++, type: 'BONUS_PTS', value: bpValue, label: `+${bpValue} PTS`, icon: '✨' });
+    slots.push({ id: id++, type: 'BONUS_PTS', value: bpValue, label: `+${bpValue} PTS`, icon: '+' });
   }
 
   // Fill remaining slots with multiplier or extra bonus_pts
@@ -109,10 +109,10 @@ export function generateMysteryBoxes(event: MysteryBoxEvent): MysteryBox[] {
     const useMultiplier = Math.random() < pool.multiplierWeight / (pool.multiplierWeight + 1);
     if (useMultiplier) {
       const mult = randomMultiplier(pool.multiplierMin, pool.multiplierMax);
-      slots.push({ id: id++, type: 'MULTIPLIER', value: mult, label: `×${mult} SCORE!`, icon: mult >= 8 ? '⚡' : '🔥' });
+      slots.push({ id: id++, type: 'MULTIPLIER', value: mult, label: `x${mult} SCORE!`, icon: 'x' });
     } else {
       const bpValue = bonusPtsValue(level);
-      slots.push({ id: id++, type: 'BONUS_PTS', value: bpValue, label: `+${bpValue} PTS`, icon: '⭐' });
+      slots.push({ id: id++, type: 'BONUS_PTS', value: bpValue, label: `+${bpValue} PTS`, icon: '+' });
     }
   }
 
@@ -134,7 +134,7 @@ export function resolveMysteryBox(box: MysteryBox, currentScore: number): BoxRes
         pointsDelta: -Math.floor(currentScore / 2),
         nextMultiplier: 1,
         halvScore: true,
-        message: '💣 BOOM! Score halved. Stay sharp!',
+        message: 'BOOM! Score halved. Stay sharp!',
       };
     case 'BONUS_PTS':
       return {
@@ -142,7 +142,7 @@ export function resolveMysteryBox(box: MysteryBox, currentScore: number): BoxRes
         pointsDelta: box.value,
         nextMultiplier: 1,
         halvScore: false,
-        message: `✨ Bonus! +${box.value.toLocaleString()} points!`,
+        message: `Bonus! +${box.value.toLocaleString()} points!`,
       };
     case 'MULTIPLIER':
       return {
@@ -150,7 +150,7 @@ export function resolveMysteryBox(box: MysteryBox, currentScore: number): BoxRes
         pointsDelta: 0,
         nextMultiplier: box.value,
         halvScore: false,
-        message: `🔥 ×${box.value} MULTIPLIER on your next clear!`,
+        message: `x${box.value} MULTIPLIER on your next clear!`,
       };
   }
 }

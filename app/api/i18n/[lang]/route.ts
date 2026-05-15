@@ -14,9 +14,9 @@ const BUNDLES: Record<string, Record<string, string>> = {
     no_data: 'No data', backend_off: 'Backend offline',
     empty_lb: 'No entries yet. Connect wallet to appear.',
     empty_hist: 'No history yet.',
-    join_waitlist: 'Join Waitlist →',
+    join_waitlist: 'Join Waitlist',
     waitlist_note: 'No spam. Unsubscribe anytime.',
-    waitlist_success: "✓ You're on the list! We'll notify you when BlockBite launches.",
+    waitlist_success: "You're on the list! We'll notify you when BlockBite launches.",
   },
   id: {
     nav_home: 'Beranda', nav_play: 'Main', nav_map: 'Peta',
@@ -31,9 +31,9 @@ const BUNDLES: Record<string, Record<string, string>> = {
     no_data: 'Tidak ada data', backend_off: 'Backend offline',
     empty_lb: 'Belum ada data. Hubungkan wallet.',
     empty_hist: 'Belum ada riwayat.',
-    join_waitlist: 'Daftar Waitlist →',
+    join_waitlist: 'Daftar Waitlist',
     waitlist_note: 'Tanpa spam. Bisa berhenti kapan saja.',
-    waitlist_success: '✓ Kamu sudah terdaftar! Kami akan notifikasi saat BlockBite meluncur.',
+    waitlist_success: 'Kamu sudah terdaftar! Kami akan notifikasi saat BlockBite meluncur.',
   },
 };
 

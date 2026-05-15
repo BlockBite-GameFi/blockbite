@@ -146,7 +146,7 @@ export default function ShopPage() {
           {txSig && (
             <div style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.25)', borderRadius: 10, padding: '12px 20px', marginBottom: 20, textAlign: 'center', fontSize: 14, color: '#00FF88' }}>
               Purchase confirmed! Tickets added.{' '}
-              <a href={explorerTx(txSig)} target="_blank" rel="noopener noreferrer" style={{ color: '#00F5FF', textDecoration: 'underline' }}>View on Solana Explorer →</a>
+              <a href={explorerTx(txSig)} target="_blank" rel="noopener noreferrer" style={{ color: '#00F5FF', textDecoration: 'underline' }}>View on Solana Explorer</a>
             </div>
           )}
           {txError && (
@@ -354,7 +354,7 @@ export default function ShopPage() {
                           gap: 6,
                           marginBottom: 4,
                         }}>
-                          <span style={{ color: colors.from, fontSize: 13 }}>✓</span>
+                          <span style={{ color: colors.from, fontSize: 13 }}>-</span>
                           <span style={{
                             fontFamily: "'Plus Jakarta Sans', sans-serif",
                             fontSize: 13, color: '#AAAACC',

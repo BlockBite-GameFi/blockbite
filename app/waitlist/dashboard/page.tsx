@@ -1,40 +1,47 @@
 'use client';
 import { useState } from 'react';
 
-const BG = '#0a0a0f';
-const CARD = '#13131a';
+const BG     = '#0a0a0f';
+const CARD   = '#13131a';
 const PURPLE = '#7c3aed';
-const TEAL = '#0891b2';
-const GOLD = '#d97706';
-const TEXT = '#f1f5f9';
-const MUTED = '#64748b';
+const TEAL   = '#0891b2';
+const GOLD   = '#d97706';
+const TEXT   = '#f1f5f9';
+const MUTED  = '#64748b';
 const BORDER = '#1e293b';
-
-const ADMIN_USER = 'nayrbryanGaming';
-const ADMIN_PASS = 'nayrbryanGaming';
-const ADMIN_TOKEN = 'nayrbryanGaming_admin_2025';
 
 type Entry = { email: string; ts: number };
 
 export default function DashboardPage() {
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [count, setCount] = useState(0);
-  const [fetched, setFetched] = useState(false);
+  const [token, setToken]         = useState('');
+  const [loggedIn, setLoggedIn]   = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [entries, setEntries]     = useState<Entry[]>([]);
+  const [count, setCount]         = useState(0);
+  const [fetched, setFetched]     = useState(false);
   const [fetchError, setFetchError] = useState('');
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (username === ADMIN_USER && password === ADMIN_PASS) {
+    if (!token.trim()) { setAuthError('Enter your admin token'); return; }
+    setLoading(true);
+    setAuthError('');
+    try {
+      const res = await fetch('/api/waitlist/list', {
+        headers: { 'x-admin-token': token.trim() },
+      });
+      if (res.status === 401) { setAuthError('Invalid token'); return; }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setCount(data.count ?? 0);
+      setEntries(data.entries ?? []);
+      setFetched(true);
       setLoggedIn(true);
-      setLoginError('');
-      fetchEntries();
-    } else {
-      setLoginError('Invalid credentials');
+    } catch (err: unknown) {
+      setAuthError(err instanceof Error ? err.message : 'Failed to authenticate');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -42,7 +49,9 @@ export default function DashboardPage() {
     setLoading(true);
     setFetchError('');
     try {
-      const res = await fetch(`/api/waitlist/list?token=${ADMIN_TOKEN}`);
+      const res = await fetch('/api/waitlist/list', {
+        headers: { 'x-admin-token': token.trim() },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setCount(data.count ?? 0);
@@ -72,39 +81,30 @@ export default function DashboardPage() {
           </div>
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-              style={{
-                background: '#0f172a', border: `1px solid ${BORDER}`, borderRadius: '10px',
-                color: TEXT, padding: '12px 16px', fontSize: '15px', outline: 'none',
-              }}
-            />
-            <input
               type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Admin token"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
               autoComplete="current-password"
               style={{
                 background: '#0f172a', border: `1px solid ${BORDER}`, borderRadius: '10px',
                 color: TEXT, padding: '12px 16px', fontSize: '15px', outline: 'none',
               }}
             />
-            {loginError && (
-              <p style={{ color: '#f87171', fontSize: '13px', margin: 0 }}>{loginError}</p>
+            {authError && (
+              <p style={{ color: '#f87171', fontSize: '13px', margin: 0 }}>{authError}</p>
             )}
             <button
               type="submit"
+              disabled={loading}
               style={{
                 background: `linear-gradient(135deg, ${PURPLE}, ${TEAL})`,
                 color: '#fff', border: 'none', borderRadius: '10px',
-                padding: '13px', fontSize: '15px', fontWeight: 700, cursor: 'pointer',
+                padding: '13px', fontSize: '15px', fontWeight: 700,
+                cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1,
               }}
             >
-              Sign In
+              {loading ? 'Verifying…' : 'Sign In'}
             </button>
           </form>
         </div>
@@ -115,11 +115,10 @@ export default function DashboardPage() {
   return (
     <div style={{ minHeight: '100vh', background: BG, padding: '24px', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
           <div>
             <h1 style={{ color: TEXT, fontSize: '24px', fontWeight: 800, margin: 0 }}>Waitlist Dashboard</h1>
-            <p style={{ color: MUTED, fontSize: '13px', margin: '4px 0 0' }}>Logged in as {ADMIN_USER}</p>
+            <p style={{ color: MUTED, fontSize: '13px', margin: '4px 0 0' }}>BlockBite Admin</p>
           </div>
           <button
             onClick={fetchEntries}
@@ -132,7 +131,6 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '28px' }}>
           {[
             { label: 'Total Signups', value: count, color: PURPLE },
@@ -157,10 +155,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Table */}
-        <div style={{
-          background: CARD, border: `1px solid ${BORDER}`, borderRadius: '14px', overflow: 'hidden',
-        }}>
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: '14px', overflow: 'hidden' }}>
           <div style={{
             padding: '16px 20px', borderBottom: `1px solid ${BORDER}`,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -192,18 +187,14 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {entries.map((e, i) => {
-                    const d = new Date(e.ts);
+                  {entries.map((entry, i) => {
+                    const d = new Date(entry.ts);
                     return (
-                      <tr key={e.email} style={{
+                      <tr key={entry.email} style={{
                         borderBottom: i < entries.length - 1 ? `1px solid ${BORDER}` : 'none',
                       }}>
-                        <td style={{ padding: '13px 20px', color: MUTED, fontSize: '13px', width: '48px' }}>
-                          {i + 1}
-                        </td>
-                        <td style={{ padding: '13px 20px', color: TEXT, fontSize: '14px' }}>
-                          {e.email}
-                        </td>
+                        <td style={{ padding: '13px 20px', color: MUTED, fontSize: '13px', width: '48px' }}>{i + 1}</td>
+                        <td style={{ padding: '13px 20px', color: TEXT, fontSize: '14px' }}>{entry.email}</td>
                         <td style={{ padding: '13px 20px', color: MUTED, fontSize: '13px' }}>
                           {d.toLocaleDateString('en-GB')}
                         </td>

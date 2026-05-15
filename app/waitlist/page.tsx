@@ -24,7 +24,7 @@ const I18N = {
     sub: 'Secure your assets with automated, milestone-based distribution that eliminates fatal human error while transforming passive claimants into loyal, long-term contributors.',
     target: 'For Solana Ecosystem Builders & Project Founders',
     cta: 'Join the Waitlist',
-    success: '✓ You\'re on the list! We\'ll notify you when BlockBite launches.',
+    success: 'You\'re on the list! We\'ll notify you when BlockBite launches.',
     stats: [
       { v: '100%', l: 'ON-CHAIN' },
       { v: 'Auto', l: 'SMART CONTRACT' },
@@ -58,7 +58,7 @@ const I18N = {
     sub: 'Amankan asetmu dengan distribusi berbasis milestone yang otomatis — menghilangkan kesalahan manusia yang fatal sekaligus mengubah penerima pasif menjadi kontributor jangka panjang yang loyal.',
     target: 'Untuk Builder & Founder Ekosistem Solana',
     cta: 'Daftar Waitlist',
-    success: '✓ Kamu sudah terdaftar! Kami akan notifikasi saat BlockBite meluncur.',
+    success: 'Kamu sudah terdaftar! Kami akan notifikasi saat BlockBite meluncur.',
     stats: [
       { v: '100%', l: 'ON-CHAIN' },
       { v: 'Otomatis', l: 'SMART CONTRACT' },
@@ -249,17 +249,7 @@ export default function WaitlistPage() {
           position: 'sticky', top: 0, zIndex: 100,
         }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: '#fff' }}>
-            {/* Stacked B-block logo mark */}
-            <svg width="38" height="38" viewBox="0 0 38 38">
-              <defs>
-                <linearGradient id="lgNav" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor={MAGENTA}/>
-                  <stop offset="100%" stopColor={PURPLE}/>
-                </linearGradient>
-              </defs>
-              <rect width="38" height="38" rx="10" fill="url(#lgNav)"/>
-              <text x="19" y="27" textAnchor="middle" fontSize="22" fontWeight="900" fill="#fff" fontFamily="Montserrat,sans-serif">B</text>
-            </svg>
+            <img src="/logo.png" alt="BlockBite" width={40} height={40} style={{ objectFit: 'contain', flexShrink: 0 }}/>
             <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.5px', fontFamily: 'Montserrat,sans-serif' }}>BlockBite</span>
           </Link>
 
@@ -300,7 +290,7 @@ export default function WaitlistPage() {
               { c1: MAGENTA, c2: '#e0408c', d: '3.1s', icon: '◆' },
               { c1: TEAL,    c2: '#5aa8c0', d: '2.7s', icon: '◈' },
               { c1: GOLD,    c2: '#f5c34a', d: '3.4s', icon: '◉' },
-              { c1: PURPLE,  c2: '#a0a4f5', d: '2.4s', icon: '✦' },
+              { c1: PURPLE,  c2: '#a0a4f5', d: '2.4s', icon: '*' },
               { c1: CORAL,   c2: '#f07080', d: '3.7s', icon: '⬡' },
               { c1: TEAL,    c2: '#3d9fb5', d: '2.9s', icon: '◇' },
             ].map((b, i) => (

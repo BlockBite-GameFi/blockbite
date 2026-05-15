@@ -13,7 +13,7 @@ export interface MechanicDef {
 
 export const MECHANICS: Record<string, MechanicDef> = {
   // CELL MODIFIERS
-  locked:    { id: 'locked',    cat: 'cell', weight: 8, label: 'Locked cells', icon: '🔒', tier: 1 },
+  locked:    { id: 'locked',    cat: 'cell', weight: 8, label: 'Locked cells', icon: '[X]', tier: 1 },
   ice:       { id: 'ice',       cat: 'cell', weight: 7, label: 'Ice cells',    tier: 2 },
   stone:     { id: 'stone',     cat: 'cell', weight: 6, label: 'Stone cells',  tier: 2 },
   steel:     { id: 'steel',     cat: 'cell', weight: 4, label: 'Steel cells',  tier: 4 },

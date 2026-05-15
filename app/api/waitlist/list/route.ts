@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sbGetList, sbGetCount, supabaseReady } from '@/lib/supabase-rest';
 import { memGetList } from '@/lib/waitlist-store';
+import { timingSafeEqual } from 'crypto';
 
-const ADMIN_TOKEN = 'nayrbryanGaming_admin_2025';
+function checkToken(provided: string): boolean {
+  const secret = process.env.ADMIN_TOKEN;
+  if (!secret) return false;
+  try {
+    return provided.length === secret.length &&
+      timingSafeEqual(Buffer.from(provided), Buffer.from(secret));
+  } catch {
+    return false;
+  }
+}
 
 export async function GET(req: NextRequest) {
   const token =
     req.headers.get('x-admin-token') ||
-    req.nextUrl.searchParams.get('token');
-  if (token !== ADMIN_TOKEN) {
+    req.nextUrl.searchParams.get('token') ||
+    '';
+  if (!checkToken(token)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

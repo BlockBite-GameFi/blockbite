@@ -21,9 +21,9 @@ const DICT: Record<Lang, Record<string, string>> = {
     empty_hist: 'No history yet.',
     nav_quests: 'Quests', nav_season: 'Season Pass',
     nav_friends: 'Friends', nav_daily: 'Daily Login',
-    join_waitlist: 'Join Waitlist →',
+    join_waitlist: 'Join Waitlist',
     waitlist_note: 'No spam. Unsubscribe anytime.',
-    waitlist_success: "✓ You're on the list! We'll notify you when BlockBite launches.",
+    waitlist_success: "You're on the list! We'll notify you when BlockBite launches.",
   },
   id: {
     nav_home: 'Beranda', nav_play: 'Main', nav_map: 'Peta',
@@ -41,9 +41,9 @@ const DICT: Record<Lang, Record<string, string>> = {
     empty_hist: 'Belum ada riwayat.',
     nav_quests: 'Misi', nav_season: 'Pass Musim',
     nav_friends: 'Teman', nav_daily: 'Login Harian',
-    join_waitlist: 'Daftar Waitlist →',
+    join_waitlist: 'Daftar Waitlist',
     waitlist_note: 'Tanpa spam. Bisa berhenti kapan saja.',
-    waitlist_success: '✓ Kamu sudah terdaftar! Kami akan notifikasi saat BlockBite meluncur.',
+    waitlist_success: 'Kamu sudah terdaftar! Kami akan notifikasi saat BlockBite meluncur.',
   },
 };
 

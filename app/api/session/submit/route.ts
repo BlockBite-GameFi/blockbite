@@ -18,12 +18,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { recordScore } from '@/lib/leaderboard/store';
 
-const SESSION_SECRET = process.env.SESSION_SECRET ?? 'blockbite-dev-secret-changeme';
+const SESSION_SECRET = process.env.SESSION_SECRET;
 // True upper-bound per placement — see security audit comment in constants.ts
 const MAX_SCORE_PER_MOVE = 200_000;
 
 function verifyToken(token: string): { walletAddress: string; expiresAt: number } | null {
   try {
+    if (!SESSION_SECRET) return null;
     const decoded = Buffer.from(token, 'base64url').toString('utf8');
     const parts = decoded.split('|');
     if (parts.length !== 5) return null;

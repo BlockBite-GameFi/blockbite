@@ -41,13 +41,7 @@ export default function MascotsPage() {
         position: 'sticky', top: 0, zIndex: 100,
       }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: '#fff' }}>
-          <svg width="34" height="34" viewBox="0 0 34 34">
-            <defs><linearGradient id="lgNav" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={MAGENTA}/><stop offset="100%" stopColor="#5055a4"/>
-            </linearGradient></defs>
-            <rect width="34" height="34" rx="9" fill="url(#lgNav)"/>
-            <text x="17" y="24" textAnchor="middle" fontSize="20" fontWeight="900" fill="#fff" fontFamily="Space Grotesk,sans-serif">B</text>
-          </svg>
+          <img src="/logo.png" alt="BlockBite" width={34} height={34} style={{ objectFit: 'contain', flexShrink: 0 }}/>
           <span style={{ fontSize: 18, fontWeight: 900 }}>BlockBite</span>
         </Link>
         <div style={{ flex: 1 }}/>
@@ -55,7 +49,7 @@ export default function MascotsPage() {
           padding: '8px 18px', borderRadius: 999,
           background: `linear-gradient(135deg, ${MAGENTA}, #5055a4)`,
           color: '#fff', fontWeight: 800, fontSize: 13, textDecoration: 'none',
-        }}>▶ PLAY</Link>
+        }}>PLAY</Link>
       </nav>
 
       {/* Header */}

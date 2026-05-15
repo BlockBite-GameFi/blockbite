@@ -63,16 +63,16 @@ export function calculateScore(
       multiplier = nextMultiplierOverride;
     } else if (linesCleared >= 5) {
       multiplier = PENTA_MULTIPLIER;
-      label = '⚡ PENTA CLEAR!';
+      label = 'PENTA CLEAR!';
     } else if (linesCleared === 4) {
       multiplier = LINE_MULTIPLIERS[4] ?? 3.0;
-      label = '🔥 QUAD CLEAR!';
+      label = 'QUAD CLEAR!';
     } else if (linesCleared === 3) {
       multiplier = LINE_MULTIPLIERS[3] ?? 2.0;
-      label = '💥 TRIPLE CLEAR!';
+      label = 'TRIPLE CLEAR!';
     } else if (linesCleared === 2) {
       multiplier = LINE_MULTIPLIERS[2] ?? 1.5;
-      label = '✨ DOUBLE CLEAR!';
+      label = 'DOUBLE CLEAR!';
     } else {
       multiplier = LINE_MULTIPLIERS[1] ?? 1.0;
       label = 'CLEAR';
@@ -89,8 +89,8 @@ export function calculateScore(
     }
     if (chainMultiplierBonus > 0) {
       multiplier *= (1 + chainMultiplierBonus);
-      if (newChain >= 5) label = `🌟 ×${newChain} CHAIN! ` + label;
-      else if (newChain >= 2) label = `🔗 ×${newChain} CHAIN ` + label;
+      if (newChain >= 5) label = `x${newChain} CHAIN! ` + label;
+      else if (newChain >= 2) label = `x${newChain} CHAIN ` + label;
     }
   } else {
     // No clear — reset chain
@@ -108,7 +108,7 @@ export function calculateScore(
   // ── Perfect board bonus ───────────────────────────────────────
   if (perfectBoard) {
     pointsEarned += PERFECT_BOARD_BONUS;
-    label = '🏆 PERFECT BOARD! +5000';
+    label = 'PERFECT BOARD! +5000';
   }
 
   return {

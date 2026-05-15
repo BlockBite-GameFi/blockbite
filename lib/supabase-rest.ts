@@ -42,21 +42,21 @@ export async function sbInsertEmail(
 /** Return total row count. */
 export async function sbGetCount(): Promise<number | null> {
   try {
-    // No URL-level limit — let Range header alone control pagination so
-    // Prefer:count=exact can put the real total in content-range.
-    const res = await fetch(`${SB_URL}/rest/v1/waitlist`, {
-      headers: h({ Prefer: 'count=exact', Range: '0-0' }),
+    // HEAD + Prefer:count=exact is the standard PostgREST count pattern.
+    // Returns Content-Range: 0-N/total without fetching row data.
+    const res = await fetch(`${SB_URL}/rest/v1/waitlist?select=email`, {
+      method: 'HEAD',
+      headers: h({ Prefer: 'count=exact' }),
     });
-    const range = res.headers.get('content-range'); // "0-0/N" or "*/N"
+    const range = res.headers.get('content-range');
     if (range) {
-      const n = parseInt(range.split('/')[1]);
-      if (!isNaN(n)) return n;
+      const n = parseInt(range.split('/').pop() ?? '');
+      if (!isNaN(n) && n >= 0) return n;
     }
-    // Fallback: read body count if header missing
-    if (res.ok) {
-      const data = await res.json().catch(() => null);
-      if (Array.isArray(data)) return data.length;
-    }
+    // Fallback: GET full list and count — covers PostgREST versions that
+    // don't return content-range on HEAD requests.
+    const list = await sbGetList();
+    if (list !== null) return list.length;
     return null;
   } catch {
     return null;

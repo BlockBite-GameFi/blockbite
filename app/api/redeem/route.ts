@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySig } from '@/lib/sig';
+import { rateLimit, getIP } from '@/lib/rate-limit';
 
 // Solana base58 address: 32–44 alphanumeric chars (no 0, O, I, l)
 const SOLANA_ADDR_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 export async function POST(req: NextRequest) {
+  // BBT-005: rate limit redeem to 10/min/IP
+  const ip = getIP(req);
+  const rl = await rateLimit(`redeem:${ip}`, 10, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const { addr, act, sig } = await req.json();
     if (!addr || act == null || !sig) {

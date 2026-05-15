@@ -2,14 +2,11 @@
 
 import React, { useMemo } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
-import {
-  PhantomWalletAdapter,
-  SolflareWalletAdapter,
-  TrustWalletAdapter,
-  LedgerWalletAdapter,
-  TorusWalletAdapter,
-  CoinbaseWalletAdapter,
-} from '@solana/wallet-adapter-wallets';
+import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
+import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
+import { TrustWalletAdapter } from '@solana/wallet-adapter-trust';
+import { LedgerWalletAdapter } from '@solana/wallet-adapter-ledger';
+import { CoinbaseWalletAdapter } from '@solana/wallet-adapter-coinbase';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { ACTIVE_NETWORK, RPC_URL } from '@/lib/solana/config';
 
@@ -25,7 +22,6 @@ export default function AppWalletProvider({ children }: { children: React.ReactN
       new SolflareWalletAdapter(),
       new TrustWalletAdapter(),
       new CoinbaseWalletAdapter(),
-      new TorusWalletAdapter(),
       new LedgerWalletAdapter(),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps

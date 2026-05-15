@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'BlockBite — Web3 Arcade on Solana',
-    description: 'Buy tickets, play blocks, bite into the prize pool. 100% on-chain, zero RNG, pure skill.',
+    description: 'Buy tickets, play blocks, bite into the prize pool. 100% on-chain, deterministic levels, pure skill.',
   },
 };
 

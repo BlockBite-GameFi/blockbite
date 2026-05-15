@@ -34,8 +34,8 @@ const I18N = {
     features: [
       { color: MAGENTA, t: 'Milestone-Based Distribution (W5)', d: 'Coming in W5: Set unlock conditions tied to real project milestones — not just time. Current release supports time-based linear vesting with cliff.' },
       { color: TEAL,    t: 'Automated & Trustless', d: 'Smart contract enforces all distribution rules on-chain. No manual transfers, no oversight gaps, no rug-pull vectors.' },
-      { color: GOLD,    t: 'Cliff + Linear Vesting', d: 'Configure cliff periods and linear unlock schedules. On-chain enforcement means even the team can\'t bypass the rules.' },
-      { color: PURPLE,  t: 'Smart Contract Enforced', d: 'Distribution logic is hardcoded on-chain. Upgrade authority burned before mainnet — contract is permanently immutable and autonomous. No admin can alter vesting schedules.' },
+      { color: GOLD,    t: 'Cliff + Linear Vesting', d: 'Configure cliff periods and linear unlock schedules. After upgrade authority is burned pre-mainnet, even the team cannot bypass on-chain rules.' },
+      { color: PURPLE,  t: 'Smart Contract Enforced', d: 'Distribution logic enforced on-chain. Upgrade authority will be burned before mainnet — after burn, contract is permanently immutable. No admin can alter vesting schedules post-deploy.' },
       { color: CORAL,   t: 'Full Transparency', d: 'Every vesting schedule, unlock event, and claim is recorded on-chain. Auditable by anyone, anytime.' },
       { color: TEAL,    t: 'Loyal Contributor Incentives', d: 'Transform passive token holders into active contributors by aligning rewards with long-term project success.' },
     ],
@@ -46,7 +46,7 @@ const I18N = {
     steps: [
       { t: 'Connect Wallet', d: 'Connect your Solana wallet — Phantom, Solflare, Backpack, or any compatible wallet.' },
       { t: 'Define Schedules', d: 'Set cliff periods, vesting durations, and milestone unlock conditions for each recipient group.' },
-      { t: 'Fund the Vault', d: 'Deposit tokens into the PDA-owned vault. The smart contract autonomously enforces all rules — no admin override possible.' },
+      { t: 'Fund the Vault', d: 'Deposit tokens into the PDA-owned vault. The smart contract autonomously enforces all rules — no admin override possible after upgrade authority is burned.' },
       { t: 'Automated Distribution', d: 'Recipients claim vested tokens on-chain when conditions are met. Zero manual intervention needed.' },
     ],
     footer: '© 2026 BlockBite · Built on Solana',
@@ -68,8 +68,8 @@ const I18N = {
     features: [
       { color: MAGENTA, t: 'Distribusi Berbasis Milestone (W5)', d: 'Segera hadir di W5: Tetapkan kondisi unlock yang terikat pada milestone nyata. Rilis saat ini mendukung vesting linear berbasis waktu dengan cliff.' },
       { color: TEAL,    t: 'Otomatis & Trustless', d: 'Smart contract menegakkan semua aturan distribusi on-chain. Tanpa transfer manual, tanpa celah pengawasan.' },
-      { color: GOLD,    t: 'Cliff + Vesting Linear', d: 'Konfigurasi periode cliff dan jadwal unlock linear. Penegakan on-chain berarti bahkan tim tidak bisa melewatinya.' },
-      { color: PURPLE,  t: 'Smart Contract Terverifikasi', d: 'Logika distribusi dikodekan keras on-chain. Upgrade authority dibakar sebelum mainnet — kontrak bersifat permanen imutabel dan otonom. Tidak ada admin yang bisa mengubah jadwal vesting.' },
+      { color: GOLD,    t: 'Cliff + Vesting Linear', d: 'Konfigurasi periode cliff dan jadwal unlock linear. Setelah upgrade authority dibakar sebelum mainnet, bahkan tim tidak bisa melewati aturan on-chain.' },
+      { color: PURPLE,  t: 'Smart Contract Terverifikasi', d: 'Logika distribusi ditegakkan on-chain. Upgrade authority akan dibakar sebelum mainnet — setelah dibakar, kontrak permanen imutabel. Admin tidak bisa mengubah jadwal vesting setelah deploy.' },
       { color: CORAL,   t: 'Transparansi Penuh', d: 'Setiap jadwal vesting, event unlock, dan klaim tercatat on-chain. Dapat diaudit siapa saja, kapan saja.' },
       { color: TEAL,    t: 'Insentif Kontributor Loyal', d: 'Ubah pemegang token pasif menjadi kontributor aktif dengan menyelaraskan reward dengan kesuksesan proyek jangka panjang.' },
     ],
@@ -80,7 +80,7 @@ const I18N = {
     steps: [
       { t: 'Hubungkan Wallet', d: 'Hubungkan wallet Solanamu — Phantom, Solflare, Backpack, atau wallet compatible apapun.' },
       { t: 'Tentukan Jadwal', d: 'Atur periode cliff, durasi vesting, dan kondisi unlock milestone untuk setiap kelompok penerima.' },
-      { t: 'Dana Vault', d: 'Depositkan token ke vault milik PDA. Smart contract secara otomatis menegakkan semua aturan — tanpa intervensi admin.' },
+      { t: 'Dana Vault', d: 'Depositkan token ke vault milik PDA. Smart contract secara otomatis menegakkan semua aturan — tanpa intervensi admin setelah upgrade authority dibakar.' },
       { t: 'Distribusi Otomatis', d: 'Penerima mengklaim token yang sudah vested on-chain saat kondisi terpenuhi. Tanpa intervensi manual.' },
     ],
     footer: '© 2026 BlockBite · Dibangun di Solana',

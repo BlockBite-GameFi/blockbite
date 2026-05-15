@@ -5,7 +5,7 @@
 **Program ID (devnet):** `DvhxiL5PF8Cq3icqcjdbQvtMhJcj6LWheUgovRpaXTFf`  
 **Deploy tx (W4):** `3q6KHeMvnSH1bA8mM1f1idz9BvPXHnheSSGub3PTREJCk6DBKbbfD4wkPUS1VMhf9twp3cCckn4vXrmnZdHGqXiM`  
 **IDL account:** `FgsBt6FeKaeax98XKSDD1psL24fMpDReAedzv2WAcorC`  
-**Upgrade authority:** `35z7X59rtyts557Up1RAwpyYN7x2cFqcDc7RjPuNxFzr`
+**Upgrade authority:** `35z7X59rtyts557Up1RAwpyYN7x2cFqcDc7RjPuNxFzr` ⚠️ **Currently upgradeable by this single wallet. Authority will be burned before mainnet — program is NOT yet immutable.**
 
 ---
 
@@ -64,7 +64,7 @@ pub velocity_strikes: u8,  // incremented on sub-human-speed claims
 pub last_action_ts:   i64, // timestamp of last withdrawal
 ```
 
-Full enforcement (auto-invalidate on 3 strikes) arrives with `update_proof` CPI in W5.
+**W4 enforcement active:** `require!` guard in `withdraw()` blocks the transaction when `velocity_strikes` reaches 3 (`VelocityViolation`). `update_proof` CPI integration for cross-program enforcement arrives in W5.
 
 **Error codes**
 
@@ -77,7 +77,7 @@ Full enforcement (auto-invalidate on 3 strikes) arrives with `update_proof` CPI 
 | `Unauthorized` | Signer is not the stream beneficiary / authority |
 | `StreamCancelled` | Stream was already cancelled |
 | `Overflow` | Arithmetic overflow |
-| `VelocityViolation` | Reserved for W5 VGPV enforcement |
+| `VelocityViolation` | Active W4 — blocks `withdraw` when velocity_strikes reaches 3 |
 
 ---
 

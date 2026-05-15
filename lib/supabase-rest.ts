@@ -26,10 +26,12 @@ export async function sbInsertEmail(
   try {
     const res = await fetch(`${SB_URL}/rest/v1/waitlist`, {
       method: 'POST',
-      headers: h({ Prefer: 'return=minimal' }),
+      // No Prefer:return=minimal — that changes success status to 204.
+      // Without it, PostgREST returns 201 Created which is what we check below.
+      headers: h({ Prefer: 'return=representation' }),
       body: JSON.stringify({ email }),
     });
-    if (res.status === 201) return 'inserted';
+    if (res.status === 201 || res.status === 204) return 'inserted';
     if (res.status === 409) return 'duplicate';
     return 'error';
   } catch {

@@ -6,23 +6,40 @@ const CARD   = '#13131a';
 const PURPLE = '#7c3aed';
 const TEAL   = '#0891b2';
 const GOLD   = '#d97706';
+const RED    = '#dc2626';
 const TEXT   = '#f1f5f9';
 const MUTED  = '#64748b';
 const BORDER = '#1e293b';
 
 type Entry = { email: string; ts: number };
 
+function downloadCSV(entries: Entry[]) {
+  const rows = entries.map(e => {
+    const d = new Date(e.ts);
+    return `"${e.email}","${d.toLocaleDateString('en-GB')}","${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}"`;
+  });
+  const csv = ['Email,Date,Time', ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `blockbite-waitlist-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function DashboardPage() {
-  const [username, setUsername]   = useState('');
-  const [password, setPassword]   = useState('');
-  const [loggedIn, setLoggedIn]   = useState(false);
-  const [authError, setAuthError] = useState('');
-  const [loading, setLoading]     = useState(false);
+  const [username, setUsername]     = useState('');
+  const [password, setPassword]     = useState('');
+  const [loggedIn, setLoggedIn]     = useState(false);
+  const [authError, setAuthError]   = useState('');
+  const [loading, setLoading]       = useState(false);
   const token = password;
-  const [entries, setEntries]     = useState<Entry[]>([]);
-  const [count, setCount]         = useState(0);
-  const [fetched, setFetched]     = useState(false);
+  const [entries, setEntries]       = useState<Entry[]>([]);
+  const [count, setCount]           = useState(0);
+  const [fetched, setFetched]       = useState(false);
   const [fetchError, setFetchError] = useState('');
+  const [deleting, setDeleting]     = useState<string | null>(null);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -64,6 +81,24 @@ export default function DashboardPage() {
       setFetchError(err instanceof Error ? err.message : 'Failed to fetch');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function deleteEntry(email: string) {
+    if (!confirm(`Delete ${email} from waitlist?`)) return;
+    setDeleting(email);
+    try {
+      const res = await fetch(
+        `/api/waitlist/list?email=${encodeURIComponent(email)}`,
+        { method: 'DELETE', headers: { 'x-admin-token': token.trim() } },
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setEntries(prev => prev.filter(e => e.email !== email));
+      setCount(prev => Math.max(0, prev - 1));
+    } catch {
+      alert('Delete failed. Try again.');
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -118,7 +153,7 @@ export default function DashboardPage() {
                 cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? 'Verifying…' : 'Sign In'}
+              {loading ? 'Verifying...' : 'Sign In'}
             </button>
           </form>
         </div>
@@ -128,28 +163,46 @@ export default function DashboardPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: BG, padding: '24px', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
+      <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h1 style={{ color: TEXT, fontSize: '24px', fontWeight: 800, margin: 0 }}>Waitlist Dashboard</h1>
             <p style={{ color: MUTED, fontSize: '13px', margin: '4px 0 0' }}>BlockBite Admin</p>
           </div>
-          <button
-            onClick={fetchEntries}
-            style={{
-              background: PURPLE, color: '#fff', border: 'none', borderRadius: '10px',
-              padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            {loading ? 'Refreshing…' : '↻ Refresh'}
-          </button>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {entries.length > 0 && (
+              <button
+                type="button"
+                onClick={() => downloadCSV(entries)}
+                style={{
+                  background: TEAL, color: '#fff', border: 'none', borderRadius: '10px',
+                  padding: '10px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Download CSV
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={fetchEntries}
+              disabled={loading}
+              style={{
+                background: PURPLE, color: '#fff', border: 'none', borderRadius: '10px',
+                padding: '10px 20px', fontSize: '14px', fontWeight: 600,
+                cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '28px' }}>
           {[
-            { label: 'Total Signups', value: count, color: PURPLE },
-            { label: 'KV Status', value: entries.length > 0 ? 'Live' : 'In-Memory', color: TEAL },
-            { label: 'Latest', value: entries[0] ? new Date(entries[0].ts).toLocaleDateString() : '—', color: GOLD },
+            { label: 'Total Signups', value: count,                                                   color: PURPLE },
+            { label: 'DB Status',     value: fetched ? 'Live' : 'Ready',                              color: TEAL   },
+            { label: 'Latest',        value: entries[0] ? new Date(entries[0].ts).toLocaleDateString() : 'None', color: GOLD },
           ].map((s) => (
             <div key={s.label} style={{
               background: CARD, border: `1px solid ${BORDER}`, borderRadius: '12px', padding: '20px',
@@ -182,7 +235,7 @@ export default function DashboardPage() {
           </div>
 
           {loading && !fetched ? (
-            <div style={{ color: MUTED, padding: '40px', textAlign: 'center', fontSize: '14px' }}>Loading…</div>
+            <div style={{ color: MUTED, padding: '40px', textAlign: 'center', fontSize: '14px' }}>Loading...</div>
           ) : entries.length === 0 ? (
             <div style={{ color: MUTED, padding: '40px', textAlign: 'center', fontSize: '14px' }}>
               {fetched ? 'No signups yet.' : 'Click Refresh to load entries.'}
@@ -192,9 +245,9 @@ export default function DashboardPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-                    {['#', 'Email', 'Date', 'Time'].map((h) => (
+                    {['#', 'Email', 'Date', 'Time', 'Actions'].map((h) => (
                       <th key={h} style={{
-                        padding: '12px 20px', textAlign: 'left',
+                        padding: '12px 16px', textAlign: h === 'Actions' ? 'center' : 'left',
                         color: MUTED, fontSize: '12px', fontWeight: 600, textTransform: 'uppercase',
                       }}>{h}</th>
                     ))}
@@ -203,17 +256,36 @@ export default function DashboardPage() {
                 <tbody>
                   {entries.map((entry, i) => {
                     const d = new Date(entry.ts);
+                    const isDeleting = deleting === entry.email;
                     return (
                       <tr key={entry.email} style={{
                         borderBottom: i < entries.length - 1 ? `1px solid ${BORDER}` : 'none',
+                        opacity: isDeleting ? 0.4 : 1,
+                        transition: 'opacity 0.2s',
                       }}>
-                        <td style={{ padding: '13px 20px', color: MUTED, fontSize: '13px', width: '48px' }}>{i + 1}</td>
-                        <td style={{ padding: '13px 20px', color: TEXT, fontSize: '14px' }}>{entry.email}</td>
-                        <td style={{ padding: '13px 20px', color: MUTED, fontSize: '13px' }}>
+                        <td style={{ padding: '12px 16px', color: MUTED, fontSize: '13px', width: '40px' }}>{i + 1}</td>
+                        <td style={{ padding: '12px 16px', color: TEXT, fontSize: '14px' }}>{entry.email}</td>
+                        <td style={{ padding: '12px 16px', color: MUTED, fontSize: '13px' }}>
                           {d.toLocaleDateString('en-GB')}
                         </td>
-                        <td style={{ padding: '13px 20px', color: MUTED, fontSize: '13px' }}>
+                        <td style={{ padding: '12px 16px', color: MUTED, fontSize: '13px' }}>
                           {d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => deleteEntry(entry.email)}
+                            disabled={!!deleting}
+                            style={{
+                              background: 'transparent', color: RED,
+                              border: `1px solid ${RED}44`, borderRadius: '6px',
+                              padding: '4px 12px', fontSize: '12px', fontWeight: 600,
+                              cursor: deleting ? 'wait' : 'pointer',
+                              opacity: deleting ? 0.5 : 1,
+                            }}
+                          >
+                            {isDeleting ? '...' : 'Delete'}
+                          </button>
                         </td>
                       </tr>
                     );
@@ -225,7 +297,7 @@ export default function DashboardPage() {
         </div>
 
         <p style={{ color: MUTED, fontSize: '11px', textAlign: 'center', marginTop: '24px' }}>
-          BlockBite Admin · Data from Vercel KV (or in-memory fallback)
+          BlockBite Admin · Data from Supabase (or in-memory fallback)
         </p>
       </div>
     </div>

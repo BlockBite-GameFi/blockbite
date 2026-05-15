@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sbGetList, sbGetCount, supabaseReady } from '@/lib/supabase-rest';
+import { sbGetList, sbGetCount, sbDeleteEmail, supabaseReady } from '@/lib/supabase-rest';
 import { memGetList } from '@/lib/waitlist-store';
 import { timingSafeEqual } from 'crypto';
 
@@ -44,4 +44,25 @@ export async function GET(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
+}
+
+export async function DELETE(req: NextRequest) {
+  const token =
+    req.headers.get('x-admin-token') ||
+    req.nextUrl.searchParams.get('token') ||
+    '';
+  if (!checkToken(token)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const email = req.nextUrl.searchParams.get('email');
+  if (!email) return NextResponse.json({ error: 'Missing email' }, { status: 400 });
+
+  if (!supabaseReady()) {
+    return NextResponse.json({ error: 'Storage unavailable' }, { status: 503 });
+  }
+
+  const ok = await sbDeleteEmail(email);
+  if (!ok) return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
+  return NextResponse.json({ success: true });
 }

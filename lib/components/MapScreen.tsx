@@ -17,9 +17,9 @@ interface Props {
   walletAddress?: string;
 }
 
-const NODE_COUNT = 20;
+const NODE_COUNT = 40;
 const SVG_W      = 400;
-const SVG_H      = NODE_COUNT * 150;
+const SVG_H      = NODE_COUNT * 160;
 const SVG_MARGIN = 80;
 
 function romanize(n: number) {
@@ -88,7 +88,7 @@ function Pill({ label, value, biome, small }: {
 }
 
 function NodeDot({
-  n, active, biome, unlocked, onClick, depth,
+  n, active, biome, unlocked, onClick,
 }: {
   n: { x: number; y: number; level: number };
   active: boolean;
@@ -97,11 +97,11 @@ function NodeDot({
   onClick: () => void;
   depth: number;
 }) {
-  // Near nodes (bottom) are larger/brighter; far nodes (top) are smaller/dimmer — strong 3D effect
-  const baseR = Math.round(10 + depth * 14); // 10 (far top) → 24 (near bottom)
-  const r = active ? baseR + 6 : baseR;
-  const fz = Math.round(7 + depth * 8);      // 7 (far) → 15 (near)
-  const nodeOpacity = unlocked ? (0.35 + depth * 0.65) : 0.22; // 0.35 far → 1.0 near
+  const R  = active ? 28 : unlocked ? 23 : 17;
+  const fz = active ? 13 : unlocked ? 11 : 9;
+  const bgFill  = active ? biome.glow    : unlocked ? biome.accent : '#0f172a';
+  const border  = active ? '#fff'        : unlocked ? biome.glow   : '#334155';
+  const txtFill = active ? '#0a0a14'     : unlocked ? '#fff'       : '#64748b';
 
   return (
     <g
@@ -110,59 +110,68 @@ function NodeDot({
       role={unlocked ? 'button' : undefined}
       aria-label={unlocked ? `Level ${n.level}` : undefined}
     >
-      <circle cx={n.x} cy={n.y} r={r + 14} fill="transparent" />
-      <ellipse cx={n.x} cy={n.y + r * 0.7} rx={r * 0.8} ry={r * 0.22}
-        fill="#000" opacity={depth * 0.35} />
+      {/* enlarged transparent hit area */}
+      <circle cx={n.x} cy={n.y} r={R + 14} fill="transparent" />
 
+      {/* drop shadow */}
+      <ellipse cx={n.x + 2} cy={n.y + R * 0.75}
+        rx={R * 0.82} ry={R * 0.2}
+        fill="#000" opacity="0.45" />
+
+      {/* pulse ring for current level */}
       {active && (
         <>
-          <circle cx={n.x} cy={n.y} r={r + 10} fill="none"
-            stroke={biome.glow} strokeWidth="1.5" opacity="0.5">
-            <animate attributeName="r" values={`${r};${r + 16};${r}`} dur="2s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.6;0;0.6" dur="2s" repeatCount="indefinite" />
+          <circle cx={n.x} cy={n.y} r={R + 4} fill="none"
+            stroke={biome.glow} strokeWidth="2.5" opacity="0">
+            <animate attributeName="r"
+              values={`${R + 2};${R + 24};${R + 2}`} dur="1.6s" repeatCount="indefinite" />
+            <animate attributeName="opacity"
+              values="0.8;0;0.8" dur="1.6s" repeatCount="indefinite" />
           </circle>
-          <circle cx={n.x} cy={n.y} r={r + 4} fill="none"
-            stroke={biome.glow} strokeWidth="2" opacity="0.7" />
+          <circle cx={n.x} cy={n.y} r={R + 7} fill="none"
+            stroke={biome.glow} strokeWidth="3" opacity="0.45" />
         </>
       )}
 
-      <circle
-        cx={n.x} cy={n.y} r={r}
-        fill={active ? biome.accent : unlocked ? `${biome.accent}bb` : 'rgba(10,10,20,0.5)'}
-        stroke={active ? biome.glow : unlocked ? biome.glow : '#334155'}
-        strokeWidth={active ? 3.5 : unlocked ? 2.5 : 1.5}
-        opacity={nodeOpacity}
-      />
+      {/* outer decorative ring */}
+      <circle cx={n.x} cy={n.y} r={R + 4}
+        fill="none"
+        stroke={active ? biome.glow : unlocked ? biome.accent + 'aa' : '#1e293b'}
+        strokeWidth={active ? 4 : 2.5} />
 
-      {unlocked && (
-        <ellipse
-          cx={n.x - r * 0.28} cy={n.y - r * 0.3}
-          rx={r * 0.28} ry={r * 0.16}
-          fill="#fff" opacity={0.25 + depth * 0.3}
-        />
+      {/* main body */}
+      <circle cx={n.x} cy={n.y} r={R}
+        fill={bgFill}
+        stroke={border}
+        strokeWidth={active ? 3 : 2} />
+
+      {/* candy-gloss highlight */}
+      {(active || unlocked) && (
+        <ellipse cx={n.x - R * 0.28} cy={n.y - R * 0.3}
+          rx={R * 0.3} ry={R * 0.18}
+          fill="#fff" opacity="0.28" />
       )}
 
+      {/* level number — ALWAYS visible */}
       <text
-        x={n.x} y={n.y + fz * 0.38}
+        x={n.x} y={n.y + fz * 0.42}
         textAnchor="middle" fontSize={fz}
-        fontWeight={900}
-        fill={unlocked ? '#fff' : '#475569'}
-        stroke={unlocked ? 'rgba(0,0,0,0.45)' : 'none'}
-        strokeWidth="1.2"
-        paintOrder="stroke"
+        fontWeight={active ? 900 : 700}
+        fill={txtFill}
         style={{ pointerEvents: 'none', userSelect: 'none' }}
       >
-        {unlocked ? n.level : '-'}
+        {n.level}
       </text>
 
+      {/* 3-star decoration below unlocked (non-active) nodes */}
       {!active && unlocked && (
-        <g opacity="0.92">
+        <g opacity="0.85">
           {[-1, 0, 1].map(si => (
             <StarShape
               key={si}
-              cx={n.x + si * r * 0.58}
-              cy={n.y + r + 9}
-              r={Math.max(3.2, r * 0.22)}
+              cx={n.x + si * R * 0.58}
+              cy={n.y + R + 9}
+              r={Math.max(3, R * 0.22)}
               color={biome.glow}
             />
           ))}
@@ -530,6 +539,7 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 ACT {romanize(biome.act)} · LVL {biome.range[0]}-{biome.range[1]}
               </text>
 
+<<<<<<< HEAD
               {/* Candy path — shadow base */}
               <path d={pathD} stroke="rgba(0,0,0,0.42)" strokeWidth="20" fill="none"
                 strokeLinecap="round" />
@@ -545,6 +555,18 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
               {/* Depth fog — fades top nodes into distance */}
               <path d={pathD} stroke="url(#bb-fog-depth)" strokeWidth="16" fill="none"
                 strokeLinecap="round" />
+=======
+              {/* Candy Crush rope-style path */}
+              <path d={pathD} stroke={biome.rock} strokeWidth="38" fill="none"
+                strokeLinecap="round" opacity="0.95" />
+              <path d={pathD} stroke={biome.accent} strokeWidth="28" fill="none"
+                strokeLinecap="round" opacity="0.6" />
+              <path d={pathD} stroke={biome.glow} strokeWidth="10" fill="none"
+                strokeDasharray="16 20" strokeLinecap="round" opacity="0.9" />
+              <path d={pathD} stroke="#fff" strokeWidth="3.5" fill="none"
+                strokeDasharray="7 29" strokeLinecap="round" strokeDashoffset="9"
+                opacity="0.35" />
+>>>>>>> 6778621 (feat: Candy Crush map nodes, remove nav icons, waitlist CSV/delete)
 
               {nodes.map((n, i) => {
                 if (i === 0) return null;

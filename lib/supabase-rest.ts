@@ -65,6 +65,20 @@ export async function sbGetCount(): Promise<number | null> {
 
 export type SbEntry = { email: string; created_at: string };
 
+/** Delete a single email from waitlist. Returns true on success. */
+export async function sbDeleteEmail(email: string): Promise<boolean> {
+  try {
+    const encoded = encodeURIComponent(email);
+    const res = await fetch(
+      `${SB_URL}/rest/v1/waitlist?email=eq.${encoded}`,
+      { method: 'DELETE', headers: h({ Prefer: 'return=minimal' }) },
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 /** Return all entries ordered newest first. */
 export async function sbGetList(): Promise<SbEntry[] | null> {
   try {

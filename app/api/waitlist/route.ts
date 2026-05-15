@@ -31,7 +31,12 @@ export async function POST(req: NextRequest) {
         } catch { /* KV optional */ }
         return NextResponse.json({ ok: true, _src: 'sb' });
       }
-      // Supabase failed — fall through to memory
+      // Supabase rejected the insert — surface the real reason instead of pretending success
+      console.error('[waitlist POST] supabase insert failed:', result);
+      return NextResponse.json(
+        { error: 'Storage rejected the signup', detail: result },
+        { status: 502 },
+      );
     }
 
     // Fallback: in-memory

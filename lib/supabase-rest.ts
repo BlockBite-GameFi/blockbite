@@ -19,7 +19,11 @@ export function supabaseReady(): boolean {
   return Boolean(SB_URL && SB_KEY);
 }
 
-/** Insert email. Returns 'inserted' | 'duplicate' | 'error:STATUS'. */
+/** Insert email. Returns 'inserted' | 'duplicate' | 'error:STATUS'.
+ *  Strict: with Prefer:return=representation the response body MUST contain the
+ *  inserted row. If RLS or a trigger silently drops the row, PostgREST returns
+ *  201 with [] — we treat that as a silent failure instead of "inserted".
+ */
 export async function sbInsertEmail(
   email: string,
 ): Promise<'inserted' | 'duplicate' | string> {
@@ -29,14 +33,62 @@ export async function sbInsertEmail(
       headers: h({ Prefer: 'return=representation' }),
       body: JSON.stringify({ email }),
     });
-    // 200: Prefer:return=representation, 201: default insert, 204: Prefer:return=minimal
-    if (res.status === 200 || res.status === 201 || res.status === 204) return 'inserted';
     if (res.status === 409) return 'duplicate';
-    // Return status + body snippet for debugging
-    const body = await res.text().catch(() => '');
-    return `error:${res.status}:${body.slice(0, 120)}`;
+    const bodyText = await res.text().catch(() => '');
+    if (res.status === 200 || res.status === 201) {
+      // representation should return the inserted row. Empty array = silent RLS drop.
+      try {
+        const parsed = JSON.parse(bodyText);
+        if (Array.isArray(parsed) && parsed.length === 0) {
+          return `error:silent-rls:body=[]:status=${res.status}`;
+        }
+      } catch { /* not JSON — accept as inserted */ }
+      return 'inserted';
+    }
+    if (res.status === 204) return 'inserted'; // minimal — can't verify, trust status
+    return `error:${res.status}:${bodyText.slice(0, 200)}`;
   } catch (e) {
-    return `error:exception:${String(e).slice(0, 80)}`;
+    return `error:exception:${String(e).slice(0, 120)}`;
+  }
+}
+
+/** Decode JWT payload without verifying — used only for diagnostics so we can
+ *  tell the user whether the key in Vercel is the anon key vs service_role.
+ */
+export function sbKeyRole(): { role?: string; ref?: string; error?: string } {
+  if (!SB_KEY) return { error: 'no-key' };
+  const parts = SB_KEY.split('.');
+  if (parts.length !== 3) return { error: 'not-jwt' };
+  try {
+    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = payload + '='.repeat((4 - payload.length % 4) % 4);
+    const decoded = JSON.parse(Buffer.from(padded, 'base64').toString('utf-8'));
+    return { role: decoded?.role, ref: decoded?.ref };
+  } catch (e) {
+    return { error: `decode:${String(e).slice(0, 60)}` };
+  }
+}
+
+/** Probe Supabase with a raw SELECT and return the response details. */
+export async function sbProbe(): Promise<{
+  status: number;
+  bodyHead: string;
+  rowCount: number | null;
+}> {
+  try {
+    const res = await fetch(
+      `${SB_URL}/rest/v1/waitlist?select=email&limit=5`,
+      { headers: h({ Prefer: 'count=exact' }) },
+    );
+    const txt = await res.text().catch(() => '');
+    let rowCount: number | null = null;
+    try {
+      const parsed = JSON.parse(txt);
+      if (Array.isArray(parsed)) rowCount = parsed.length;
+    } catch { /* ignore */ }
+    return { status: res.status, bodyHead: txt.slice(0, 300), rowCount };
+  } catch (e) {
+    return { status: -1, bodyHead: `exception:${String(e).slice(0, 200)}`, rowCount: null };
   }
 }
 

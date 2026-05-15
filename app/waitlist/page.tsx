@@ -215,6 +215,10 @@ export default function WaitlistPage() {
       });
       if (res.status === 429) {
         setRateLimited(true);
+      } else if (res.status === 502) {
+        // Storage backend rejected the row — DO NOT pretend success.
+        setServerErr(true);
+        setTimeout(() => setServerErr(false), 6000);
       } else if (res.ok || res.status === 409) {
         setDone(true);
         try {
@@ -232,8 +236,8 @@ export default function WaitlistPage() {
         setTimeout(() => setServerErr(false), 4000);
       }
     } catch {
-      setDone(true);
-      try { localStorage.setItem(LS_DONE, '1'); } catch { /* ignore */ }
+      setServerErr(true);
+      setTimeout(() => setServerErr(false), 6000);
     }
     setBusy(false);
   }

@@ -205,14 +205,15 @@ export function generateNodes(startLevel: number, endLevel: number, count: numbe
 }
 
 // Long-form node generator: one node per level, fixed Y spacing, S-curve in X.
-// For Candy-Crush-style maps with thousands of clickable levels.
-// Returns deterministic positions so virtualization can compute indices from scrollY.
+// Candy-Crush orientation: level startLevel sits at the BOTTOM of the SVG,
+// endLevel at the TOP. Player scrolls UPWARD to reach higher levels.
 export function generateLongNodes(
   startLevel: number,
   endLevel: number,
   spacingY: number,
   w: number,
   topMargin: number,
+  svgH: number,
 ) {
   const count = endLevel - startLevel + 1;
   const out: { x: number; y: number; level: number }[] = new Array(count);
@@ -224,7 +225,8 @@ export function generateLongNodes(
     const t = i / wave;
     // Layer two sines for organic winding so it doesn't look mechanical
     const x = cx + Math.sin(t * Math.PI) * ampl + Math.sin(t * Math.PI * 0.37) * (ampl * 0.18);
-    const y = topMargin + i * spacingY;
+    // Invert Y: i=0 (start level) → bottom; i=count-1 (end level) → top
+    const y = svgH - topMargin - i * spacingY;
     out[i] = { x, y, level: startLevel + i };
   }
   return out;

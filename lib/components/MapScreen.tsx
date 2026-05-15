@@ -458,8 +458,8 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
   const SVG_H = totalLevels * NODE_DY + SVG_MARGIN * 2;
 
   const allNodes = React.useMemo(
-    () => generateLongNodes(biome.range[0], biome.range[1], NODE_DY, SVG_W, SVG_MARGIN),
-    [biome.range[0], biome.range[1]],
+    () => generateLongNodes(biome.range[0], biome.range[1], NODE_DY, SVG_W, SVG_MARGIN, SVG_H),
+    [biome.range[0], biome.range[1], SVG_H],
   );
 
   const clampedLevel = Math.max(biome.range[0], Math.min(biome.range[1], currentLevel));
@@ -488,9 +488,12 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
       if (scale <= 0) return;
       const topSvg = el.scrollTop / scale;
       const botSvg = (el.scrollTop + el.clientHeight) / scale;
-      // Each node sits at y = SVG_MARGIN + i * NODE_DY
-      const startIdx = Math.max(0, Math.floor((topSvg - VIS_BUFFER - SVG_MARGIN) / NODE_DY));
-      const endIdx   = Math.min(totalLevels, Math.ceil((botSvg + VIS_BUFFER - SVG_MARGIN) / NODE_DY) + 1);
+      // Inverted layout: index i sits at y = SVG_H - SVG_MARGIN - i*NODE_DY.
+      // Visible window covers SVG y in [topSvg-VIS_BUFFER, botSvg+VIS_BUFFER].
+      // Solving for i: i_min from y=botSvg+buffer; i_max from y=topSvg-buffer.
+      const iFromY = (y: number) => (SVG_H - SVG_MARGIN - y) / NODE_DY;
+      const startIdx = Math.max(0, Math.floor(iFromY(botSvg + VIS_BUFFER)));
+      const endIdx   = Math.min(totalLevels, Math.ceil(iFromY(topSvg - VIS_BUFFER)) + 1);
       setVisRange(prev => (prev.start === startIdx && prev.end === endIdx)
         ? prev
         : { start: startIdx, end: endIdx });
@@ -523,9 +526,11 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
       const rect = svg.getBoundingClientRect();
       if (!rect.height) return false;
       const scale = rect.width / SVG_W;
-      const targetSvgY = SVG_MARGIN + activeIdx * NODE_DY;
+      // Inverted layout: active node y = SVG_H - SVG_MARGIN - activeIdx * NODE_DY.
+      // We want it parked ~60% from top of viewport (so future levels stay above).
+      const targetSvgY = SVG_H - SVG_MARGIN - activeIdx * NODE_DY;
       const targetPx = targetSvgY * scale;
-      el.scrollTop = Math.max(0, targetPx - el.clientHeight * 0.4);
+      el.scrollTop = Math.max(0, targetPx - el.clientHeight * 0.6);
       return true;
     };
 
@@ -581,21 +586,35 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
 
       <div style={{
         flex: 1, display: 'flex',
-        flexDirection: isTablet ? 'row' : 'column',
+        // Mobile = column (map on top, bottom card below + tab bar).
+        // Tablet + desktop = row (map fills left, side cards on the right).
+        flexDirection: isMobile ? 'column' : 'row',
         overflow: 'hidden',
+        minWidth: 0,
+        minHeight: 0,
       }}>
         <div
           ref={scrollRef}
           style={{
             flex: 1,
+            minWidth: 0,
+            minHeight: 0,
             overflowY: 'auto',
             overflowX: 'hidden',
             WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
             position: 'relative',
+            perspective: '1400px',
+            perspectiveOrigin: '50% 100%',
           }}
         >
           {/* Full-width — no clamp. SVG fills the available column and scales. */}
-          <div style={{ width: '100%' }}>
+          <div style={{
+            width: '100%',
+            transformStyle: 'preserve-3d',
+            transform: isMobile ? 'none' : 'rotateX(6deg)',
+            transformOrigin: '50% 100%',
+            willChange: 'transform',
+          }}>
             <svg
               viewBox={`0 0 ${SVG_W} ${SVG_H}`}
               preserveAspectRatio="xMidYMin meet"
@@ -606,10 +625,18 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                   <stop offset="0%"   stopColor={biome.path} stopOpacity="1" />
                   <stop offset="100%" stopColor={biome.path} stopOpacity="0.15" />
                 </linearGradient>
+                {/* Depth fog: darker at TOP (distant high levels), clear at BOTTOM (player). */}
                 <linearGradient id="bb-fog-depth" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"  stopColor="#000" stopOpacity="0" />
-                  <stop offset="100%" stopColor="#000" stopOpacity="0.18" />
+                  <stop offset="0%"  stopColor="#000" stopOpacity="0.55" />
+                  <stop offset="35%" stopColor="#000" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="#000" stopOpacity="0" />
                 </linearGradient>
+                {/* Spotlight: bright halo around the player position (BOTTOM of map). */}
+                <radialGradient id="bb-spotlight" cx="50%" cy="92%" r="70%">
+                  <stop offset="0%"  stopColor={biome.glow} stopOpacity="0.18" />
+                  <stop offset="40%" stopColor={biome.glow} stopOpacity="0.05" />
+                  <stop offset="100%" stopColor={biome.glow} stopOpacity="0" />
+                </radialGradient>
                 {/* 3D sphere gradients used by each node — depth illusion */}
                 <radialGradient id="bb-node-active" cx="35%" cy="32%" r="70%">
                   <stop offset="0%"   stopColor="#fff" stopOpacity="0.95" />
@@ -650,13 +677,22 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
               ))}
               <rect width={SVG_W} height={SVG_H} fill={biome.fog} />
               <rect width={SVG_W} height={SVG_H} fill="url(#bb-fog-depth)" />
+              <rect width={SVG_W} height={SVG_H} fill="url(#bb-spotlight)" />
 
+              {/* TOP label = end-of-act gateway (level endLevel sits up here) */}
               <text
                 x={SVG_W / 2} y={70}
-                textAnchor="middle" fontSize="20" fontWeight="800"
-                fill={biome.glow} opacity="0.55" letterSpacing="4"
+                textAnchor="middle" fontSize="22" fontWeight="900"
+                fill={biome.glow} opacity="0.7" letterSpacing="5"
               >
-                ACT {romanize(biome.act)} · LVL {biome.range[0].toLocaleString()}–{biome.range[1].toLocaleString()}
+                ACT {romanize(biome.act)} GATEWAY · LVL {biome.range[1].toLocaleString()}
+              </text>
+              <text
+                x={SVG_W / 2} y={96}
+                textAnchor="middle" fontSize="12" fontWeight="600"
+                fill="#fff" opacity="0.45" letterSpacing="3"
+              >
+                ▲ HIGHER LEVELS ▲
               </text>
 
               {/* Candy path — shadow base */}
@@ -714,21 +750,29 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 );
               })}
 
-              {/* Finish flag revealed only when player reaches the last node */}
+              {/* Finish flag floats above the last (highest-level) node at the TOP */}
               {activeIdx >= allNodes.length - 2 && (
                 <FinishFlag
                   x={allNodes[allNodes.length - 1].x}
-                  y={allNodes[allNodes.length - 1].y + 30}
+                  y={allNodes[allNodes.length - 1].y - 60}
                   biome={biome}
                 />
               )}
 
+              {/* BOTTOM label = act start (level startLevel sits down here) */}
               <text
-                x={SVG_W / 2} y={SVG_H - 40}
+                x={SVG_W / 2} y={SVG_H - 56}
                 textAnchor="middle" fontSize="14" fontWeight="700"
-                fill={biome.glow} opacity="0.45" letterSpacing="2"
+                fill="#fff" opacity="0.45" letterSpacing="3"
               >
-                ACT {romanize(biome.act)} END · LVL {biome.range[1].toLocaleString()}
+                ▼ JOURNEY START ▼
+              </text>
+              <text
+                x={SVG_W / 2} y={SVG_H - 30}
+                textAnchor="middle" fontSize="16" fontWeight="800"
+                fill={biome.glow} opacity="0.6" letterSpacing="3"
+              >
+                ACT {romanize(biome.act)} · LVL {biome.range[0].toLocaleString()}
               </text>
             </svg>
           </div>

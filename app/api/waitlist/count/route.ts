@@ -13,12 +13,13 @@ export async function GET() {
     // 1. Primary: Vercel KV — same instance as leaderboard, always available
     const kvCount = await kvGetCount();
     if (kvCount !== null) {
-      // If KV has 0 but Supabase has data, bootstrap KV from Supabase
-      if (kvCount === 0 && supabaseReady()) {
+      // Always reconcile with Supabase — KV may have missed signups that fell
+      // through to the Supabase fallback path (e.g. during KV write errors).
+      if (supabaseReady()) {
         const sbCount = await sbGetCount();
-        if (sbCount && sbCount > 0) {
+        if (sbCount && sbCount > kvCount) {
           await kvSeedFromExternal(sbCount);
-          return NextResponse.json({ count: sbCount, source: 'supabase-seed' }, { headers });
+          return NextResponse.json({ count: sbCount, source: 'supabase-sync' }, { headers });
         }
       }
       return NextResponse.json({ count: kvCount, source: 'kv' }, { headers });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { kvAddEmail } from '@/lib/waitlist-kv';
-import { sbInsertEmail, supabaseReady } from '@/lib/supabase-rest';
+import { kvAddEmail, kvSeedFromExternal } from '@/lib/waitlist-kv';
+import { sbInsertEmail, sbGetCount, supabaseReady } from '@/lib/supabase-rest';
 import { memAdd } from '@/lib/waitlist-store';
 import { rateLimit, getIP } from '@/lib/rate-limit';
 
@@ -33,7 +33,11 @@ export async function POST(req: NextRequest) {
     if (supabaseReady()) {
       const result = await sbInsertEmail(normalized);
       if (result === 'duplicate') return NextResponse.json({ ok: true, already: true, _src: 'sb-dup' }, { status: 409 });
-      if (result === 'inserted') return NextResponse.json({ ok: true, _src: 'sb' });
+      if (result === 'inserted') {
+        // Heal KV counter to stay in sync with Supabase
+        sbGetCount().then(n => { if (n) kvSeedFromExternal(n); }).catch(() => {});
+        return NextResponse.json({ ok: true, _src: 'sb' });
+      }
       // Supabase insert failed — expose error in _src for diagnosis
       console.error('[waitlist] Supabase insert failed:', result);
       return NextResponse.json({ ok: true, _src: result });

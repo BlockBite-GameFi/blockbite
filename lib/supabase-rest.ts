@@ -32,6 +32,7 @@ export async function sbInsertEmail(
       method: 'POST',
       headers: h({ Prefer: 'return=representation' }),
       body: JSON.stringify({ email }),
+      cache: 'no-store',
     });
     if (res.status === 409) return 'duplicate';
     const bodyText = await res.text().catch(() => '');
@@ -78,7 +79,7 @@ export async function sbProbe(): Promise<{
   try {
     const res = await fetch(
       `${SB_URL}/rest/v1/waitlist?select=email&limit=5`,
-      { headers: h({ Prefer: 'count=exact' }) },
+      { headers: h({ Prefer: 'count=exact' }), cache: 'no-store' },
     );
     const txt = await res.text().catch(() => '');
     let rowCount: number | null = null;
@@ -109,7 +110,7 @@ export async function sbDeleteEmail(email: string): Promise<boolean> {
     const encoded = encodeURIComponent(email);
     const res = await fetch(
       `${SB_URL}/rest/v1/waitlist?email=eq.${encoded}`,
-      { method: 'DELETE', headers: h({ Prefer: 'return=minimal' }) },
+      { method: 'DELETE', headers: h({ Prefer: 'return=minimal' }), cache: 'no-store' },
     );
     return res.ok;
   } catch {
@@ -117,12 +118,17 @@ export async function sbDeleteEmail(email: string): Promise<boolean> {
   }
 }
 
-/** Return all entries ordered newest first. */
+/** Return all entries ordered newest first.
+ *  cache:no-store is REQUIRED — Next.js 14 caches server-side fetch() by
+ *  default, so without it every GET sees the same frozen snapshot of rows
+ *  even when force-dynamic is set on the route. That bug caused the public
+ *  counter to stick at 2 while new signups kept landing in Supabase.
+ */
 export async function sbGetList(): Promise<SbEntry[] | null> {
   try {
     const res = await fetch(
-      `${SB_URL}/rest/v1/waitlist?select=email,created_at&order=created_at.desc`,
-      { headers: h() },
+      `${SB_URL}/rest/v1/waitlist?select=email,created_at&order=created_at.desc&limit=50000`,
+      { headers: h(), cache: 'no-store' },
     );
     if (!res.ok) return null;
     return res.json();

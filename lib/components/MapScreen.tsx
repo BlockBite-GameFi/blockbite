@@ -424,28 +424,37 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
   const Art       = ART[biome.id];
 
   const nodes = generateNodes(biome.range[0], biome.range[1], NODE_COUNT, SVG_W, SVG_H);
-  const pathD = buildPathD(nodes);
 
   let activeIdx = 0;
   for (let i = 0; i < nodes.length; i++) {
     if (nodes[i].level <= currentLevel) activeIdx = i;
   }
 
+  // Revealed path: only draw up to active+2 nodes (Candy Crush progressive reveal)
+  const revealedNodes = nodes.slice(0, activeIdx + 3);
+  const pathD = buildPathD(revealedNodes);
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    // Start at bottom so level-1 players don't see the top of the SVG
+    el.scrollTop = el.scrollHeight;
+
+    let attempts = 0;
     const run = () => {
       const svg = el.querySelector('svg');
       if (!svg) return;
       const svgPxH = svg.getBoundingClientRect().height;
-      if (!svgPxH) return;
+      if (!svgPxH && attempts < 10) {
+        attempts++;
+        requestAnimationFrame(run);
+        return;
+      }
       const scale  = svgPxH / SVG_H;
       const nodeY  = nodes[activeIdx].y * scale;
       el.scrollTop = Math.max(0, nodeY - el.clientHeight * 0.42);
     };
-    run();
-    const t = setTimeout(run, 120);
-    return () => clearTimeout(t);
+    requestAnimationFrame(run);
   }, [currentLevel, activeIdx]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isDesktop = layout === 'desktop';
@@ -547,7 +556,8 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 strokeLinecap="round" />
 
               {nodes.map((n, i) => {
-                if (i === 0) return null;
+                // Mid-dots only between revealed nodes
+                if (i === 0 || i > activeIdx + 2) return null;
                 const prev = nodes[i - 1];
                 const midX = (prev.x + n.x) / 2;
                 const midY = (prev.y + n.y) / 2;
@@ -559,6 +569,8 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
               })}
 
               {nodes.map((n, i) => {
+                // Progressive reveal: only show completed nodes + next 2 upcoming
+                if (i > activeIdx + 2) return null;
                 const depth = Math.max(0, Math.min(1,
                   (n.y - SVG_MARGIN) / (SVG_H - SVG_MARGIN * 2)
                 ));
@@ -575,11 +587,14 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 );
               })}
 
-              <FinishFlag
-                x={nodes[nodes.length - 1].x}
-                y={nodes[nodes.length - 1].y - 50}
-                biome={biome}
-              />
+              {/* Finish flag only revealed when player reaches last node */}
+              {activeIdx >= nodes.length - 1 && (
+                <FinishFlag
+                  x={nodes[nodes.length - 1].x}
+                  y={nodes[nodes.length - 1].y - 50}
+                  biome={biome}
+                />
+              )}
 
               <text
                 x={SVG_W / 2} y={SVG_H - 20}

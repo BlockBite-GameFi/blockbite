@@ -31,14 +31,9 @@ export default function MapActPage() {
   const [currentLevel, setCurrentLevel] = useState(biome.range[0]);
 
   useEffect(() => {
-    getPlayerProgress('local').then(p => {
-      let level = p.currentLevel;
-      // fallback to localStorage for guests
-      if (!publicKey) {
-        const stored = localStorage.getItem('bb_max_level');
-        if (stored) level = Math.max(level, parseInt(stored, 10));
-      }
-      const clamped = Math.max(biome.range[0], Math.min(biome.range[1], level));
+    const walletAddr = publicKey?.toBase58() ?? '';
+    getPlayerProgress(walletAddr).then(p => {
+      const clamped = Math.max(biome.range[0], Math.min(biome.range[1], p.currentLevel));
       setCurrentLevel(clamped);
     });
   }, [biome, publicKey]);

@@ -797,6 +797,18 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
       </div>
 
       {isMobile && <MobileTabBar biome={biome} />}
+
+      {/* Deploy verification badge — proves which build is rendered. */}
+      <div style={{
+        position: 'fixed', right: 10, bottom: 10, zIndex: 9999,
+        padding: '6px 10px', borderRadius: 8,
+        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
+        border: `1px solid ${biome.glow}66`,
+        color: biome.glow, fontSize: 10, fontWeight: 700, letterSpacing: 1,
+        fontFamily: 'monospace', pointerEvents: 'none',
+      }}>
+        MAP v2 · CANDY · {new Date().toISOString().slice(0,10)}
+      </div>
     </div>
   );
 }

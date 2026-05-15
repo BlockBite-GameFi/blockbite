@@ -128,41 +128,57 @@ function NodeDot({
 
       <circle
         cx={n.x} cy={n.y} r={r}
-        fill={active ? biome.accent : unlocked ? `${biome.rock}ee` : 'rgba(10,10,20,0.5)'}
-        stroke={active ? biome.glow : unlocked ? `${biome.accent}cc` : '#334155'}
-        strokeWidth={active ? 3.5 : 2}
+        fill={active ? biome.accent : unlocked ? `${biome.accent}bb` : 'rgba(10,10,20,0.5)'}
+        stroke={active ? biome.glow : unlocked ? biome.glow : '#334155'}
+        strokeWidth={active ? 3.5 : unlocked ? 2.5 : 1.5}
         opacity={nodeOpacity}
       />
 
       {unlocked && (
         <ellipse
           cx={n.x - r * 0.28} cy={n.y - r * 0.3}
-          rx={r * 0.22} ry={r * 0.14}
-          fill="#fff" opacity={0.18 + depth * 0.22}
+          rx={r * 0.28} ry={r * 0.16}
+          fill="#fff" opacity={0.25 + depth * 0.3}
         />
       )}
 
       <text
         x={n.x} y={n.y + fz * 0.38}
         textAnchor="middle" fontSize={fz}
-        fontWeight={active ? 900 : 700}
-        fill={unlocked ? (active ? '#0a0a14' : biome.glow) : '#475569'}
+        fontWeight={900}
+        fill={unlocked ? '#fff' : '#475569'}
+        stroke={unlocked ? 'rgba(0,0,0,0.45)' : 'none'}
+        strokeWidth="1.2"
+        paintOrder="stroke"
         style={{ pointerEvents: 'none', userSelect: 'none' }}
       >
         {unlocked ? n.level : '-'}
       </text>
 
-      {unlocked && !active && (
-        <text
-          x={n.x + r + 2} y={n.y - r + 2}
-          fontSize="9" fill={biome.glow} opacity="0.7"
-          style={{ pointerEvents: 'none', userSelect: 'none' }}
-        >
-          {'<'}
-        </text>
+      {!active && unlocked && (
+        <g opacity="0.92">
+          {[-1, 0, 1].map(si => (
+            <StarShape
+              key={si}
+              cx={n.x + si * r * 0.58}
+              cy={n.y + r + 9}
+              r={Math.max(3.2, r * 0.22)}
+              color={biome.glow}
+            />
+          ))}
+        </g>
       )}
     </g>
   );
+}
+
+function StarShape({ cx, cy, r, color }: { cx: number; cy: number; r: number; color: string }) {
+  const pts = Array.from({ length: 10 }, (_, i) => {
+    const a = (i * Math.PI) / 5 - Math.PI / 2;
+    const radius = i % 2 === 0 ? r : r * 0.42;
+    return `${(cx + Math.cos(a) * radius).toFixed(1)},${(cy + Math.sin(a) * radius).toFixed(1)}`;
+  }).join(' ');
+  return <polygon points={pts} fill={color} />;
 }
 
 function FinishFlag({ x, y, biome }: { x: number; y: number; biome: Biome }) {
@@ -514,10 +530,21 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 ACT {romanize(biome.act)} · LVL {biome.range[0]}-{biome.range[1]}
               </text>
 
-              <path d={pathD} stroke="url(#bb-path-depth)" strokeWidth="22" fill="none"
-                strokeLinecap="round" opacity="0.22" />
-              <path d={pathD} stroke="url(#bb-path-depth)" strokeWidth="7" fill="none"
-                strokeDasharray="6 10" strokeLinecap="round" />
+              {/* Candy path — shadow base */}
+              <path d={pathD} stroke="rgba(0,0,0,0.42)" strokeWidth="20" fill="none"
+                strokeLinecap="round" />
+              {/* Candy path — solid body */}
+              <path d={pathD} stroke={biome.path} strokeWidth="14" fill="none"
+                strokeLinecap="round" opacity="0.85" />
+              {/* Candy stripe — white highlight dashes */}
+              <path d={pathD} stroke="rgba(255,255,255,0.38)" strokeWidth="5" fill="none"
+                strokeDasharray="9 13" strokeLinecap="round" />
+              {/* Candy stripe — dark counter-dashes for depth */}
+              <path d={pathD} stroke="rgba(0,0,0,0.18)" strokeWidth="4" fill="none"
+                strokeDasharray="9 13" strokeDashoffset="11" strokeLinecap="round" />
+              {/* Depth fog — fades top nodes into distance */}
+              <path d={pathD} stroke="url(#bb-fog-depth)" strokeWidth="16" fill="none"
+                strokeLinecap="round" />
 
               {nodes.map((n, i) => {
                 if (i === 0) return null;

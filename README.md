@@ -13,10 +13,10 @@
 
 | Week | Deliverable | Status | Score |
 |------|-------------|--------|-------|
-| W1 | Technical Research | ✅ Complete | 43 / 50 |
-| W2 | System Design | ✅ Complete | 48 / 50 |
-| W3 | Project Setup | ✅ Complete | 20 / 50 |
-| **W4** | **Core Smart Contract + Waitlist** | **🔄 In Progress — due 2026-05-16** | — |
+| W1 | Technical Research | [x] Complete | 43 / 50 |
+| W2 | System Design | [x] Complete | 48 / 50 |
+| W3 | Project Setup | [x] Complete | 20 / 50 |
+| **W4** | **Core Smart Contract + Waitlist** | **[~] In Progress — due 2026-05-16** | — |
 
 ---
 

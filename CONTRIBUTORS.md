@@ -41,7 +41,7 @@ explanation for the single-author commit history.
 
 | Artifact | Work |
 |---|---|
-| `StreamAccount` byte layout | Verified `LEN = 155` manually (8 disc + 32 authority + 32 beneficiary + 32 mint + 8 amount_total + 8 amount_withdrawn + 8 start_ts + 8 cliff_ts + 8 end_ts + 8 stream_id + 1 cancelled + 1 bump + 1 velocity_strikes + 8 last_action_ts = 155 ✓) |
+| `StreamAccount` byte layout | Verified `LEN = 155` manually (8 disc + 32 authority + 32 beneficiary + 32 mint + 8 amount_total + 8 amount_withdrawn + 8 start_ts + 8 cliff_ts + 8 end_ts + 8 stream_id + 1 cancelled + 1 bump + 1 velocity_strikes + 8 last_action_ts = 155 [ok]) |
 | Error codes | Defined spec for `ZeroAmount`, `InvalidTimeRange`, `InvalidCliff`, `NothingToWithdraw`, `Unauthorized`, `StreamCancelled`, `Overflow`, `VelocityViolation` |
 | Acceptance criteria AC1–AC7 | Drafted W4 test descriptions; co-reviewed all 11 tests in `tests/vesting.ts` |
 | Waitlist page | Reviewed `app/waitlist/page.tsx` UX and bilingual EN/ID copy |

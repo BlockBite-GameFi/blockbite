@@ -40,14 +40,22 @@ export async function sbInsertEmail(
 /** Return total row count. */
 export async function sbGetCount(): Promise<number | null> {
   try {
-    const res = await fetch(
-      `${SB_URL}/rest/v1/waitlist?select=id&limit=1`,
-      { headers: h({ Prefer: 'count=exact', Range: '0-0' }) },
-    );
+    // No URL-level limit — let Range header alone control pagination so
+    // Prefer:count=exact can put the real total in content-range.
+    const res = await fetch(`${SB_URL}/rest/v1/waitlist`, {
+      headers: h({ Prefer: 'count=exact', Range: '0-0' }),
+    });
     const range = res.headers.get('content-range'); // "0-0/N" or "*/N"
-    if (!range) return null;
-    const n = parseInt(range.split('/')[1]);
-    return isNaN(n) ? null : n;
+    if (range) {
+      const n = parseInt(range.split('/')[1]);
+      if (!isNaN(n)) return n;
+    }
+    // Fallback: read body count if header missing
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (Array.isArray(data)) return data.length;
+    }
+    return null;
   } catch {
     return null;
   }

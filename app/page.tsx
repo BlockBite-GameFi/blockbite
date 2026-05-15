@@ -7,7 +7,7 @@ import Navbar from '@/components/Navbar';
 import { MascotSVG, BRAND_MASCOTS, PALETTES } from '@/components/Mascot';
 
 const BLOCK_COLORS = ['#a78bfa','#5eead4','#fbbf24','#f472b6','#7dd3fc','#fb923c'];
-const BLOCK_ICONS: string[] = [];
+const BLOCK_ICONS: string[] = ['◆', '◈', '◉', '⬡', '◇', '✦'];
 
 const FEATURES = {
   en: [

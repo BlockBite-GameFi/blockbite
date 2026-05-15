@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac, randomUUID } from 'crypto';
+import { rateLimit, getIP } from '@/lib/rate-limit';
 
 const SESSION_SECRET = process.env.SESSION_SECRET;
 const SESSION_TTL_MS = 60 * 60 * 1000;
@@ -24,6 +25,15 @@ function signSession(payload: string): string {
 export async function POST(req: NextRequest) {
   if (!SESSION_SECRET) {
     return NextResponse.json({ error: 'Server misconfigured' }, { status: 503 });
+  }
+
+  const ip = getIP(req);
+  const rl = await rateLimit(`session:${ip}`, 10, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': '60' } },
+    );
   }
 
   let body: { walletAddress?: string };

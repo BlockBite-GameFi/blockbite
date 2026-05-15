@@ -2,8 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kvAddEmail } from '@/lib/waitlist-kv';
 import { sbInsertEmail, supabaseReady } from '@/lib/supabase-rest';
 import { memAdd } from '@/lib/waitlist-store';
+import { rateLimit, getIP } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
+  const ip = getIP(req);
+  const rl = await rateLimit(`waitlist:${ip}`, 5, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': '60' } },
+    );
+  }
   try {
     const body = await req.json().catch(() => ({}));
     const { email } = body as { email?: string };

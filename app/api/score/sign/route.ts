@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySig } from '@/lib/sig';
 import { MAX_GAME_LEVEL } from '@/lib/game/constants';
+import { rateLimit, getIP } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -13,6 +14,15 @@ const LEVELS_PER_ACT = 500;
 const MAX_ACT = 8;
 
 export async function POST(req: NextRequest) {
+  const ip = getIP(req);
+  const rl = await rateLimit(`score:${ip}`, 20, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': '60' } },
+    );
+  }
+
   let body: { level?: unknown; score?: unknown; message?: unknown; signature?: unknown };
   try {
     body = await req.json();

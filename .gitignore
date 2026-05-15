@@ -47,6 +47,9 @@ anchor-build.log
 .surfpool/
 test-ledger/
 
+# ─── Scripts (may contain keypairs / secrets) ─────────────────────────────────
+scripts/
+
 # ─── Unrelated subproject dirs that must never be committed ──────────────────
 blockblast/
 

@@ -24,10 +24,18 @@ export const RPC_URL =
     : 'https://api.mainnet-beta.solana.com');
 
 // ── USDC SPL Mint addresses ────────────────────────────────────────
-// Devnet:  Circle's official test USDC  (airdrop via spl-token CLI or faucet.solana.com)
-// Mainnet: Circle's production USDC
-export const USDC_MINT_DEVNET  = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
-export const USDC_MINT_MAINNET = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+// Devnet:  BlockBite mock-USDC (mint authority = team wallet). Circle's official
+//          devnet USDC has no public faucet API, so for autonomous funding we
+//          control our own 6-decimal mint and treat it AS USDC. The prize-pool
+//          vault was seeded with 100k of this mint via scripts/setup-prize-pool.
+//          Override with NEXT_PUBLIC_USDC_MINT_DEVNET for any other test setup.
+// Mainnet: Circle's production USDC.
+export const USDC_MINT_DEVNET  = new PublicKey(
+  process.env.NEXT_PUBLIC_USDC_MINT_DEVNET ?? 'ZLkYWYvM4ZEDcPcvmcxmcgTgvsWRCXqg9ZYyQuf7njU',
+);
+export const USDC_MINT_MAINNET = new PublicKey(
+  process.env.NEXT_PUBLIC_USDC_MINT_MAINNET ?? 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+);
 export const USDC_MINT = IS_DEVNET ? USDC_MINT_DEVNET : USDC_MINT_MAINNET;
 export const USDC_DECIMALS = 6;
 

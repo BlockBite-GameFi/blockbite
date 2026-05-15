@@ -15,18 +15,18 @@ export const revalidate = 30;
  * If either is missing we treat the prize pool as "not yet initialized"
  * and return 0 — the frontend renders that gracefully ("PRIZE POOL · 0 USDC").
  */
-export async function GET() {
-  const programId   = process.env.NEXT_PUBLIC_VESTING_PROGRAM_ID;
-  const authority   = process.env.NEXT_PUBLIC_PRIZE_POOL_AUTHORITY;
-  const streamIdStr = process.env.NEXT_PUBLIC_PRIZE_POOL_STREAM_ID;
+// Production fallbacks — these are public on-chain addresses, not secrets, so
+// hardcoding them lets the API work in any environment (Vercel preview/prod,
+// local dev, CI) without having to copy env vars by hand. Env vars still
+// override these for mainnet swap-overs.
+const DEFAULT_PROGRAM_ID = 'DvhxiL5PF8Cq3icqcjdbQvtMhJcj6LWheUgovRpaXTFf';
+const DEFAULT_AUTHORITY  = '35z7X59rtyts557Up1RAwpyYN7x2cFqcDc7RjPuNxFzr';
+const DEFAULT_STREAM_ID  = '1';
 
-  if (!programId || !authority || !streamIdStr) {
-    return NextResponse.json({
-      balance: 0,
-      source: 'placeholder',
-      note: 'prize pool stream not yet initialized — set NEXT_PUBLIC_PRIZE_POOL_AUTHORITY and NEXT_PUBLIC_PRIZE_POOL_STREAM_ID after calling create_stream',
-    });
-  }
+export async function GET() {
+  const programId   = process.env.NEXT_PUBLIC_VESTING_PROGRAM_ID   ?? DEFAULT_PROGRAM_ID;
+  const authority   = process.env.NEXT_PUBLIC_PRIZE_POOL_AUTHORITY ?? DEFAULT_AUTHORITY;
+  const streamIdStr = process.env.NEXT_PUBLIC_PRIZE_POOL_STREAM_ID ?? DEFAULT_STREAM_ID;
 
   try {
     const { Connection, PublicKey } = await import('@solana/web3.js');

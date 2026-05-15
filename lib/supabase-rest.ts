@@ -41,26 +41,11 @@ export async function sbInsertEmail(
 
 /** Return total row count. */
 export async function sbGetCount(): Promise<number | null> {
-  try {
-    // HEAD + Prefer:count=exact is the standard PostgREST count pattern.
-    // Returns Content-Range: 0-N/total without fetching row data.
-    const res = await fetch(`${SB_URL}/rest/v1/waitlist?select=email`, {
-      method: 'HEAD',
-      headers: h({ Prefer: 'count=exact' }),
-    });
-    const range = res.headers.get('content-range');
-    if (range) {
-      const n = parseInt(range.split('/').pop() ?? '');
-      if (!isNaN(n) && n >= 0) return n;
-    }
-    // Fallback: GET full list and count — covers PostgREST versions that
-    // don't return content-range on HEAD requests.
-    const list = await sbGetList();
-    if (list !== null) return list.length;
-    return null;
-  } catch {
-    return null;
-  }
+  // Always use sbGetList() — the HEAD+count=exact approach returns unreliable
+  // zeros from this PostgREST instance. List length is the authoritative count.
+  const list = await sbGetList();
+  if (list !== null) return list.length;
+  return null;
 }
 
 export type SbEntry = { email: string; created_at: string };

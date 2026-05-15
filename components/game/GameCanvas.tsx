@@ -622,7 +622,7 @@ export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?
         <span className={styles.hintKey}>1-3</span> SELECT PIECE · <span className={styles.hintKey}>CLICK</span> BOARD TO PLACE · <span className={styles.hintKey}>ESC</span> DESELECT
       </div>
 
-      {(state.isGameOver || (!hasStartedGame && ticketBalance! > 0)) && (
+      {(state.isGameOver || (!hasStartedGame && ticketBalance !== null && ticketBalance > 0)) && (
         <div className={styles.gameOverActions}>
           <button type="button" className="btn btn-primary btn-lg" onClick={handleStartGame}>
             {state.isGameOver ? 'PLAY AGAIN (1 TICKET)' : 'START GAME (1 TICKET)'}
@@ -635,6 +635,21 @@ export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?
             <Link href="/leaderboard" className="btn btn-secondary">
               LEADERBOARD
             </Link>
+          )}
+        </div>
+      )}
+
+      {/* No-tickets dead-end: connected but ran out, and we're not in or done with a game.
+          Without this overlay the canvas just sits there with no way forward. */}
+      {!hasStartedGame && !state.isGameOver && connected && ticketBalance === 0 && (
+        <div className={styles.gameOverActions}>
+          <Link href="/shop" className="btn btn-primary btn-lg">
+            GET TICKETS →
+          </Link>
+          {onBack && (
+            <button type="button" className="btn btn-secondary" onClick={onBack}>
+              BACK TO MAP
+            </button>
           )}
         </div>
       )}

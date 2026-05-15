@@ -98,12 +98,17 @@ pub mod blockbite_vesting {
         let bump            = stream.bump;
         let last_ts         = stream.last_action_ts;
 
-        // VGPV: increment velocity strikes on sub-human-speed claims (W5 enforces)
+        // VGPV enforcement — block withdrawals faster than human threshold
         let elapsed = now.saturating_sub(last_ts);
         if last_ts > 0 && elapsed < VGPV_MIN_SECONDS_PER_ACT {
-            ctx.accounts.stream.velocity_strikes = ctx.accounts.stream
-                .velocity_strikes
-                .saturating_add(1);
+            let new_strikes = ctx.accounts.stream.velocity_strikes
+                .checked_add(1)
+                .ok_or(VestingError::Overflow)?;
+            ctx.accounts.stream.velocity_strikes = new_strikes;
+            require!(
+                new_strikes < VGPV_MAX_VELOCITY_STRIKES,
+                VestingError::VelocityViolation
+            );
         }
         ctx.accounts.stream.last_action_ts = now;
 
@@ -143,7 +148,9 @@ pub mod blockbite_vesting {
         Ok(())
     }
 
-    /// Creator cancels stream: remaining unvested tokens return to creator.
+    /// Creator cancels stream.
+    /// Already-vested but unclaimed tokens go to the beneficiary.
+    /// Truly unvested tokens return to the creator.
     pub fn cancel(ctx: Context<Cancel>) -> Result<()> {
         require!(!ctx.accounts.stream.cancelled, VestingError::StreamCancelled);
         require!(
@@ -151,22 +158,46 @@ pub mod blockbite_vesting {
             VestingError::Unauthorized
         );
 
-        let stream          = &ctx.accounts.stream;
-        let remaining       = stream.amount_total.saturating_sub(stream.amount_withdrawn);
+        let now = Clock::get()?.unix_timestamp;
+        let stream = &ctx.accounts.stream;
+
+        // Split at the vested boundary as of now
+        let vested_at_cancel        = stream.unlocked_amount(now);
+        let claimable_for_beneficiary = vested_at_cancel.saturating_sub(stream.amount_withdrawn);
+        let return_to_creator         = stream.amount_total.saturating_sub(vested_at_cancel);
+
         let authority_key   = stream.authority;
         let stream_id_bytes = stream.stream_id.to_le_bytes();
         let bump            = stream.bump;
 
+        // Checks-Effects-Interactions: mark cancelled before any transfers
         ctx.accounts.stream.cancelled = true;
 
-        if remaining > 0 {
-            let seeds: &[&[u8]] = &[
-                b"stream",
-                authority_key.as_ref(),
-                stream_id_bytes.as_ref(),
-                &[bump],
-            ];
+        let seeds: &[&[u8]] = &[
+            b"stream",
+            authority_key.as_ref(),
+            stream_id_bytes.as_ref(),
+            &[bump],
+        ];
 
+        // Transfer vested-but-unclaimed → beneficiary
+        if claimable_for_beneficiary > 0 {
+            token::transfer(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info(),
+                    Transfer {
+                        from:      ctx.accounts.vault.to_account_info(),
+                        to:        ctx.accounts.beneficiary_ata.to_account_info(),
+                        authority: ctx.accounts.stream.to_account_info(),
+                    },
+                    &[seeds],
+                ),
+                claimable_for_beneficiary,
+            )?;
+        }
+
+        // Transfer unvested → creator
+        if return_to_creator > 0 {
             token::transfer(
                 CpiContext::new_with_signer(
                     ctx.accounts.token_program.to_account_info(),
@@ -177,14 +208,14 @@ pub mod blockbite_vesting {
                     },
                     &[seeds],
                 ),
-                remaining,
+                return_to_creator,
             )?;
         }
 
         emit!(Cancelled {
             stream:    ctx.accounts.stream.key(),
             authority: ctx.accounts.authority.key(),
-            refunded:  remaining,
+            refunded:  return_to_creator,
         });
 
         Ok(())
@@ -271,6 +302,10 @@ pub struct Withdraw<'info> {
 pub struct Cancel<'info> {
     pub authority: Signer<'info>,
 
+    /// CHECK: address validated against stream.beneficiary below
+    #[account(address = stream.beneficiary)]
+    pub beneficiary: AccountInfo<'info>,
+
     #[account(
         mut,
         seeds = [b"stream", stream.authority.as_ref(), &stream.stream_id.to_le_bytes()],
@@ -287,12 +322,21 @@ pub struct Cancel<'info> {
     )]
     pub vault: Account<'info, TokenAccount>,
 
+    /// Creator's ATA — receives unvested portion
     #[account(
         mut,
         token::mint = stream.mint,
         token::authority = authority,
     )]
     pub authority_ata: Account<'info, TokenAccount>,
+
+    /// Beneficiary's ATA — receives vested-but-unclaimed portion
+    #[account(
+        mut,
+        token::mint = stream.mint,
+        token::authority = beneficiary,
+    )]
+    pub beneficiary_ata: Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
 }

@@ -22,17 +22,28 @@ const SESSION_SECRET = process.env.SESSION_SECRET;
 // True upper-bound per placement — see security audit comment in constants.ts
 const MAX_SCORE_PER_MOVE = 200_000;
 
-function verifyToken(token: string): { walletAddress: string; expiresAt: number } | null {
+function verifyToken(token: string): { walletAddress: string; expiresAt: number; nonce: string } | null {
   try {
     if (!SESSION_SECRET) return null;
     const decoded = Buffer.from(token, 'base64url').toString('utf8');
     const parts = decoded.split('|');
-    if (parts.length !== 5) return null;
-    const [sessionId, wallet, , expiresAt, sig] = parts;
-    const payload = `${sessionId}|${wallet}|${parts[2]}|${expiresAt}`;
-    const expected = createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
-    if (sig !== expected) return null;
-    return { walletAddress: wallet, expiresAt: Number(expiresAt) };
+    // Support new 6-part format (with nonce) and legacy 5-part format
+    if (parts.length === 6) {
+      const [sessionId, wallet, , expiresAt, nonce, sig] = parts;
+      const payload = `${sessionId}|${wallet}|${parts[2]}|${expiresAt}|${nonce}`;
+      const expected = createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
+      if (sig !== expected) return null;
+      return { walletAddress: wallet, expiresAt: Number(expiresAt), nonce };
+    }
+    if (parts.length === 5) {
+      // Legacy tokens (issued before nonce was added) — no replay protection
+      const [sessionId, wallet, , expiresAt, sig] = parts;
+      const payload = `${sessionId}|${wallet}|${parts[2]}|${expiresAt}`;
+      const expected = createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
+      if (sig !== expected) return null;
+      return { walletAddress: wallet, expiresAt: Number(expiresAt), nonce: '' };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -71,7 +82,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Wallet mismatch' }, { status: 403 });
   }
 
-  // 4. Plausibility
+  // 4. Nonce replay protection (only for new-format tokens with a nonce)
+  if (session.nonce) {
+    const nonceKey = `blockbite:nonce:${session.nonce}`;
+    try {
+      const { kv } = await import('@vercel/kv');
+      const used = await kv.get(nonceKey);
+      if (used) return NextResponse.json({ error: 'Session already submitted' }, { status: 409 });
+      const ttl = Math.ceil((session.expiresAt - Date.now()) / 1000) + 60;
+      await kv.set(nonceKey, 1, { ex: ttl > 0 ? ttl : 3600 });
+    } catch { /* KV unavailable — allow through in dev */ }
+  }
+
+  // 5. Plausibility
   const maxPlausibleScore = (placements + 1) * MAX_SCORE_PER_MOVE;
   if (score < 0 || score > maxPlausibleScore) {
     return NextResponse.json({ error: 'Score implausible' }, { status: 422 });

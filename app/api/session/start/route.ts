@@ -12,7 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createHmac, randomUUID } from 'crypto';
+import { createHmac, randomUUID, randomBytes } from 'crypto';
 import { rateLimit, getIP } from '@/lib/rate-limit';
 
 const SESSION_SECRET = process.env.SESSION_SECRET;
@@ -49,11 +49,12 @@ export async function POST(req: NextRequest) {
   }
 
   const sessionId = randomUUID();
-  const issuedAt = Date.now();
+  const issuedAt  = Date.now();
   const expiresAt = issuedAt + SESSION_TTL_MS;
+  const nonce     = randomBytes(16).toString('hex');
 
-  // Signed token: sessionId|wallet|issuedAt|expiresAt|hmac
-  const payload = `${sessionId}|${walletAddress}|${issuedAt}|${expiresAt}`;
+  // Signed token: sessionId|wallet|issuedAt|expiresAt|nonce|hmac
+  const payload = `${sessionId}|${walletAddress}|${issuedAt}|${expiresAt}|${nonce}`;
   const sig = signSession(payload);
   const token = Buffer.from(`${payload}|${sig}`).toString('base64url');
 
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
     sessionId,
     token,
     expiresAt,
+    nonce,
     walletAddress,
   });
 }

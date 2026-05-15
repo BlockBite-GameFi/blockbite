@@ -11,7 +11,7 @@ export default function MapRedirect() {
   useEffect(() => {
     const walletAddr = publicKey?.toBase58() ?? '';
     getPlayerProgress(walletAddr).then(p => {
-      const act = Math.min(8, Math.max(1, Math.ceil(p.currentLevel / 500)));
+      const act = Math.min(8, Math.max(1, Math.ceil(p.currentLevel / 5000)));
       router.replace(`/map/${act}`);
     });
   }, [router, publicKey]);

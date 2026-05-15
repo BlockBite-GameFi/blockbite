@@ -106,15 +106,15 @@ export const ACT_NAME: Record<number, string> = {
 };
 
 export function actOf(N: number): number {
-  return Math.min(8, Math.max(1, Math.ceil(N / 500)));
+  return Math.min(8, Math.max(1, Math.ceil(N / 5000)));
 }
 
 export function mechanicCount(N: number): number {
-  return Math.min(6, Math.max(1, 1 + Math.floor(N / 250)));
+  return Math.min(6, Math.max(1, 1 + Math.floor(N / 2500)));
 }
 
 export function density(N: number): number {
-  return 0.05 + (N / 4000) * 0.55;
+  return 0.05 + Math.min(1, N / 40000) * 0.55;
 }
 
 export function goalToughness(N: number): number {

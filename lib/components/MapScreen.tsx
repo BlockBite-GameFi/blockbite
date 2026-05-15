@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { Biome } from '@/lib/game/biomes';
 import { levelConfig } from '@/lib/game/levelConfig';
 import { getLevelTier } from '@/lib/game/constants';
-import { ART, buildPathD, generateNodes } from '@/lib/components/MapArt';
+import { ART, buildPathD, generateLongNodes } from '@/lib/components/MapArt';
 
 export type Layout = 'mobile' | 'tablet' | 'desktop';
 
@@ -17,10 +17,15 @@ interface Props {
   walletAddress?: string;
 }
 
-const NODE_COUNT = 40;
-const SVG_W      = 400;
-const SVG_H      = NODE_COUNT * 160;
-const SVG_MARGIN = 80;
+// One SVG node per level. 5000 levels per act → 5000 nodes.
+// Virtualization only paints nodes near the viewport, so the cost is ~60
+// rendered <g> elements at a time regardless of total length.
+const SVG_W       = 800;
+const NODE_DY     = 130;          // SVG units between consecutive levels
+const SVG_MARGIN  = 140;          // top + bottom padding inside SVG
+const VIS_BUFFER  = 1200;         // SVG units of nodes to render outside viewport
+const REVEAL_AHEAD = 5;           // how many locked-but-near nodes to show ahead
+const ART_TILE_H  = 1200;         // biome backdrop tile height in SVG units
 
 function romanize(n: number) {
   return ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][n] ?? String(n);
@@ -97,11 +102,16 @@ function NodeDot({
   onClick: () => void;
   depth: number;
 }) {
-  const R  = active ? 28 : unlocked ? 23 : 17;
-  const fz = active ? 13 : unlocked ? 11 : 9;
-  const bgFill  = active ? biome.glow    : unlocked ? biome.accent : '#0f172a';
-  const border  = active ? '#fff'        : unlocked ? biome.glow   : '#334155';
-  const txtFill = active ? '#0a0a14'     : unlocked ? '#fff'       : '#64748b';
+  const R  = active ? 36 : unlocked ? 28 : 22;
+  const fz = active ? 16 : unlocked ? 13 : 11;
+  // 3D sphere fills via radialGradient (defined once in <defs>) — gives every
+  // node real depth instead of a flat fill. Cheap: same gradient instance reused.
+  const sphereFill =
+    active   ? 'url(#bb-node-active)'
+    : unlocked ? 'url(#bb-node-unlocked)'
+    : 'url(#bb-node-locked)';
+  const border  = active ? '#fff' : unlocked ? biome.glow : '#334155';
+  const txtFill = active ? '#0a0a14' : unlocked ? '#fff' : '#94a3b8';
 
   return (
     <g
@@ -110,49 +120,60 @@ function NodeDot({
       role={unlocked ? 'button' : undefined}
       aria-label={unlocked ? `Level ${n.level}` : undefined}
     >
-      {/* enlarged transparent hit area */}
-      <circle cx={n.x} cy={n.y} r={R + 14} fill="transparent" />
+      {/* enlarged transparent hit area for easy tapping */}
+      <circle cx={n.x} cy={n.y} r={R + 18} fill="transparent" />
 
-      {/* drop shadow */}
-      <ellipse cx={n.x + 2} cy={n.y + R * 0.75}
-        rx={R * 0.82} ry={R * 0.2}
-        fill="#000" opacity="0.45" />
+      {/* soft ground shadow — 3D anchor */}
+      <ellipse cx={n.x + 3} cy={n.y + R * 0.82}
+        rx={R * 0.92} ry={R * 0.22}
+        fill="#000" opacity="0.55" />
+
+      {/* outer glow halo for active + unlocked */}
+      {(active || unlocked) && (
+        <circle cx={n.x} cy={n.y} r={R + 10}
+          fill={active ? biome.glow : biome.accent}
+          opacity={active ? 0.35 : 0.18}
+          filter="url(#bb-node-glow)" />
+      )}
 
       {/* pulse ring for current level */}
       {active && (
         <>
           <circle cx={n.x} cy={n.y} r={R + 4} fill="none"
-            stroke={biome.glow} strokeWidth="2.5" opacity="0">
+            stroke={biome.glow} strokeWidth="3" opacity="0">
             <animate attributeName="r"
-              values={`${R + 2};${R + 24};${R + 2}`} dur="1.6s" repeatCount="indefinite" />
+              values={`${R + 2};${R + 32};${R + 2}`} dur="1.6s" repeatCount="indefinite" />
             <animate attributeName="opacity"
-              values="0.8;0;0.8" dur="1.6s" repeatCount="indefinite" />
+              values="0.85;0;0.85" dur="1.6s" repeatCount="indefinite" />
           </circle>
           <circle cx={n.x} cy={n.y} r={R + 7} fill="none"
-            stroke={biome.glow} strokeWidth="3" opacity="0.45" />
+            stroke={biome.glow} strokeWidth="3.5" opacity="0.5" />
         </>
       )}
 
       {/* outer decorative ring */}
       <circle cx={n.x} cy={n.y} r={R + 4}
         fill="none"
-        stroke={active ? biome.glow : unlocked ? biome.accent + 'aa' : '#1e293b'}
-        strokeWidth={active ? 4 : 2.5} />
+        stroke={active ? biome.glow : unlocked ? biome.accent + 'cc' : '#1e293b'}
+        strokeWidth={active ? 5 : 3} />
 
-      {/* main body */}
+      {/* main 3D sphere body */}
       <circle cx={n.x} cy={n.y} r={R}
-        fill={bgFill}
+        fill={sphereFill}
         stroke={border}
         strokeWidth={active ? 3 : 2} />
 
-      {/* candy-gloss highlight */}
-      {(active || unlocked) && (
-        <ellipse cx={n.x - R * 0.28} cy={n.y - R * 0.3}
-          rx={R * 0.3} ry={R * 0.18}
-          fill="#fff" opacity="0.28" />
-      )}
+      {/* specular highlight — top-left "sheen" sells the sphere illusion */}
+      <ellipse cx={n.x - R * 0.32} cy={n.y - R * 0.36}
+        rx={R * 0.36} ry={R * 0.22}
+        fill="#fff" opacity={active ? 0.55 : unlocked ? 0.42 : 0.18} />
 
-      {/* level number — ALWAYS visible */}
+      {/* secondary tiny highlight — extra gloss */}
+      <ellipse cx={n.x + R * 0.18} cy={n.y - R * 0.48}
+        rx={R * 0.08} ry={R * 0.05}
+        fill="#fff" opacity={active ? 0.7 : 0.35} />
+
+      {/* level number — ALWAYS visible, even on locked nodes (Candy Crush style) */}
       <text
         x={n.x} y={n.y + fz * 0.42}
         textAnchor="middle" fontSize={fz}
@@ -160,18 +181,18 @@ function NodeDot({
         fill={txtFill}
         style={{ pointerEvents: 'none', userSelect: 'none' }}
       >
-        {n.level}
+        {n.level.toLocaleString()}
       </text>
 
       {/* 3-star decoration below unlocked (non-active) nodes */}
       {!active && unlocked && (
-        <g opacity="0.85">
+        <g opacity="0.9">
           {[-1, 0, 1].map(si => (
             <StarShape
               key={si}
-              cx={n.x + si * R * 0.58}
-              cy={n.y + R + 9}
-              r={Math.max(3, R * 0.22)}
+              cx={n.x + si * R * 0.6}
+              cy={n.y + R + 12}
+              r={Math.max(3.5, R * 0.22)}
               color={biome.glow}
             />
           ))}
@@ -432,33 +453,66 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
   const scrollRef = useRef<HTMLDivElement>(null);
   const Art       = ART[biome.id];
 
-  const nodes = generateNodes(biome.range[0], biome.range[1], NODE_COUNT, SVG_W, SVG_H);
+  // One node per level. 5000 levels → 5000 nodes (virtualized at render time).
+  const totalLevels = biome.range[1] - biome.range[0] + 1;
+  const SVG_H = totalLevels * NODE_DY + SVG_MARGIN * 2;
 
-  let activeIdx = 0;
-  for (let i = 0; i < nodes.length; i++) {
-    if (nodes[i].level <= currentLevel) activeIdx = i;
-  }
+  const allNodes = React.useMemo(
+    () => generateLongNodes(biome.range[0], biome.range[1], NODE_DY, SVG_W, SVG_MARGIN),
+    [biome.range[0], biome.range[1]],
+  );
 
-  const targetReveal = activeIdx + 3;
+  const clampedLevel = Math.max(biome.range[0], Math.min(biome.range[1], currentLevel));
+  const activeIdx = clampedLevel - biome.range[0];
+  // Locked nodes within REVEAL_AHEAD of active are visible but greyed; beyond that they're dimmed.
+  const revealCutoff = activeIdx + REVEAL_AHEAD;
 
-  // Candy Crush progressive reveal: nodes pop in one by one on mount/level change
-  const [revealedCount, setRevealedCount] = useState(1);
+  // Virtualized window: only the indices whose SVG y is within the viewport (±VIS_BUFFER)
+  // get rendered. Updated on scroll/resize. Default window covers the active node.
+  const [visRange, setVisRange] = useState<{ start: number; end: number }>(() => {
+    const s = Math.max(0, activeIdx - 25);
+    const e = Math.min(totalLevels, activeIdx + 35);
+    return { start: s, end: e };
+  });
+
   useEffect(() => {
-    setRevealedCount(1);
-    if (targetReveal <= 1) return;
-    let count = 1;
-    const id = setInterval(() => {
-      count += 1;
-      setRevealedCount(count);
-      if (count >= targetReveal) clearInterval(id);
-    }, 80);
-    return () => clearInterval(id);
-  }, [targetReveal]);
+    const el = scrollRef.current;
+    if (!el) return;
 
-  // Revealed path: only draw up to revealedCount nodes (animates like Candy Crush)
-  const revealedNodes = nodes.slice(0, revealedCount);
-  const pathD = buildPathD(revealedNodes);
+    const recompute = () => {
+      const svg = el.querySelector('svg');
+      if (!svg) return;
+      const rect = svg.getBoundingClientRect();
+      if (!rect.height) return;
+      const scale = rect.width / SVG_W; // SVG units → px ratio (uniform)
+      if (scale <= 0) return;
+      const topSvg = el.scrollTop / scale;
+      const botSvg = (el.scrollTop + el.clientHeight) / scale;
+      // Each node sits at y = SVG_MARGIN + i * NODE_DY
+      const startIdx = Math.max(0, Math.floor((topSvg - VIS_BUFFER - SVG_MARGIN) / NODE_DY));
+      const endIdx   = Math.min(totalLevels, Math.ceil((botSvg + VIS_BUFFER - SVG_MARGIN) / NODE_DY) + 1);
+      setVisRange(prev => (prev.start === startIdx && prev.end === endIdx)
+        ? prev
+        : { start: startIdx, end: endIdx });
+    };
 
+    recompute();
+    el.addEventListener('scroll', recompute, { passive: true });
+    const ro = new ResizeObserver(recompute);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', recompute);
+      ro.disconnect();
+    };
+  }, [totalLevels]);
+
+  // Build path only for the visible window — a 5000-node single SVG path
+  // is fine as data but cheaper to repaint when limited to the viewport.
+  const visNodes = allNodes.slice(visRange.start, visRange.end);
+  const pathD = buildPathD(visNodes);
+
+  // Auto-scroll so the active level lands near the top-third of the viewport
+  // on mount, on level change, or on biome change. Runs once content is laid out.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -466,25 +520,27 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
     const doScroll = (): boolean => {
       const svg = el.querySelector('svg');
       if (!svg) return false;
-      const svgPxH = svg.getBoundingClientRect().height;
-      if (!svgPxH) return false;
-      const scale = svgPxH / SVG_H;
-      const nodeY = nodes[activeIdx].y * scale;
-      // For level 1 (activeIdx=0), nodeY ≈ 80px → scrollTop=0, visible immediately
-      el.scrollTop = Math.max(0, nodeY - el.clientHeight * 0.38);
+      const rect = svg.getBoundingClientRect();
+      if (!rect.height) return false;
+      const scale = rect.width / SVG_W;
+      const targetSvgY = SVG_MARGIN + activeIdx * NODE_DY;
+      const targetPx = targetSvgY * scale;
+      el.scrollTop = Math.max(0, targetPx - el.clientHeight * 0.4);
       return true;
     };
 
     if (doScroll()) return;
 
-    // SVG not yet painted — observe it until it has a height
     const svg = el.querySelector('svg');
     if (!svg) return;
     const observer = new ResizeObserver(() => { if (doScroll()) observer.disconnect(); });
     observer.observe(svg);
     const timer = setTimeout(doScroll, 600);
     return () => { observer.disconnect(); clearTimeout(timer); };
-  }, [currentLevel, activeIdx]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [biome.id, activeIdx]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // How many backdrop tiles we need to cover the full SVG height
+  const artTileCount = Math.ceil(SVG_H / ART_TILE_H);
 
   const isDesktop = layout === 'desktop';
   const isTablet  = layout === 'tablet';
@@ -538,8 +594,8 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
             position: 'relative',
           }}
         >
-          {/* margin:0 auto centers without display:flex (flex would stretch height and break scroll) */}
-          <div style={{ width: '100%', maxWidth: 400, margin: '0 auto' }}>
+          {/* Full-width — no clamp. SVG fills the available column and scales. */}
+          <div style={{ width: '100%' }}>
             <svg
               viewBox={`0 0 ${SVG_W} ${SVG_H}`}
               preserveAspectRatio="xMidYMin meet"
@@ -551,97 +607,128 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                   <stop offset="100%" stopColor={biome.path} stopOpacity="0.15" />
                 </linearGradient>
                 <linearGradient id="bb-fog-depth" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="40%" stopColor="#000" stopOpacity="0" />
-                  <stop offset="100%" stopColor="#000" stopOpacity="0.55" />
+                  <stop offset="0%"  stopColor="#000" stopOpacity="0" />
+                  <stop offset="100%" stopColor="#000" stopOpacity="0.18" />
                 </linearGradient>
+                {/* 3D sphere gradients used by each node — depth illusion */}
+                <radialGradient id="bb-node-active" cx="35%" cy="32%" r="70%">
+                  <stop offset="0%"   stopColor="#fff" stopOpacity="0.95" />
+                  <stop offset="40%"  stopColor={biome.glow} />
+                  <stop offset="100%" stopColor={biome.accent} />
+                </radialGradient>
+                <radialGradient id="bb-node-unlocked" cx="35%" cy="32%" r="70%">
+                  <stop offset="0%"   stopColor={biome.glow} stopOpacity="0.95" />
+                  <stop offset="55%"  stopColor={biome.accent} />
+                  <stop offset="100%" stopColor={biome.rock} />
+                </radialGradient>
+                <radialGradient id="bb-node-locked" cx="35%" cy="32%" r="70%">
+                  <stop offset="0%"   stopColor="#1e293b" />
+                  <stop offset="100%" stopColor="#020617" />
+                </radialGradient>
+                <filter id="bb-node-glow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="6" />
+                </filter>
                 <style>{`
                   @keyframes bb-node-pop {
                     0%   { opacity: 0; transform: scale(0.3); transform-box: fill-box; transform-origin: center; }
                     65%  { opacity: 1; transform: scale(1.18); transform-box: fill-box; transform-origin: center; }
                     100% { opacity: 1; transform: scale(1);    transform-box: fill-box; transform-origin: center; }
                   }
+                  @keyframes bb-active-pulse {
+                    0%, 100% { transform: scale(1);    opacity: 0.9; }
+                    50%      { transform: scale(1.08); opacity: 1;   }
+                  }
                 `}</style>
               </defs>
 
-              {Art && <Art b={biome} />}
+              {/* Tiled biome backdrop — Art component is designed for a 600-tall canvas
+                  so we tile it vertically every ART_TILE_H units to cover the full map. */}
+              {Art && Array.from({ length: artTileCount }).map((_, t) => (
+                <g key={`tile-${t}`} transform={`translate(0 ${t * ART_TILE_H}) scale(${SVG_W / 400} ${ART_TILE_H / 600})`}>
+                  <Art b={biome} />
+                </g>
+              ))}
               <rect width={SVG_W} height={SVG_H} fill={biome.fog} />
               <rect width={SVG_W} height={SVG_H} fill="url(#bb-fog-depth)" />
 
               <text
-                x={SVG_W / 2} y={40}
-                textAnchor="middle" fontSize="11" fontWeight="700"
-                fill={biome.glow} opacity="0.6" letterSpacing="2"
+                x={SVG_W / 2} y={70}
+                textAnchor="middle" fontSize="20" fontWeight="800"
+                fill={biome.glow} opacity="0.55" letterSpacing="4"
               >
-                ACT {romanize(biome.act)} · LVL {biome.range[0]}-{biome.range[1]}
+                ACT {romanize(biome.act)} · LVL {biome.range[0].toLocaleString()}–{biome.range[1].toLocaleString()}
               </text>
 
               {/* Candy path — shadow base */}
-              <path d={pathD} stroke="rgba(0,0,0,0.42)" strokeWidth="20" fill="none"
+              <path d={pathD} stroke="rgba(0,0,0,0.45)" strokeWidth="26" fill="none"
                 strokeLinecap="round" />
               {/* Candy path — solid body */}
-              <path d={pathD} stroke={biome.path} strokeWidth="14" fill="none"
-                strokeLinecap="round" opacity="0.85" />
+              <path d={pathD} stroke={biome.path} strokeWidth="18" fill="none"
+                strokeLinecap="round" opacity="0.9" />
               {/* Candy stripe — white highlight dashes */}
-              <path d={pathD} stroke="rgba(255,255,255,0.38)" strokeWidth="5" fill="none"
-                strokeDasharray="9 13" strokeLinecap="round" />
+              <path d={pathD} stroke="rgba(255,255,255,0.42)" strokeWidth="6" fill="none"
+                strokeDasharray="12 16" strokeLinecap="round" />
               {/* Candy stripe — dark counter-dashes for depth */}
-              <path d={pathD} stroke="rgba(0,0,0,0.18)" strokeWidth="4" fill="none"
-                strokeDasharray="9 13" strokeDashoffset="11" strokeLinecap="round" />
-              {/* Depth fog — fades top nodes into distance */}
-              <path d={pathD} stroke="url(#bb-fog-depth)" strokeWidth="16" fill="none"
-                strokeLinecap="round" />
+              <path d={pathD} stroke="rgba(0,0,0,0.22)" strokeWidth="5" fill="none"
+                strokeDasharray="12 16" strokeDashoffset="14" strokeLinecap="round" />
 
-              {nodes.map((n, i) => {
-                // Mid-dots only between revealed nodes (Candy Crush progressive)
-                if (i === 0 || i >= revealedCount) return null;
-                const prev = nodes[i - 1];
+              {/* Render only the virtualized window of nodes.
+                  visRange shifts as the user scrolls — ~50–80 nodes painted at a time. */}
+              {visNodes.map((n, k) => {
+                const i = visRange.start + k;
+                if (i === 0) return null;
+                const prev = allNodes[i - 1];
                 const midX = (prev.x + n.x) / 2;
                 const midY = (prev.y + n.y) / 2;
-                const d = 1 - (midY - SVG_MARGIN) / (SVG_H - SVG_MARGIN * 2);
                 return (
-                  <circle key={`mid-${i}`} cx={midX} cy={midY} r={2 + d * 2}
-                    fill={biome.path} opacity={0.2 + d * 0.5} />
+                  <circle key={`mid-${i}`} cx={midX} cy={midY} r={3}
+                    fill={biome.path} opacity={0.45} />
                 );
               })}
 
-              {nodes.map((n, i) => {
-                // Progressive reveal: only show nodes up to revealedCount (Candy Crush)
-                if (i >= revealedCount) return null;
-                const depth = Math.max(0, Math.min(1,
-                  1 - (n.y - SVG_MARGIN) / (SVG_H - SVG_MARGIN * 2)
-                ));
-                // Active node displays the actual current level, not the node range start
-                const isActive = i === activeIdx;
+              {visNodes.map((n, k) => {
+                const i = visRange.start + k;
+                const isActive   = i === activeIdx;
+                const isUnlocked = n.level <= clampedLevel;
+                const isFutureNear = !isUnlocked && i <= revealCutoff;
+                // Only animate-pop nodes near the active player position — past
+                // levels are stable, far-future locked nodes are static.
+                const shouldPop = isActive || isFutureNear;
                 const displayN = isActive ? { ...n, level: currentLevel } : n;
                 return (
-                  <g key={i} style={{ animation: 'bb-node-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+                  <g
+                    key={i}
+                    style={shouldPop
+                      ? { animation: `bb-node-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) both`, animationDelay: `${Math.max(0, i - activeIdx) * 60}ms` }
+                      : undefined}
+                  >
                     <NodeDot
                       n={displayN}
                       biome={biome}
                       active={isActive}
-                      unlocked={n.level <= currentLevel}
+                      unlocked={isUnlocked}
                       onClick={() => onEnterLevel(isActive ? currentLevel : n.level)}
-                      depth={depth}
+                      depth={0}
                     />
                   </g>
                 );
               })}
 
               {/* Finish flag revealed only when player reaches the last node */}
-              {activeIdx >= nodes.length - 2 && (
+              {activeIdx >= allNodes.length - 2 && (
                 <FinishFlag
-                  x={nodes[nodes.length - 1].x}
-                  y={nodes[nodes.length - 1].y + 20}
+                  x={allNodes[allNodes.length - 1].x}
+                  y={allNodes[allNodes.length - 1].y + 30}
                   biome={biome}
                 />
               )}
 
               <text
-                x={SVG_W / 2} y={SVG_H - 20}
-                textAnchor="middle" fontSize="10"
-                fill={biome.glow} opacity="0.4"
+                x={SVG_W / 2} y={SVG_H - 40}
+                textAnchor="middle" fontSize="14" fontWeight="700"
+                fill={biome.glow} opacity="0.45" letterSpacing="2"
               >
-                ACT {romanize(biome.act)} END · LVL {biome.range[1]}
+                ACT {romanize(biome.act)} END · LVL {biome.range[1].toLocaleString()}
               </text>
             </svg>
           </div>

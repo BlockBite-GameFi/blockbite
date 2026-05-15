@@ -17,8 +17,11 @@ export interface LevelConfig {
   phase: number;
 }
 
+// 8 acts × 5000 levels each = 40,000 total
+const LEVELS_PER_ACT = 5000;
+
 function levelToBiome(level: number): Biome {
-  return BIOMES[Math.min(7, Math.floor((level - 1) / 500))];
+  return BIOMES[Math.min(7, Math.floor((level - 1) / LEVELS_PER_ACT))];
 }
 
 function rngFromSeed(seedHex: string) {
@@ -33,7 +36,7 @@ function rngFromSeed(seedHex: string) {
 export function levelConfig(level: number, seedHex?: string): LevelConfig {
   const biome = levelToBiome(level);
   const localIdx = level - biome.range[0];
-  const phase = localIdx / 499;
+  const phase = localIdx / (LEVELS_PER_ACT - 1);
   const rng = rngFromSeed(seedHex ?? String(level * 2654435761));
 
   const diff = +(biome.act + phase * 1.4).toFixed(2);

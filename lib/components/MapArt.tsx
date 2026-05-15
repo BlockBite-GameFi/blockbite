@@ -203,3 +203,29 @@ export function generateNodes(startLevel: number, endLevel: number, count: numbe
   }
   return out;
 }
+
+// Long-form node generator: one node per level, fixed Y spacing, S-curve in X.
+// For Candy-Crush-style maps with thousands of clickable levels.
+// Returns deterministic positions so virtualization can compute indices from scrollY.
+export function generateLongNodes(
+  startLevel: number,
+  endLevel: number,
+  spacingY: number,
+  w: number,
+  topMargin: number,
+) {
+  const count = endLevel - startLevel + 1;
+  const out: { x: number; y: number; level: number }[] = new Array(count);
+  // Sine wave: ~6 full waves across the whole journey, scaled per-act so curves stay tight.
+  const wave = Math.max(3, Math.min(60, count / 6));
+  const ampl = w * 0.32;
+  const cx = w / 2;
+  for (let i = 0; i < count; i++) {
+    const t = i / wave;
+    // Layer two sines for organic winding so it doesn't look mechanical
+    const x = cx + Math.sin(t * Math.PI) * ampl + Math.sin(t * Math.PI * 0.37) * (ampl * 0.18);
+    const y = topMargin + i * spacingY;
+    out[i] = { x, y, level: startLevel + i };
+  }
+  return out;
+}

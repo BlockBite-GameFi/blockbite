@@ -16,7 +16,7 @@ const FEATURES = {
     { ic:'03', t:'Skill-Based Match-3',    d:'4,000 levels across 8 biomes. Boards seeded by keccak256 — same level, identical for every player.' },
     { ic:'04', t:'Vesting Cooldown',       d:'24-hour on-chain cooldown between claims. Enforced by the Solana program — not just a UI check.' },
     { ic:'05', t:'Transparent Tokenomics', d:'70% prize · 15% team · 10% dev · 5% referral. All splits happen atomically on-chain.' },
-    { ic:'06', t:'Squads Multisig',        d:'Admin actions require 2-of-3 Squads v4 signatures. The vault is PDA-owned — not a team wallet.' },
+    { ic:'06', t:'Immutable Contract',     d:'Upgrade authority burned before mainnet. Contract is permanently autonomous — no admin can alter on-chain logic or vault rules.' },
   ],
   id: [
     { ic:'01', t:'Bukti On-chain',         d:'Setiap Babak selesai menulis ProofCache PDA ke Solana. Progresmu permanen.' },
@@ -24,7 +24,7 @@ const FEATURES = {
     { ic:'03', t:'Match-3 Berbasis Skill', d:'4.000 level di 8 bioma. Papan diacak oleh keccak256.' },
     { ic:'04', t:'Cooldown Vesting',       d:'Cooldown 24 jam on-chain dipaksa oleh program Solana.' },
     { ic:'05', t:'Tokenomik Transparan',   d:'Pembagian 70/15/10/5 terjadi secara atomik on-chain.' },
-    { ic:'06', t:'Multisig Squads',        d:'Aksi admin memerlukan tanda tangan 2-dari-3 Squads v4.' },
+    { ic:'06', t:'Kontrak Imutabel',       d:'Upgrade authority dibakar sebelum mainnet. Kontrak permanen otonom — tidak ada admin yang bisa mengubah logika on-chain.' },
   ],
 };
 

@@ -36,7 +36,7 @@ Bug bounty program will be formally launched 2 weeks before any USDC is deposite
 ## Current Security Status
 
 - Network: **Devnet only** — no real funds at risk
-- Upgrade authority: Single wallet (to be transferred to 3-of-5 Squads multisig before mainnet)
+- Upgrade authority: Will be burned before mainnet — contract becomes permanently immutable and autonomous
 - VGPV anti-bot: Struct scaffolding live; full enforcement ships W5
 - Rate limiting: Active on /api/waitlist, /api/session/start, /api/score/sign
 

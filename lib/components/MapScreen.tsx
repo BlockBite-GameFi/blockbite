@@ -6,6 +6,7 @@ import type { Biome } from '@/lib/game/biomes';
 import { levelConfig } from '@/lib/game/levelConfig';
 import { getLevelTier } from '@/lib/game/constants';
 import { ART, buildPathD, generateLongNodes } from '@/lib/components/MapArt';
+import { BIOMES } from '@/lib/game/biomes';
 
 export type Layout = 'mobile' | 'tablet' | 'desktop';
 
@@ -209,6 +210,61 @@ function StarShape({ cx, cy, r, color }: { cx: number; cy: number; r: number; co
     return `${(cx + Math.cos(a) * radius).toFixed(1)},${(cy + Math.sin(a) * radius).toFixed(1)}`;
   }).join(' ');
   return <polygon points={pts} fill={color} />;
+}
+
+function ActSelector({ biome }: { biome: Biome }) {
+  return (
+    <div style={{
+      flexShrink: 0,
+      padding: '8px 12px',
+      display: 'flex', alignItems: 'center', gap: 8,
+      background: 'rgba(8,8,22,0.7)', backdropFilter: 'blur(14px)',
+      borderTop: `1px solid ${biome.accent}22`,
+      borderBottom: `1px solid ${biome.accent}33`,
+      overflowX: 'auto', whiteSpace: 'nowrap',
+    }}>
+      <span style={{
+        fontSize: 10, letterSpacing: 2, color: biome.glow, opacity: 0.7,
+        marginRight: 6, flexShrink: 0,
+      }}>
+        ACTS
+      </span>
+      {BIOMES.map((b) => {
+        const active = b.id === biome.id;
+        return (
+          <Link
+            key={b.id}
+            href={`/map/${b.act}`}
+            style={{
+              flexShrink: 0,
+              padding: '7px 13px', borderRadius: 999,
+              background: active
+                ? `linear-gradient(135deg, ${b.accent}, ${b.glow})`
+                : 'rgba(255,255,255,0.04)',
+              border: active
+                ? `1px solid ${b.glow}`
+                : `1px solid ${b.accent}33`,
+              color: active ? '#0a0a14' : '#cbd5e1',
+              fontSize: 11, fontWeight: active ? 900 : 600,
+              letterSpacing: 1, textDecoration: 'none',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              boxShadow: active ? `0 0 14px ${b.accent}66` : 'none',
+            }}
+          >
+            <span style={{
+              width: 8, height: 8, borderRadius: 2,
+              background: b.accent,
+              boxShadow: `0 0 6px ${b.glow}`,
+            }} />
+            {`ACT ${['I','II','III','IV','V','VI','VII','VIII'][b.act - 1]}`}
+            <span style={{ opacity: active ? 0.7 : 0.5, fontWeight: 600 }}>
+              {b.name}
+            </span>
+          </Link>
+        );
+      })}
+    </div>
+  );
 }
 
 function FinishFlag({ x, y, biome }: { x: number; y: number; biome: Biome }) {
@@ -584,6 +640,9 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
         />
       )}
 
+      {/* 8-act selector strip — lets the player browse every biome map. */}
+      <ActSelector biome={biome} />
+
       <div style={{
         flex: 1, display: 'flex',
         // Mobile = column (map on top, bottom card below + tab bar).
@@ -611,7 +670,7 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
           <div style={{
             width: '100%',
             transformStyle: 'preserve-3d',
-            transform: isMobile ? 'none' : 'rotateX(6deg)',
+            transform: isMobile ? 'none' : 'rotateX(14deg)',
             transformOrigin: '50% 100%',
             willChange: 'transform',
           }}>

@@ -439,8 +439,24 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
     if (nodes[i].level <= currentLevel) activeIdx = i;
   }
 
-  // Revealed path: only draw up to active+2 nodes (Candy Crush progressive reveal)
-  const revealedNodes = nodes.slice(0, activeIdx + 3);
+  const targetReveal = activeIdx + 3;
+
+  // Candy Crush progressive reveal: nodes pop in one by one on mount/level change
+  const [revealedCount, setRevealedCount] = useState(1);
+  useEffect(() => {
+    setRevealedCount(1);
+    if (targetReveal <= 1) return;
+    let count = 1;
+    const id = setInterval(() => {
+      count += 1;
+      setRevealedCount(count);
+      if (count >= targetReveal) clearInterval(id);
+    }, 80);
+    return () => clearInterval(id);
+  }, [targetReveal]);
+
+  // Revealed path: only draw up to revealedCount nodes (animates like Candy Crush)
+  const revealedNodes = nodes.slice(0, revealedCount);
   const pathD = buildPathD(revealedNodes);
 
   useEffect(() => {
@@ -538,6 +554,13 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                   <stop offset="40%" stopColor="#000" stopOpacity="0" />
                   <stop offset="100%" stopColor="#000" stopOpacity="0.55" />
                 </linearGradient>
+                <style>{`
+                  @keyframes bb-node-pop {
+                    0%   { opacity: 0; transform: scale(0.3); transform-box: fill-box; transform-origin: center; }
+                    65%  { opacity: 1; transform: scale(1.18); transform-box: fill-box; transform-origin: center; }
+                    100% { opacity: 1; transform: scale(1);    transform-box: fill-box; transform-origin: center; }
+                  }
+                `}</style>
               </defs>
 
               {Art && <Art b={biome} />}
@@ -569,8 +592,8 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 strokeLinecap="round" />
 
               {nodes.map((n, i) => {
-                // Mid-dots only between revealed nodes
-                if (i === 0 || i > activeIdx + 2) return null;
+                // Mid-dots only between revealed nodes (Candy Crush progressive)
+                if (i === 0 || i >= revealedCount) return null;
                 const prev = nodes[i - 1];
                 const midX = (prev.x + n.x) / 2;
                 const midY = (prev.y + n.y) / 2;
@@ -582,8 +605,8 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
               })}
 
               {nodes.map((n, i) => {
-                // Progressive reveal: only show completed nodes + next 2 upcoming
-                if (i > activeIdx + 2) return null;
+                // Progressive reveal: only show nodes up to revealedCount (Candy Crush)
+                if (i >= revealedCount) return null;
                 const depth = Math.max(0, Math.min(1,
                   1 - (n.y - SVG_MARGIN) / (SVG_H - SVG_MARGIN * 2)
                 ));
@@ -591,15 +614,16 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 const isActive = i === activeIdx;
                 const displayN = isActive ? { ...n, level: currentLevel } : n;
                 return (
-                  <NodeDot
-                    key={i}
-                    n={displayN}
-                    biome={biome}
-                    active={isActive}
-                    unlocked={n.level <= currentLevel}
-                    onClick={() => onEnterLevel(isActive ? currentLevel : n.level)}
-                    depth={depth}
-                  />
+                  <g key={i} style={{ animation: 'bb-node-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+                    <NodeDot
+                      n={displayN}
+                      biome={biome}
+                      active={isActive}
+                      unlocked={n.level <= currentLevel}
+                      onClick={() => onEnterLevel(isActive ? currentLevel : n.level)}
+                      depth={depth}
+                    />
+                  </g>
                 );
               })}
 

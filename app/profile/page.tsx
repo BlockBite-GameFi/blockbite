@@ -29,7 +29,7 @@ export default function ProfilePage() {
     setUsername(u);
     setEditValue(u);
     setSelectedAvatar(a);
-    // Real stats from localStorage
+    // Seed from localStorage first (instant display)
     const lvl = parseInt(localStorage.getItem('bb_max_level') || '1');
     setMaxLevel(isNaN(lvl) ? 1 : lvl);
     const gp = parseInt(localStorage.getItem('bb_games_played') || '0');
@@ -40,6 +40,22 @@ export default function ProfilePage() {
       setReferredWallets(Array.isArray(refs) ? refs : []);
     } catch { setReferredWallets([]); }
   }, []);
+
+  // Sync maxLevel from server when wallet is connected (source of truth)
+  useEffect(() => {
+    if (!publicKey) return;
+    const addr = publicKey.toBase58();
+    fetch(`/api/profile?addr=${encodeURIComponent(addr)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        if (typeof data.currentLevel === 'number' && data.currentLevel >= 1) {
+          setMaxLevel(data.currentLevel);
+          localStorage.setItem('bb_max_level', String(data.currentLevel));
+        }
+      })
+      .catch(() => {});
+  }, [publicKey]);
 
   const handleSave = () => {
     const trimmed = editValue.trim();

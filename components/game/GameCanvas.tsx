@@ -101,6 +101,10 @@ export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?
   const { connected, publicKey } = useWallet();
   const [ticketBalance, setTicketBalance] = useState<number | null>(null);
   const [isCheckingTicket, setIsCheckingTicket] = useState(false);
+  // Tracks whether the player has consumed a ticket and a live session is
+  // running. We can't rely on `state.score === 0` because a fresh game also
+  // starts at score 0 — without this flag the START overlay never hides.
+  const [hasStartedGame, setHasStartedGame] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
@@ -155,6 +159,9 @@ export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?
       const newBal = ticketBalance - 1;
       setTicketBalance(newBal);
       localStorage.setItem(`tickets_${publicKey.toBase58()}`, newBal.toString());
+      // Hide the START overlay immediately — synchronous state update so the
+      // user gets instant visual feedback even before the async session POST.
+      setHasStartedGame(true);
       // Start a server-side session so the submit endpoint can validate the score
       try {
         const res = await fetch('/api/session/start', {
@@ -212,6 +219,9 @@ export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?
       }
     }
     if (!state.isGameOver) gameOverHandledRef.current = false;
+    // When the engine declares game over, allow the START overlay back so the
+    // player can buy another ticket and play again.
+    if (state.isGameOver) setHasStartedGame(false);
   }, [state.isGameOver, connected, publicKey, state.level, state.score, state.sessionId, state.placements]);
 
   const handleMysteryBoxResult = useCallback((result: BoxResult) => {
@@ -612,7 +622,7 @@ export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?
         <span className={styles.hintKey}>1-3</span> SELECT PIECE · <span className={styles.hintKey}>CLICK</span> BOARD TO PLACE · <span className={styles.hintKey}>ESC</span> DESELECT
       </div>
 
-      {(state.isGameOver || (state.score === 0 && ticketBalance! > 0)) && (
+      {(state.isGameOver || (!hasStartedGame && ticketBalance! > 0)) && (
         <div className={styles.gameOverActions}>
           <button type="button" className="btn btn-primary btn-lg" onClick={handleStartGame}>
             {state.isGameOver ? 'PLAY AGAIN (1 TICKET)' : 'START GAME (1 TICKET)'}

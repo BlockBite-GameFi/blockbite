@@ -1,9 +1,16 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import GameCanvas from '@/components/game/GameCanvas';
 import { BIOMES } from '@/lib/game/biomes';
+
+// Real-time 3D backdrop, same component the map page uses. Client-only —
+// no SSR, no hydration mismatch.
+const BiomeScene3D = dynamic(() => import('@/lib/components/BiomeScene3D'), {
+  ssr: false,
+});
 
 export default function PlayLevelPage() {
   const params = useParams<{ level: string }>();
@@ -13,30 +20,41 @@ export default function PlayLevelPage() {
   // Pick the biome that owns this level so the in-game backdrop matches the
   // map theme the player just came from (Crystal/Frost/Ember/.../Apex).
   const biome = BIOMES.find(b => level >= b.range[0] && level <= b.range[1]) ?? BIOMES[0];
+  const progress = Math.max(
+    0,
+    Math.min(1, (level - biome.range[0]) / Math.max(1, biome.range[1] - biome.range[0])),
+  );
 
   return (
     <>
-      {/* Biome-themed full-screen backdrop — sits behind everything. */}
+      {/* Real-time 3D biome backdrop — fixed behind the entire game UI so
+          the canvas always plays "inside" the act's landscape. Pointer
+          events disabled so it never blocks game controls. */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed', inset: 0, zIndex: -2,
+          background: biome.sky, overflow: 'hidden', pointerEvents: 'none',
+        }}
+      >
+        <BiomeScene3D biome={biome} progress={progress} />
+      </div>
+      {/* Vignette + biome fog tint above the 3D layer for legibility. */}
       <div
         aria-hidden
         style={{
           position: 'fixed', inset: 0, zIndex: -1,
-          background: biome.sky,
-          overflow: 'hidden',
+          background: biome.fog, pointerEvents: 'none',
         }}
-      >
-        {/* Atmospheric fog overlay tinted by biome */}
-        <div style={{ position: 'absolute', inset: 0, background: biome.fog }} />
-        {/* Soft accent halo */}
-        <div style={{
-          position: 'absolute', left: '50%', top: '30%',
-          transform: 'translate(-50%, -50%)',
-          width: '80vw', height: '80vw',
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${biome.accent}22 0%, transparent 65%)`,
+      />
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed', inset: 0, zIndex: -1,
+          background: `radial-gradient(ellipse at 50% 50%, transparent 0%, transparent 40%, rgba(0,0,0,0.55) 100%)`,
           pointerEvents: 'none',
-        }} />
-      </div>
+        }}
+      />
 
       <Navbar />
       <main style={{ paddingTop: 64, minHeight: '100vh' }}>

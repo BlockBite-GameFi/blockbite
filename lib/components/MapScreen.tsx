@@ -689,12 +689,21 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
         />
       )}
 
-      {/* Main column to the right of the desktop rail. Holds the act selector
-          strip across the top and the map/side-cards row below it. position
-          relative + zIndex 2 keeps it above the absolute 3D backdrop. */}
+      {/* Main column. On desktop it sits to the right of DesktopRail inside
+          the outer flex-ROW container; flex:1 there means "grow to fill the
+          remaining width". On mobile/tablet the outer is flex-COLUMN and
+          this same div stacks below TopHeader; flex:1 there means "grow to
+          fill the remaining height" and its width comes from align-items:
+          stretch.
+          PREVIOUS BUG: had `width: 0` which forced the wrapper to zero
+          cross-axis on the mobile flex-column outer, collapsing every child
+          inside (act selector, map, BottomCard) and leaving only TopHeader
+          + badge visible. Replaced with width:'100%' so mobile gets full
+          viewport width; desktop's `flex: 1 1 0` still distributes width
+          via the main-axis growth path. */}
       <div style={{
         flex: '1 1 0', display: 'flex', flexDirection: 'column',
-        width: 0,
+        width: '100%',
         height: '100%',
         minWidth: 0, minHeight: 0, overflow: 'hidden',
         position: 'relative', zIndex: 2,

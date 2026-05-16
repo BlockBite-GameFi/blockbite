@@ -226,7 +226,7 @@ blockbite/
 | `PERFECT_BOARD_BONUS` | 5 000 | Board fully cleared |
 | `LARGE_PIECE_BONUS` | 25 | Piece with ≥ 5 blocks |
 | Mystery box multiplier | up to ×10 | Random reward |
-| `MAX_GAME_LEVEL` | 40 000 | Engine maximum; content cycles 1–4 000 |
+| `MAX_GAME_LEVEL` | 4 000  | 8 acts × 500 levels — full hand-curated journey |
 
 ---
 

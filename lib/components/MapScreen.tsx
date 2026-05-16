@@ -785,7 +785,10 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                   so we tile it vertically every ART_TILE_H units to cover the full map. */}
               {Art && Array.from({ length: artTileCount }).map((_, t) => (
                 <g key={`tile-${t}`} transform={`translate(0 ${t * ART_TILE_H}) scale(${SVG_W / 400} ${ART_TILE_H / 600})`}>
-                  <Art b={biome} />
+                  {/* Pass a unique seed per tile so the procedural scenery doesn't
+                      visibly repeat. Same biome, different placement of crystals/
+                      pines/etc. each tile — produces a continuous landscape. */}
+                  <Art b={biome} seed={biome.act * 1000 + t * 137} />
                 </g>
               ))}
               <rect width={SVG_W} height={SVG_H} fill={biome.fog} />

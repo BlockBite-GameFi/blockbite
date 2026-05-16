@@ -52,8 +52,8 @@ const NoiseFilter = ({ id, scale = 6, baseFreq = 0.9 }: { id: string; scale?: nu
 
 /* ───────────────────────── 8 biome art components ───────────────────────── */
 
-export const CrystalArt = ({ b }: { b: Biome }) => {
-  const rng = seeded(101);
+export const CrystalArt = ({ b, seed = 101 }: { b: Biome; seed?: number }) => {
+  const rng = seeded(seed);
   const crystals = Array.from({ length: 14 }, (_, i) => ({
     x: 12 + rng() * 376, baseY: 360 + rng() * 220,
     h: 60 + rng() * 200, w: 18 + rng() * 38,
@@ -125,8 +125,8 @@ export const CrystalArt = ({ b }: { b: Biome }) => {
   );
 };
 
-export const FrostArt = ({ b }: { b: Biome }) => {
-  const rng = seeded(202);
+export const FrostArt = ({ b, seed = 202 }: { b: Biome; seed?: number }) => {
+  const rng = seeded(seed);
   const pines = Array.from({ length: 18 }, (_, i) => ({
     x: -10 + i * 24 + rng() * 8,
     y: 470 + rng() * 60,
@@ -191,8 +191,8 @@ export const FrostArt = ({ b }: { b: Biome }) => {
   );
 };
 
-export const EmberArt = ({ b }: { b: Biome }) => {
-  const rng = seeded(303);
+export const EmberArt = ({ b, seed = 303 }: { b: Biome; seed?: number }) => {
+  const rng = seeded(seed);
   const embers = Array.from({ length: 60 }, () => ({
     x: rng() * 400, y: 80 + rng() * 380, r: 0.8 + rng() * 1.4,
   }));
@@ -243,8 +243,8 @@ export const EmberArt = ({ b }: { b: Biome }) => {
   );
 };
 
-export const VerdantArt = ({ b }: { b: Biome }) => {
-  const rng = seeded(404);
+export const VerdantArt = ({ b, seed = 404 }: { b: Biome; seed?: number }) => {
+  const rng = seeded(seed);
   const mushrooms = Array.from({ length: 10 }, () => ({
     x: 20 + rng() * 360, y: 470 + rng() * 70, s: 12 + rng() * 16,
   }));
@@ -314,8 +314,8 @@ export const VerdantArt = ({ b }: { b: Biome }) => {
   );
 };
 
-export const TideArt = ({ b }: { b: Biome }) => {
-  const rng = seeded(505);
+export const TideArt = ({ b, seed = 505 }: { b: Biome; seed?: number }) => {
+  const rng = seeded(seed);
   const corals = Array.from({ length: 9 }, () => ({
     x: 20 + rng() * 360, y: 280 + rng() * 200, h: 100 + rng() * 180,
   }));
@@ -376,8 +376,8 @@ export const TideArt = ({ b }: { b: Biome }) => {
   );
 };
 
-export const DunesArt = ({ b }: { b: Biome }) => {
-  const rng = seeded(606);
+export const DunesArt = ({ b, seed = 606 }: { b: Biome; seed?: number }) => {
+  const rng = seeded(seed);
   const motes = Array.from({ length: 70 }, () => ({
     x: rng() * 400, y: rng() * 600, r: 0.6 + rng() * 1.2,
   }));
@@ -434,8 +434,8 @@ export const DunesArt = ({ b }: { b: Biome }) => {
   );
 };
 
-export const VoidArt = ({ b }: { b: Biome }) => {
-  const rng = seeded(707);
+export const VoidArt = ({ b, seed = 707 }: { b: Biome; seed?: number }) => {
+  const rng = seeded(seed);
   const stars = Array.from({ length: 140 }, () => ({
     x: rng() * 400, y: rng() * 600, r: 0.4 + rng() * 1.3,
   }));
@@ -486,8 +486,8 @@ export const VoidArt = ({ b }: { b: Biome }) => {
   );
 };
 
-export const ApexArt = ({ b }: { b: Biome }) => {
-  const rng = seeded(808);
+export const ApexArt = ({ b, seed = 808 }: { b: Biome; seed?: number }) => {
+  const rng = seeded(seed);
   const motes = Array.from({ length: 50 }, () => ({
     x: rng() * 400, y: rng() * 600, r: 0.8 + rng() * 1.6,
   }));
@@ -539,7 +539,7 @@ export const ApexArt = ({ b }: { b: Biome }) => {
   );
 };
 
-export const ART: Record<string, React.ComponentType<{ b: Biome }>> = {
+export const ART: Record<string, React.ComponentType<{ b: Biome; seed?: number }>> = {
   crystal:  CrystalArt,
   frost:    FrostArt,
   ember:    EmberArt,

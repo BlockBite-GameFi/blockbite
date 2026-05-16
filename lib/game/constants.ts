@@ -97,18 +97,27 @@ export const CHAIN_BONUSES: { threshold: number; multiplier: number }[] = [
   { threshold: 2, multiplier: 1.2 },
 ];
 
-// ── Level System (MOU V2: 40000 LEVELS — LOGARITHMIC DIFFICULTY CURVE) ──
-// Cosmic-scale progression: smooth onboarding, steady mid-game,
-// endgame that demands mastery. Thresholds blend quadratic + log growth.
-export const MAX_GAME_LEVEL = 40000;
-export const LEGACY_MAX_LEVEL = 9540;        // grandfather reference
+// ── Level System (MOU V3: 4,000 LEVELS — TIGHTER PROGRESSION CURVE) ──
+// Revised 2026-05-16 from 40,000 → 4,000 levels (8 acts × 500/act). Matches
+// the BLOCKBITE_AGENT_MEGAPROMPT spec and keeps the map continuous instead
+// of looping the same biome scenery indefinitely.
+//
+// Difficulty mode triggers stay at their original level numbers — they fall
+// naturally inside the 1-4000 range now and align with act boundaries:
+//   OBSTACLE  (L6)    : intro level 6
+//   CURSED    (L21)   : end of opening levels
+//   HARD      (L500)  : Act 2 boundary (Frozen Pass)
+//   NIGHTMARE (L2500) : Act 6 boundary (Sandborn Dunes)
+//   COSMIC/SING.      : un-reachable; kept for forward-compat with old saves
+export const MAX_GAME_LEVEL = 4000;
+export const LEGACY_MAX_LEVEL = 954;         // grandfather reference (was 9540)
 export const OBSTACLE_SPAWN_LEVEL = 6;
 export const CURSED_MODE_LEVEL = 21;
 export const CURSED_PLACEMENT_TRIGGER = 5;
-export const HARD_MODE_LEVEL = 500;          // tighter scoring window
-export const NIGHTMARE_MODE_LEVEL = 2500;    // obstacle variants
-export const COSMIC_MODE_LEVEL = 10000;      // max-tier skins + fx
-export const SINGULARITY_LEVEL = 25000;      // near-endgame
+export const HARD_MODE_LEVEL = 500;
+export const NIGHTMARE_MODE_LEVEL = 2500;
+export const COSMIC_MODE_LEVEL = 10000;
+export const SINGULARITY_LEVEL = 25000;
 
 /**
  * Cumulative score threshold needed to REACH `level`.

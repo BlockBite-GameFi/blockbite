@@ -1,4 +1,4 @@
-import { BIOMES, Biome } from './biomes';
+import { BIOMES, Biome, LEVELS_PER_ACT } from './biomes';
 
 export interface LevelConfig {
   level: number;
@@ -17,9 +17,11 @@ export interface LevelConfig {
   phase: number;
 }
 
-// 8 acts × 5000 levels each = 40,000 total
-const LEVELS_PER_ACT = 5000;
-
+// LEVELS_PER_ACT is imported from biomes.ts (currently 500). The previous
+// local copy was hardcoded to 5000 — after the level-cap revision it
+// returned the wrong biome for any level > 500 (everything mapped to act 1,
+// which then crashed downstream because `localIdx = level - biome.range[0]`
+// went negative and `biome.blocks[level % len]` indexed beyond the array).
 function levelToBiome(level: number): Biome {
   return BIOMES[Math.min(7, Math.floor((level - 1) / LEVELS_PER_ACT))];
 }

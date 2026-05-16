@@ -1,0 +1,244 @@
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(8, 8, 26, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border, #1f1f3a);
+}
+
+.inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 64px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 32px;
+}
+
+/* ── Logo ── */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logoText {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--text, #fff);
+  letter-spacing: -0.5px;
+}
+
+.logoAccent {
+  color: var(--accent, #a78bfa);
+}
+
+
+/* ── Links ── */
+.links {
+  display: flex;
+  list-style: none;
+  gap: 4px;
+  justify-content: center;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim, #94a3b8);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+.link:hover {
+  color: var(--text, #fff);
+  background: var(--surface, rgba(255,255,255,0.04));
+}
+
+.link.active {
+  color: var(--accent, #a78bfa);
+  background: rgba(167, 139, 250, 0.08);
+}
+
+.playLink {
+  color: var(--accent2, #5eead4) !important;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+}
+
+.playLink:hover {
+  background: rgba(94, 234, 212, 0.1) !important;
+}
+
+.lbMonthlyBadge {
+  font-size: 10px;
+  margin-left: 4px;
+  opacity: 0.8;
+}
+
+/* scrolled shadow */
+.scrolled {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+/* mobile link inner row */
+.mobileLinkInner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobileLbBadge {
+  font-size: 11px;
+  color: #fbbf24;
+  margin-left: 4px;
+}
+
+/* wallet placeholder skeleton */
+.walletPlaceholder {
+  width: 120px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--surface, rgba(255,255,255,0.05));
+}
+
+.mobileWalletWrap {
+  padding: 12px 24px;
+}
+
+/* ── Right side ── */
+.right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  justify-self: end;
+}
+
+.prizeChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 99px;
+  padding: 4px 12px;
+}
+
+.prizeIcon { font-size: 14px; }
+
+.prizeLabel {
+  font-size: 11px;
+  color: var(--text-dim, #94a3b8);
+  font-weight: 500;
+}
+
+.prizeValue {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.walletBtn { white-space: nowrap; }
+
+/* ── Lang / Theme toggles ── */
+.iconToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: var(--surface, rgba(255,255,255,0.05));
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  border-radius: 8px;
+  color: var(--text-dim, #94a3b8);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.iconToggle:hover {
+  background: rgba(167, 139, 250, 0.12);
+  border-color: rgba(167, 139, 250, 0.3);
+  color: var(--accent, #a78bfa);
+}
+
+.langLabel {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+/* ── Mobile toggle ── */
+.menuToggle {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.menuToggle span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--text-dim, #94a3b8);
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.menuToggle span.menuOpen {
+  background: var(--accent, #a78bfa);
+}
+
+/* ── Mobile menu ── */
+.mobileMenu {
+  display: none;
+  flex-direction: column;
+  border-top: 1px solid var(--border, rgba(255,255,255,0.06));
+  padding: 8px 0 16px;
+  animation: slideInDown 0.2s ease-out;
+}
+
+.mobileLink {
+  display: block;
+  padding: 12px 24px;
+  color: var(--text-dim, #94a3b8);
+  text-decoration: none;
+  font-size: 15px;
+  transition: color 0.15s;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+.mobileLink:hover,
+.mobileLink.active {
+  color: var(--accent, #a78bfa);
+}
+
+@media (max-width: 768px) {
+  .links { display: none; }
+  .prizeChip { display: none; }
+  .menuToggle { display: flex; }
+  .mobileMenu { display: flex; }
+}

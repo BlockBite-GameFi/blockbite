@@ -1,0 +1,141 @@
+/* ── BlockBite Landing Page ─────────────────────────────── */
+
+.main {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  background: #060614;
+}
+
+/* ── Hero ──────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 120px 24px 80px;
+  text-align: center;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(40px, 8vw, 80px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin: 0 0 24px;
+  text-shadow: 0 0 60px rgba(0, 245, 255, 0.15);
+}
+
+.subtitle {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(14px, 2vw, 18px);
+  color: #7777AA;
+  line-height: 1.7;
+  max-width: 520px;
+  margin: 0 0 40px;
+}
+
+/* ── Prize card ─────────────────────────────────────────── */
+.prizeCard {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(12, 12, 32, 0.7);
+  border: 1px solid rgba(0, 245, 255, 0.2);
+  border-radius: 20px;
+  padding: 28px 32px;
+  margin-bottom: 36px;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 40px rgba(0, 245, 255, 0.06), inset 0 0 20px rgba(0, 245, 255, 0.03);
+}
+
+.prizeLabel {
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #8888BB;
+  margin-bottom: 12px;
+}
+
+.prizeDivider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 245, 255, 0.2), transparent);
+  margin: 20px 0;
+}
+
+.timerWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-family: 'Orbitron', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8888BB;
+  letter-spacing: 0.1em;
+}
+
+/* ── CTA buttons ────────────────────────────────────────── */
+.actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ── Features grid ──────────────────────────────────────── */
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ── Footer ─────────────────────────────────────────────── */
+.footer {
+  text-align: center;
+  padding: 40px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  color: #444466;
+}
+
+/* ── Responsive ─────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .hero {
+    padding: 100px 20px 60px;
+  }
+
+  .title {
+    font-size: 36px;
+  }
+
+  .prizeCard {
+    padding: 20px 20px;
+  }
+
+  .actions {
+    flex-direction: column;
+    width: 100%;
+    max-width: 280px;
+  }
+}

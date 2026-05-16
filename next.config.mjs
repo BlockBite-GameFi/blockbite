@@ -1,0 +1,55 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+
+  // Expose safe public env vars to the browser bundle
+  env: {
+    NEXT_PUBLIC_APP_NAME: 'BlockBite',
+    NEXT_PUBLIC_APP_VERSION: '0.1.0-devnet',
+    // NEXT_PUBLIC_APP_URL is set per-environment in Vercel dashboard
+  },
+
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'raw.githubusercontent.com' },
+    ],
+  },
+
+  webpack: (config) => {
+    // pino-pretty / encoding are optional peer-deps — silence the build warnings
+    config.externals = [...(config.externals || []), 'pino-pretty', 'encoding'];
+    return config;
+  },
+
+  // Security headers applied globally (can be overridden per-route in vercel.json)
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-DNS-Prefetch-Control',    value: 'on' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'X-Content-Type-Options',    value: 'nosniff' },
+          { key: 'X-Frame-Options',           value: 'DENY' },
+          { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy',        value: 'camera=(), microphone=(), geolocation=(), payment=()' },
+          { key: 'X-XSS-Protection',          value: '1; mode=block' },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "connect-src 'self' https://*.solana.com https://*.helius-rpc.com wss: https://*.supabase.co https://api.mainnet-beta.solana.com",
+              "img-src 'self' data: https:",
+              "frame-ancestors 'none'",
+            ].join('; '),
+          },
+        ],
+      },
+    ];
+  },
+};
+
+export default nextConfig;

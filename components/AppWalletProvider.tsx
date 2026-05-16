@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
@@ -28,9 +28,29 @@ export default function AppWalletProvider({ children }: { children: React.ReactN
     [network]
   );
 
+  // autoConnect was set to `true` previously. That caused thousands of users
+  // to get stuck in a perpetual "Connecting…" state on page load — the
+  // adapter would try to silently reconnect the previously-selected wallet,
+  // and if the extension popup was blocked, the extension was uninstalled,
+  // or the user opened the site in a different browser, the connect promise
+  // never resolved. Worse: while `connecting === true` the wallet picker
+  // modal is silently no-op when invoked, so clicking "Connect Wallet"
+  // appeared to do nothing.
+  //
+  // Disabling autoConnect forces an explicit user click every session,
+  // which guarantees the modal opens and the adapter is never stranded
+  // mid-connect.
+  //
+  // onError funnels all adapter errors (WalletNotReady, etc.) to the
+  // console + a recoverable toast — never to the React error boundary.
+  const onError = useCallback((err: unknown) => {
+    // eslint-disable-next-line no-console
+    console.warn('[wallet-adapter] error:', err);
+  }, []);
+
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
+      <WalletProvider wallets={wallets} autoConnect={false} onError={onError}>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>

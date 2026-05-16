@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useGameEngine, canPlace } from '@/lib/game/engine';
 import { BOARD_ROWS, BOARD_COLS, CELL_SIZE, CELL_GAP, BLOCK_COLORS, TICKET_COST_USDC, MAX_GAME_LEVEL, getLevelThreshold, getLevelTier } from '@/lib/game/constants';
 import {
@@ -98,7 +99,17 @@ function drawTrayPiece(
 }
 
 export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?: number; onBack?: () => void }) {
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey, connecting, select } = useWallet();
+  const { setVisible: setWalletModalVisible } = useWalletModal();
+  const openWalletPicker = useCallback(() => {
+    // Same defensive pattern as the navbar button: if a previous wallet is
+    // stuck connecting, clear the selection so the picker shows up instead
+    // of silently waiting on a dead promise.
+    if (connecting && !connected) {
+      try { select(null as unknown as Parameters<typeof select>[0]); } catch { /* ignore */ }
+    }
+    setWalletModalVisible(true);
+  }, [connecting, connected, select, setWalletModalVisible]);
   const [ticketBalance, setTicketBalance] = useState<number | null>(null);
   const [isCheckingTicket, setIsCheckingTicket] = useState(false);
   // Tracks whether the player has consumed a ticket and a live session is
@@ -524,14 +535,32 @@ export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?
       <div className={styles.overlay}>
         <h2 className={`orbitron neon-cyan ${styles.overlayTitle}`}>CONNECT WALLET</h2>
         <p className={styles.overlayBody}>
-          Use the <strong style={{ color: '#00F5FF' }}>Connect Wallet</strong> button above to get started.
-          BlockBite runs on <strong style={{ color: '#00FF88' }}>Solana</strong> — supported wallets:
+          BlockBite runs on <strong style={{ color: '#00FF88' }}>Solana</strong>.
+          Pick a wallet to start playing — you'll get free preview tickets on first connect.
         </p>
+        {/* Big primary button — opens the wallet picker modal directly. The
+            navbar Connect Wallet button still works, but this lets the
+            player who's already on /game start the flow with one click. */}
+        <button
+          type="button"
+          className="btn btn-primary btn-lg"
+          onClick={() => openWalletPicker()}
+          style={{ marginTop: 4, marginBottom: 12, minWidth: 240 }}
+        >
+          {connecting ? 'CONNECTING…' : 'CONNECT WALLET'}
+        </button>
         <div className={styles.walletIcons}>
           {['Phantom', 'Solflare', 'Backpack'].map((name) => (
-            <div key={name} className={styles.walletChip}>
+            <button
+              key={name}
+              type="button"
+              className={styles.walletChip}
+              onClick={() => openWalletPicker()}
+              style={{ cursor: 'pointer', border: 'none' }}
+              title={`Open wallet picker (${name} supported)`}
+            >
               <span>{name}</span>
-            </div>
+            </button>
           ))}
         </div>
         <Link href="/" className="btn btn-secondary" style={{ marginTop: 8 }}>BACK TO HOME</Link>

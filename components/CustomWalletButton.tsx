@@ -12,8 +12,18 @@ function shortenAddress(address: string) {
 }
 
 export default function CustomWalletButton() {
-  const { wallet, publicKey, disconnect, connecting, connected } = useWallet();
+  const { wallet, publicKey, disconnect, connecting, connected, select } = useWallet();
   const { setVisible } = useWalletModal();
+
+  // Defensive opener: if the adapter is stuck mid-connect, clear the selected
+  // wallet first so the modal can show the picker again instead of silently
+  // waiting for the dead connect promise to resolve.
+  const openPicker = useCallback(() => {
+    if (connecting && !connected) {
+      try { select(null as unknown as Parameters<typeof select>[0]); } catch { /* ignore */ }
+    }
+    setVisible(true);
+  }, [connecting, connected, select, setVisible]);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [subPanel, setSubPanel] = useState<'none' | 'avatar'>('none');
@@ -68,7 +78,8 @@ export default function CustomWalletButton() {
       <button
         type="button"
         className="btn btn-primary"
-        onClick={() => setVisible(true)}
+        onClick={openPicker}
+        title={connecting ? 'Click again to reset and pick a wallet' : 'Connect a Solana wallet'}
         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 20px', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}
       >
         {connecting ? (

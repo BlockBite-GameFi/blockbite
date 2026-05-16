@@ -326,10 +326,11 @@ function DesktopRail({
     : username;
   return (
     <div style={{
-      width: 240, padding: 24,
+      width: 240, flexShrink: 0, padding: 24,
       background: 'rgba(8,8,22,0.55)', backdropFilter: 'blur(16px)',
       borderRight: `1px solid ${biome.accent}33`,
       display: 'flex', flexDirection: 'column', gap: 6,
+      height: '100%',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
         <Avatar biome={biome} small />

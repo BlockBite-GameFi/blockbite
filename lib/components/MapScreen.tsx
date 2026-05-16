@@ -22,11 +22,19 @@ interface Props {
 // Virtualization only paints nodes near the viewport, so the cost is ~60
 // rendered <g> elements at a time regardless of total length.
 const SVG_W       = 800;
-const NODE_DY     = 130;          // SVG units between consecutive levels
+const NODE_DY     = 70;           // SVG units between consecutive levels
+                                  // Was 130 — too sparse, made the SVG 650K tall and put
+                                  // huge swaths of dark fog between levels. 70 gives a
+                                  // candy-crush-tight switchback while keeping levels
+                                  // distinguishable.
 const SVG_MARGIN  = 140;          // top + bottom padding inside SVG
 const VIS_BUFFER  = 1200;         // SVG units of nodes to render outside viewport
 const REVEAL_AHEAD = 5;           // how many locked-but-near nodes to show ahead
-const ART_TILE_H  = 1200;         // biome backdrop tile height in SVG units
+const ART_TILE_H  = 700;          // biome backdrop tile height in SVG units
+                                  // Was 1200 — made tile #0 fade out before reaching
+                                  // Level 1, leaving a dark band over the active area.
+                                  // 700 lines up with the new node density so each tile
+                                  // covers ~10 levels of path.
 
 function romanize(n: number) {
   return ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'][n] ?? String(n);
@@ -698,8 +706,10 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 </linearGradient>
                 {/* Depth fog: darker at TOP (distant high levels), clear at BOTTOM (player). */}
                 <linearGradient id="bb-fog-depth" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"  stopColor="#000" stopOpacity="0.55" />
-                  <stop offset="35%" stopColor="#000" stopOpacity="0.18" />
+                  {/* Softened from 0.55 → 0.28 so the act-gateway top is atmospheric
+                      but not pitch-black when the player happens to scroll up there. */}
+                  <stop offset="0%"  stopColor="#000" stopOpacity="0.28" />
+                  <stop offset="35%" stopColor="#000" stopOpacity="0.10" />
                   <stop offset="100%" stopColor="#000" stopOpacity="0" />
                 </linearGradient>
                 {/* Spotlight: bright halo around the player position (BOTTOM of map). */}

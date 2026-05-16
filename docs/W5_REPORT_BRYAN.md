@@ -166,18 +166,28 @@ gapapa, tapi tolong commit history tetap rapih dan transparan"):
   committed because CI imports them directly and re-generating in CI
   is redundant work. Standard Anchor project convention.
 
-## Test-runtime status (honest)
+## Test-runtime status (honest, evidence-backed)
 
-- `anchor build` was run locally — passed (exit 0).
-- `anchor test` (which runs the full integration suite against a local
-  validator) is **executed by CI**, not yet run locally — the local
-  Windows toolchain has known anchor-test quirks. CI is the source of
-  truth. If CI flags any failure I will fix and force-push to this
-  same branch before review.
-- Status of CI on this exact commit (`0ddb2c1`): see PR check-run UI.
-  This report is intentionally NOT claiming "tests pass" until that
-  badge is green — Team-10 audit feedback Week 3 specifically called
-  out claiming pass when CI hadn't actually run. Will not repeat that.
+CI run on this branch: <https://github.com/nayrbryanGaming/blockblast/actions/runs/25963266485>
+
+| Check | Result | Evidence |
+|---|---|---|
+| **Build and test Anchor program** | ✅ **success** | Ubuntu runner, 6m38s, completed 2026-05-16T13:40:34Z. Runs `anchor build` + `anchor test` against a local validator — actual `anchor test` was executed against this commit's bytecode, not just compile-checked. |
+| npm audit | ✅ success | — |
+| gitleaks secret scan | ✅ success | — |
+| Vercel Preview | ✅ success | — |
+| cargo audit | ❌ failure (known) | Anchor 0.32 pins `solana-program 1.18` which has a public advisory (`RUSTSEC-2024-0344`). No actionable fix in our code — waiting on upstream Anchor to bump. Documented as a blocker above. |
+
+The Anchor CI job runs **both** test files (`tests/vesting.ts` for the 11
+W4 acceptance tests + `tests/vesting-w5.ts` for the 9 W5 tests) in a
+single `anchor test` invocation against an ephemeral local validator.
+A successful run means W4 didn't regress AND W5 acceptance criteria are
+satisfied at runtime, not just at compile time.
+
+This is the same audit feedback that Team 10 flagged in Week 3 — the
+fix is to point at a green check-run with a job ID, not just claim a
+green build. The job ID `76322189827` is verifiable by anyone with
+access to the repo's Actions tab.
 
 ---
 

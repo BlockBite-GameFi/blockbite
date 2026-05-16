@@ -33,7 +33,9 @@ next-env.d.ts
 
 # Per-program build directories
 programs/*/target/
-programs/*/Cargo.lock
+# Cargo.lock IS committed for the program — it's a binary/program, not a
+# library, and cargo audit cannot scan dependencies without it (Security
+# Audit CI was failing with "Couldn't load Cargo.lock" before this change).
 
 # ─── macOS ────────────────────────────────────────────────────────────────────
 .DS_Store
@@ -69,3 +71,26 @@ skills-lock.json
 .aider*
 .cursor/
 .cody/
+.superstack/
+.windsurf/
+.continue/
+.zed/
+
+# AI helper docs that are session-scratch, not part of the deliverable
+build-context.md
+idea-context.md
+ai-scratchpad/
+
+# OS / editor junk
+Thumbs.db
+desktop.ini
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Local Anchor wallets / keypairs — never commit any keypair, ever
+*-keypair.json
+*.keypair.json
+wallet-*.json

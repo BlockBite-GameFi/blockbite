@@ -7,41 +7,22 @@ import { levelConfig } from '@/lib/game/levelConfig';
 import { getLevelTier } from '@/lib/game/constants';
 import { ART, buildPathD, generateLongNodes } from '@/lib/components/MapArt';
 import { BIOMES } from '@/lib/game/biomes';
-import dynamic from 'next/dynamic';
 
-// react-three-fiber refuses to SSR — load the 3D scene client-only with no
-// SSR fallback (the SVG path on top still renders fine on the server, and
-// the 3D backdrop fades in once webGL is ready).
-const BiomeScene3D = dynamic(() => import('@/lib/components/BiomeScene3D'), {
-  ssr: false,
-});
-
-/** Deferred mount + kill switch for the 3D backdrop. */
-function Backdrop3D({ biome, progress }: { biome: Biome; progress: number }) {
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    // localStorage flag lets a user disable WebGL if their device crashed.
-    if (localStorage.getItem('bb_3d_disabled') === '1') return;
-    // Probe WebGL once before mounting the whole r3f machinery.
-    try {
-      const probe = document.createElement('canvas');
-      const ctx =
-        probe.getContext('webgl2') ||
-        probe.getContext('webgl') ||
-        (probe as HTMLCanvasElement & { getContext(t: string): unknown }).getContext('experimental-webgl');
-      if (!ctx) return;
-    } catch { return; }
-    // Defer ~300 ms so SVG paints first.
-    const t = setTimeout(() => setShow(true), 300);
-    return () => clearTimeout(t);
-  }, []);
-  if (!show) return null;
-  return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-      <BiomeScene3D biome={biome} progress={progress} />
-    </div>
-  );
+/**
+ * Backdrop3D is intentionally a no-op as of 2026-05-16.
+ *
+ * History: we tried two approaches to a "real 3D" backdrop —
+ *   (1) react-three-fiber with terrain mesh + procedural props
+ *   (2) deferred-mount + WebGL probe + per-biome scene
+ * Both crashed hydration on a non-trivial fraction of devices. The SVG
+ * candy-crush map underneath is rich on its own (per-biome art tiles,
+ * 14° isometric tilt, winding path, fog, dust motes) and renders the
+ * same on every device. We're keeping the slot here so a future
+ * lightweight effect (CSS 3D transforms, lottie, etc.) can drop in
+ * without touching the call site.
+ */
+function Backdrop3D(_props: { biome: Biome; progress: number }) {
+  return null;
 }
 
 export type Layout = 'mobile' | 'tablet' | 'desktop';

@@ -16,7 +16,7 @@ export type BlockbiteVesting = {
     {
       "name": "cancel",
       "docs": [
-        "Creator cancels stream: remaining unvested tokens return to creator."
+        "Back-compat alias for the W4 instruction name. Calls cancel_stream."
       ],
       "discriminator": [
         232,
@@ -32,6 +32,9 @@ export type BlockbiteVesting = {
         {
           "name": "authority",
           "signer": true
+        },
+        {
+          "name": "beneficiary"
         },
         {
           "name": "stream",
@@ -92,6 +95,16 @@ export type BlockbiteVesting = {
         },
         {
           "name": "authorityAta",
+          "docs": [
+            "Creator's ATA — receives unvested portion"
+          ],
+          "writable": true
+        },
+        {
+          "name": "beneficiaryAta",
+          "docs": [
+            "Beneficiary's ATA — receives vested-but-unclaimed portion"
+          ],
           "writable": true
         },
         {
@@ -102,12 +115,250 @@ export type BlockbiteVesting = {
       "args": []
     },
     {
+      "name": "cancelStream",
+      "docs": [
+        "Creator cancels stream.",
+        "Already-vested but unclaimed tokens go to the beneficiary.",
+        "Truly unvested tokens return to the creator.",
+        "",
+        "Acceptance criteria covered:",
+        "- Only creator can cancel              → Unauthorized",
+        "- Cannot cancel already-cancelled      → AlreadyCancelled",
+        "- Cannot cancel a fully-vested stream  → FullyVested",
+        "- Stream past end_ts with no withdraw  → StreamExpired (info, not blocking)"
+      ],
+      "discriminator": [
+        218,
+        221,
+        38,
+        25,
+        177,
+        207,
+        188,
+        91
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "beneficiary"
+        },
+        {
+          "name": "stream",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  114,
+                  101,
+                  97,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "stream.authority",
+                "account": "streamAccount"
+              },
+              {
+                "kind": "account",
+                "path": "stream.stream_id",
+                "account": "streamAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "stream.authority",
+                "account": "streamAccount"
+              },
+              {
+                "kind": "account",
+                "path": "stream.stream_id",
+                "account": "streamAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authorityAta",
+          "docs": [
+            "Creator's ATA — receives unvested portion"
+          ],
+          "writable": true
+        },
+        {
+          "name": "beneficiaryAta",
+          "docs": [
+            "Beneficiary's ATA — receives vested-but-unclaimed portion"
+          ],
+          "writable": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "createMilestoneStream",
+      "docs": [
+        "W5 entry — same as create_stream but the resulting stream is",
+        "milestone-gated. `unlocked_amount` returns 0 until the creator",
+        "calls `set_milestone(met=true)` regardless of how much time has",
+        "elapsed. Once the milestone is flipped, the time curve resumes."
+      ],
+      "discriminator": [
+        162,
+        112,
+        235,
+        171,
+        104,
+        156,
+        63,
+        203
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "beneficiary"
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "stream",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  114,
+                  101,
+                  97,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              },
+              {
+                "kind": "arg",
+                "path": "streamId"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "PDA token account; authority = stream PDA so withdraw can sign via seeds."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              },
+              {
+                "kind": "arg",
+                "path": "streamId"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authorityAta",
+          "docs": [
+            "Creator's token account to debit."
+          ],
+          "writable": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "streamId",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "startTs",
+          "type": "i64"
+        },
+        {
+          "name": "cliffTs",
+          "type": "i64"
+        },
+        {
+          "name": "endTs",
+          "type": "i64"
+        }
+      ]
+    },
+    {
       "name": "createStream",
       "docs": [
-        "Lock `amount` tokens from creator into a PDA vault.",
-        "Vesting is linear from `start_ts` to `end_ts`.",
-        "`cliff_ts = 0` means no cliff (behaves as start_ts).",
-        "Pass cliff_ts between start_ts and end_ts to enforce a cliff period."
+        "W4 entry — Lock `amount` tokens with linear+cliff vesting only.",
+        "Signature is byte-identical to Week 4 so the W4 test suite keeps",
+        "passing. New milestone-aware streams go through",
+        "`create_milestone_stream` below."
       ],
       "discriminator": [
         71,
@@ -231,10 +482,73 @@ export type BlockbiteVesting = {
       ]
     },
     {
+      "name": "setMilestone",
+      "docs": [
+        "Milestone-based vesting (W5 spec).",
+        "When `milestone_required == true`, `unlocked_amount` returns 0 until",
+        "the creator flips `milestone_met` via this instruction. After the flag",
+        "is set the time-based curve (cliff + linear) resumes normally.",
+        "",
+        "Idempotent: calling on an already-met milestone is a no-op success.",
+        "Only the creator may flip the flag."
+      ],
+      "discriminator": [
+        174,
+        213,
+        91,
+        82,
+        156,
+        42,
+        105,
+        3
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "stream",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  114,
+                  101,
+                  97,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "stream.authority",
+                "account": "streamAccount"
+              },
+              {
+                "kind": "account",
+                "path": "stream.stream_id",
+                "account": "streamAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "met",
+          "type": "bool"
+        }
+      ]
+    },
+    {
       "name": "withdraw",
       "docs": [
         "Beneficiary claims however many tokens have vested since last withdrawal.",
-        "VGPV: tracks withdrawal velocity; enforcement logic added in W5."
+        "VGPV: blocks withdrawals issued faster than 2 hr apart after 3 strikes."
       ],
       "discriminator": [
         183,
@@ -350,6 +664,19 @@ export type BlockbiteVesting = {
       ]
     },
     {
+      "name": "milestoneSet",
+      "discriminator": [
+        18,
+        247,
+        244,
+        42,
+        211,
+        18,
+        157,
+        101
+      ]
+    },
+    {
       "name": "streamCreated",
       "discriminator": [
         93,
@@ -394,28 +721,43 @@ export type BlockbiteVesting = {
     },
     {
       "code": 6003,
-      "name": "nothingToWithdraw",
-      "msg": "Nothing available to withdraw yet"
-    },
-    {
-      "code": 6004,
-      "name": "unauthorized",
-      "msg": "Caller is not authorized for this action"
-    },
-    {
-      "code": 6005,
-      "name": "streamCancelled",
-      "msg": "Stream has already been cancelled"
-    },
-    {
-      "code": 6006,
       "name": "overflow",
       "msg": "Arithmetic overflow"
     },
     {
-      "code": 6007,
+      "code": 6004,
       "name": "velocityViolation",
-      "msg": "Velocity exceeds human threshold — VGPV violation (enforced W5)"
+      "msg": "Velocity exceeds human threshold — VGPV violation"
+    },
+    {
+      "code": 6005,
+      "name": "unauthorized",
+      "msg": "Caller is not authorized for this action"
+    },
+    {
+      "code": 6006,
+      "name": "alreadyCancelled",
+      "msg": "Stream has already been cancelled"
+    },
+    {
+      "code": 6007,
+      "name": "fullyVested",
+      "msg": "Stream is fully vested — nothing left to cancel"
+    },
+    {
+      "code": 6008,
+      "name": "nothingToWithdraw",
+      "msg": "Nothing available to withdraw yet"
+    },
+    {
+      "code": 6009,
+      "name": "streamExpired",
+      "msg": "Stream end time has passed"
+    },
+    {
+      "code": 6010,
+      "name": "milestoneNotApplicable",
+      "msg": "This stream is not configured for milestone vesting"
     }
   ],
   "types": [
@@ -435,6 +777,30 @@ export type BlockbiteVesting = {
           {
             "name": "refunded",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "milestoneSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "stream",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "previous",
+            "type": "bool"
+          },
+          {
+            "name": "current",
+            "type": "bool"
           }
         ]
       }
@@ -495,6 +861,14 @@ export type BlockbiteVesting = {
           {
             "name": "lastActionTs",
             "type": "i64"
+          },
+          {
+            "name": "milestoneRequired",
+            "type": "bool"
+          },
+          {
+            "name": "milestoneMet",
+            "type": "bool"
           }
         ]
       }
@@ -531,6 +905,10 @@ export type BlockbiteVesting = {
           {
             "name": "endTs",
             "type": "i64"
+          },
+          {
+            "name": "milestoneRequired",
+            "type": "bool"
           }
         ]
       }

@@ -20,11 +20,15 @@ function useLayout(): Layout {
   // vertical center of the viewport and the map invisible (issue captured
   // in production screenshot 2026-05-16). Defaulting to desktop sidesteps
   // the mismatch entirely.
+  // Breakpoints lowered 2026-05-16: a production user reported the mobile
+  // TopHeader showing on a full 1920px desktop because their browser zoom
+  // was >200%, shrinking window.innerWidth below the old 1280 cutoff. New
+  // thresholds: 900+ desktop, 600-899 tablet, <600 mobile.
   const [layout, setLayout] = useState<Layout>('desktop');
   useEffect(() => {
     const compute = () => {
       const w = window.innerWidth;
-      setLayout(w >= 1280 ? 'desktop' : w >= 768 ? 'tablet' : 'mobile');
+      setLayout(w >= 900 ? 'desktop' : w >= 600 ? 'tablet' : 'mobile');
     };
     compute();
     window.addEventListener('resize', compute);

@@ -640,6 +640,16 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
         />
       )}
 
+      {/* Main column to the right of the desktop rail. Holds the act selector
+          strip across the top and the map/side-cards row below it. Without
+          this wrapper the act selector becomes a sibling COLUMN next to the
+          sidebar (outer container is flex-row on desktop) and the map area
+          collapses, which is what shipped in 7518e71 — apologies. */}
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        minWidth: 0, minHeight: 0, overflow: 'hidden',
+      }}>
+
       {/* 8-act selector strip — lets the player browse every biome map. */}
       <ActSelector biome={biome} />
 
@@ -854,6 +864,7 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
           />
         )}
       </div>
+      </div>{/* close the new column wrapper holding ActSelector + map+sidecards row */}
 
       {isMobile && <MobileTabBar biome={biome} />}
 

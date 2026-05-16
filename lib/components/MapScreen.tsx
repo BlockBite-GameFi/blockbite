@@ -641,12 +641,13 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
       )}
 
       {/* Main column to the right of the desktop rail. Holds the act selector
-          strip across the top and the map/side-cards row below it. Without
-          this wrapper the act selector becomes a sibling COLUMN next to the
-          sidebar (outer container is flex-row on desktop) and the map area
-          collapses, which is what shipped in 7518e71 — apologies. */}
+          strip across the top and the map/side-cards row below it. Explicit
+          height:100% so the cross-axis stretch can't be defeated by parents
+          (some Chromium builds drop stretch under `overflow:hidden`). */}
       <div style={{
-        flex: 1, display: 'flex', flexDirection: 'column',
+        flex: '1 1 0', display: 'flex', flexDirection: 'column',
+        width: 0,      // start at 0 then grow via flex — kills overflow-row growth
+        height: '100%',
         minWidth: 0, minHeight: 0, overflow: 'hidden',
       }}>
 

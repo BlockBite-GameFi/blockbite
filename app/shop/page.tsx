@@ -7,6 +7,7 @@ import Countdown from '@/components/Countdown';
 import { TICKET_PACKAGES } from '@/lib/game/constants';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { purchaseTickets, getUsdcBalance, InsufficientFundsError, NoTokenAccountError } from '@/lib/solana/usdc';
+import { autoconvertSolForUsdc, SwapUnavailableError, SwapFailedError } from '@/lib/solana/jupiter-swap';
 import { explorerTx, IS_DEVNET } from '@/lib/solana/config';
 
 const TIER_COLORS: Record<string, { from: string; to: string; glow: string }> = {
@@ -58,7 +59,40 @@ export default function ShopPage() {
     setBuying(pkg.id);
 
     try {
-      // Real on-chain USDC transfer → FEE_WALLET on devnet
+      // ── Pre-step: SOL→USDC autoconvert (mainnet only) ──────────────────
+      // If the buyer doesn't have enough USDC, Jupiter swaps the deficit
+      // from their SOL automatically before the ticket transfer runs.
+      // Devnet returns null (Jupiter has no devnet liquidity) and falls
+      // through to the InsufficientFunds error path below.
+      const currentUsdc = (usdcBalance ?? 0);
+      const deficit = pkg.price - currentUsdc;
+      if (deficit > 0 && !IS_DEVNET) {
+        try {
+          const swapSig = await autoconvertSolForUsdc({
+            connection,
+            payer: publicKey,
+            usdcDeficit: deficit + 0.1, // tiny buffer for slippage rounding
+            sendTransaction: sendTransaction as Parameters<typeof autoconvertSolForUsdc>[0]['sendTransaction'],
+          });
+          if (swapSig) {
+            // Re-read balance so the buy sees the freshly swapped USDC.
+            const fresh = await getUsdcBalance(connection, publicKey);
+            setUsdcBalance(fresh);
+          }
+        } catch (swapErr) {
+          if (swapErr instanceof SwapUnavailableError) {
+            // Expected on devnet — silent fallthrough.
+          } else if (swapErr instanceof SwapFailedError) {
+            setTxError(swapErr.message);
+            setBuying(null);
+            return;
+          } else {
+            throw swapErr;
+          }
+        }
+      }
+
+      // Real on-chain USDC transfer → FEE_WALLET
       const sig = await purchaseTickets({
         connection,
         payer: publicKey,

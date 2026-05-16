@@ -7,6 +7,14 @@ import { levelConfig } from '@/lib/game/levelConfig';
 import { getLevelTier } from '@/lib/game/constants';
 import { ART, buildPathD, generateLongNodes } from '@/lib/components/MapArt';
 import { BIOMES } from '@/lib/game/biomes';
+import dynamic from 'next/dynamic';
+
+// react-three-fiber refuses to SSR — load the 3D scene client-only with no
+// SSR fallback (the SVG path on top still renders fine on the server, and
+// the 3D backdrop fades in once webGL is ready).
+const BiomeScene3D = dynamic(() => import('@/lib/components/BiomeScene3D'), {
+  ssr: false,
+});
 
 export type Layout = 'mobile' | 'tablet' | 'desktop';
 
@@ -339,6 +347,7 @@ function DesktopRail({
       borderRight: `1px solid ${biome.accent}33`,
       display: 'flex', flexDirection: 'column', gap: 6,
       height: '100%',
+      position: 'relative', zIndex: 2,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
         <Avatar biome={biome} small />
@@ -619,6 +628,13 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
     : player.username;
 
+  // Active level expressed as 0–1 within this act, fed to the 3D scene so
+  // the camera and player marker track the player's progress along the path.
+  const progress = Math.max(
+    0,
+    Math.min(1, (currentLevel - biome.range[0]) / Math.max(1, biome.range[1] - biome.range[0])),
+  );
+
   return (
     <div style={{
       width: '100%', height: '100vh',
@@ -627,7 +643,23 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
       display: 'flex',
       flexDirection: isDesktop ? 'row' : 'column',
       overflow: 'hidden',
+      position: 'relative',
     }}>
+      {/* Real-time 3D biome backdrop — terrain, lighting, fog, scattered
+          props, winding path. Renders BEHIND the SVG candy-crush layer so
+          clicks on level nodes still work. */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 0,
+        pointerEvents: 'none',
+      }}>
+        <BiomeScene3D biome={biome} progress={progress} />
+      </div>
+      {/* Subtle vignette to anchor the UI on top of the 3D scene. */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 1,
+        background: `radial-gradient(ellipse at 50% 60%, transparent 0%, transparent 35%, rgba(0,0,0,0.55) 100%)`,
+        pointerEvents: 'none',
+      }} />
       {isDesktop && (
         <DesktopRail
           biome={biome}
@@ -650,14 +682,14 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
       )}
 
       {/* Main column to the right of the desktop rail. Holds the act selector
-          strip across the top and the map/side-cards row below it. Explicit
-          height:100% so the cross-axis stretch can't be defeated by parents
-          (some Chromium builds drop stretch under `overflow:hidden`). */}
+          strip across the top and the map/side-cards row below it. position
+          relative + zIndex 2 keeps it above the absolute 3D backdrop. */}
       <div style={{
         flex: '1 1 0', display: 'flex', flexDirection: 'column',
-        width: 0,      // start at 0 then grow via flex — kills overflow-row growth
+        width: 0,
         height: '100%',
         minWidth: 0, minHeight: 0, overflow: 'hidden',
+        position: 'relative', zIndex: 2,
       }}>
 
       {/* 8-act selector strip — lets the player browse every biome map. */}

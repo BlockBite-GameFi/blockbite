@@ -1,37 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import GameCanvas from '@/components/game/GameCanvas';
 import { BIOMES, type Biome } from '@/lib/game/biomes';
 
-// Real-time 3D backdrop, same component the map page uses. Client-only —
-// no SSR, no hydration mismatch.
-const BiomeScene3D = dynamic(() => import('@/lib/components/BiomeScene3D'), {
-  ssr: false,
-});
-
-/** Deferred + WebGL-probed mount, with localStorage kill switch. */
-function Backdrop3D({ biome, progress }: { biome: Biome; progress: number }) {
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (localStorage.getItem('bb_3d_disabled') === '1') return;
-    try {
-      const probe = document.createElement('canvas');
-      const ctx =
-        probe.getContext('webgl2') ||
-        probe.getContext('webgl') ||
-        (probe as HTMLCanvasElement & { getContext(t: string): unknown }).getContext('experimental-webgl');
-      if (!ctx) return;
-    } catch { return; }
-    const t = setTimeout(() => setShow(true), 300);
-    return () => clearTimeout(t);
-  }, []);
-  if (!show) return null;
-  return <BiomeScene3D biome={biome} progress={progress} />;
+/**
+ * Backdrop3D is intentionally a no-op as of 2026-05-16 — see the matching
+ * comment in lib/components/MapScreen.tsx. The biome.sky gradient + biome.fog
+ * tint + radial vignette layers below still give the page its themed feel,
+ * without any WebGL dependency.
+ */
+function Backdrop3D(_props: { biome: Biome; progress: number }) {
+  return null;
 }
 
 export default function PlayLevelPage() {

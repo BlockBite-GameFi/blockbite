@@ -141,6 +141,46 @@ security tests.
 
 ---
 
+## AI-tool transparency disclosure
+
+Per Team-10 audit guidance ("Kalau pakai AI tools untuk bantu coding
+gapapa, tapi tolong commit history tetap rapih dan transparan"):
+
+- **AI tool used:** Claude Code (Anthropic). Pair-programming workflow
+  — I drove the design decisions (separate `create_milestone_stream`
+  instruction vs param-overload, named error codes mapping, test
+  scenario list, refactor into `create_stream_inner`), Claude wrote the
+  initial drafts of the Rust and TypeScript text, I reviewed and
+  iterated.
+- **Files that originated from AI drafts:** `programs/blockbite-vesting/src/lib.rs`
+  W5 sections, `tests/vesting-w5.ts`, this report. Every line was
+  reviewed before commit.
+- **Co-author trailer:** Each AI-assisted commit message ends with
+  `Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>` — visible
+  in `git log` for transparent attribution.
+- **AI tool state files:** `.claire/`, `.aider*`, `.cursor/`, `.cody/`,
+  `.claude/settings*`, `.claude/worktrees/` are all in `.gitignore`.
+  No AI session noise gets committed.
+- **Anchor build artefacts** (`target/idl/*.json`, `target/types/*.ts`)
+  are NOT AI-generated — they come out of `anchor build`. They are
+  committed because CI imports them directly and re-generating in CI
+  is redundant work. Standard Anchor project convention.
+
+## Test-runtime status (honest)
+
+- `anchor build` was run locally — passed (exit 0).
+- `anchor test` (which runs the full integration suite against a local
+  validator) is **executed by CI**, not yet run locally — the local
+  Windows toolchain has known anchor-test quirks. CI is the source of
+  truth. If CI flags any failure I will fix and force-push to this
+  same branch before review.
+- Status of CI on this exact commit (`0ddb2c1`): see PR check-run UI.
+  This report is intentionally NOT claiming "tests pass" until that
+  badge is green — Team-10 audit feedback Week 3 specifically called
+  out claiming pass when CI hadn't actually run. Will not repeat that.
+
+---
+
 ## Metrics
 
 **Code volume (Week-5 delta):**

@@ -1,16 +1,38 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import GameCanvas from '@/components/game/GameCanvas';
-import { BIOMES } from '@/lib/game/biomes';
+import { BIOMES, type Biome } from '@/lib/game/biomes';
 
 // Real-time 3D backdrop, same component the map page uses. Client-only —
 // no SSR, no hydration mismatch.
 const BiomeScene3D = dynamic(() => import('@/lib/components/BiomeScene3D'), {
   ssr: false,
 });
+
+/** Deferred + WebGL-probed mount, with localStorage kill switch. */
+function Backdrop3D({ biome, progress }: { biome: Biome; progress: number }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (localStorage.getItem('bb_3d_disabled') === '1') return;
+    try {
+      const probe = document.createElement('canvas');
+      const ctx =
+        probe.getContext('webgl2') ||
+        probe.getContext('webgl') ||
+        (probe as HTMLCanvasElement & { getContext(t: string): unknown }).getContext('experimental-webgl');
+      if (!ctx) return;
+    } catch { return; }
+    const t = setTimeout(() => setShow(true), 300);
+    return () => clearTimeout(t);
+  }, []);
+  if (!show) return null;
+  return <BiomeScene3D biome={biome} progress={progress} />;
+}
 
 export default function PlayLevelPage() {
   const params = useParams<{ level: string }>();
@@ -37,7 +59,7 @@ export default function PlayLevelPage() {
           background: biome.sky, overflow: 'hidden', pointerEvents: 'none',
         }}
       >
-        <BiomeScene3D biome={biome} progress={progress} />
+        <Backdrop3D biome={biome} progress={progress} />
       </div>
       {/* Vignette + biome fog tint above the 3D layer for legibility. */}
       <div

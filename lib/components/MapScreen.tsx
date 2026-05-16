@@ -16,6 +16,34 @@ const BiomeScene3D = dynamic(() => import('@/lib/components/BiomeScene3D'), {
   ssr: false,
 });
 
+/** Deferred mount + kill switch for the 3D backdrop. */
+function Backdrop3D({ biome, progress }: { biome: Biome; progress: number }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    // localStorage flag lets a user disable WebGL if their device crashed.
+    if (localStorage.getItem('bb_3d_disabled') === '1') return;
+    // Probe WebGL once before mounting the whole r3f machinery.
+    try {
+      const probe = document.createElement('canvas');
+      const ctx =
+        probe.getContext('webgl2') ||
+        probe.getContext('webgl') ||
+        (probe as HTMLCanvasElement & { getContext(t: string): unknown }).getContext('experimental-webgl');
+      if (!ctx) return;
+    } catch { return; }
+    // Defer ~300 ms so SVG paints first.
+    const t = setTimeout(() => setShow(true), 300);
+    return () => clearTimeout(t);
+  }, []);
+  if (!show) return null;
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+      <BiomeScene3D biome={biome} progress={progress} />
+    </div>
+  );
+}
+
 export type Layout = 'mobile' | 'tablet' | 'desktop';
 
 interface Props {
@@ -647,13 +675,12 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
     }}>
       {/* Real-time 3D biome backdrop — terrain, lighting, fog, scattered
           props, winding path. Renders BEHIND the SVG candy-crush layer so
-          clicks on level nodes still work. */}
-      <div style={{
-        position: 'absolute', inset: 0, zIndex: 0,
-        pointerEvents: 'none',
-      }}>
-        <BiomeScene3D biome={biome} progress={progress} />
-      </div>
+          clicks on level nodes still work. Gated on a small client-side
+          delay so the SVG paints first and the WebGL context creation can't
+          block first paint. Can be force-disabled via localStorage
+          `bb_3d_disabled=1` — protects users whose GPU drivers refuse a
+          WebGL context. */}
+      <Backdrop3D biome={biome} progress={progress} />
       {/* Subtle vignette to anchor the UI on top of the 3D scene. */}
       <div style={{
         position: 'absolute', inset: 0, zIndex: 1,

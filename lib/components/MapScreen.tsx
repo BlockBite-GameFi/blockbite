@@ -731,17 +731,15 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
             overflowX: 'hidden',
             WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
             position: 'relative',
-            perspective: '1400px',
-            perspectiveOrigin: '50% 100%',
           }}
         >
-          {/* Full-width — no clamp. SVG fills the available column and scales. */}
+          {/* Full-width — no clamp. SVG fills the available column and scales.
+              Removed the rotateX(14deg) perspective tilt: it was a CSS hack
+              that made the top of the SVG appear smaller/distant — perceived
+              by users as "the map is shrinking." Real depth now comes from
+              BiomeScene3D (WebGL) sitting behind the SVG nodes. */}
           <div style={{
             width: '100%',
-            transformStyle: 'preserve-3d',
-            transform: isMobile ? 'none' : 'rotateX(14deg)',
-            transformOrigin: '50% 100%',
-            willChange: 'transform',
           }}>
             <svg
               viewBox={`0 0 ${SVG_W} ${SVG_H}`}

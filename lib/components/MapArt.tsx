@@ -54,55 +54,82 @@ const NoiseFilter = ({ id, scale = 6, baseFreq = 0.9 }: { id: string; scale?: nu
 
 export const CrystalArt = ({ b, seed = 101 }: { b: Biome; seed?: number }) => {
   const rng = seeded(seed);
-  const crystals = Array.from({ length: 14 }, (_, i) => ({
-    x: 12 + rng() * 376, baseY: 360 + rng() * 220,
-    h: 60 + rng() * 200, w: 18 + rng() * 38,
-    tone: i % 3,
+  // Procedural mountain ranges — positions jittered per tile so no two tiles
+  // share the same silhouette. The bigger the jitter, the less obvious the loop.
+  const farMountains = Array.from({ length: 4 }, () => ({
+    cx: rng() * 440 - 20,
+    baseY: 280 + rng() * 60,
+    peakH: 160 + rng() * 120,
+    baseW: 200 + rng() * 120,
+    hueShift: Math.floor(rng() * 30) - 15,
+  }));
+  const midMountains = Array.from({ length: 3 }, () => ({
+    cx: rng() * 440 - 20,
+    baseY: 400 + rng() * 50,
+    peakH: 140 + rng() * 80,
+    baseW: 180 + rng() * 100,
+  }));
+  const archMidX1 = 100 + rng() * 60;
+  const archMidY1 = 230 + rng() * 40;
+  const archMidX2 = 240 + rng() * 60;
+  const archMidY2 = 230 + rng() * 40;
+  const archTopY  = 360 + rng() * 30;
+  // Background hue tint per tile keeps each section visually distinct.
+  const tintHue = Math.floor(rng() * 40) - 20;
+  const crystals = Array.from({ length: 18 }, (_, i) => ({
+    x: 8 + rng() * 384, baseY: 350 + rng() * 230,
+    h: 50 + rng() * 220, w: 16 + rng() * 42,
+    tone: Math.floor(rng() * 3),
+    flip: rng() > 0.5,
   }));
   return (
     <g>
       <defs>
-        <linearGradient id={`${b.id}-c1`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${b.id}-${seed}-c1`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#e9d5ff" stopOpacity="0.95" />
           <stop offset="55%" stopColor="#a78bfa" stopOpacity="0.85" />
           <stop offset="100%" stopColor="#4c1d95" stopOpacity="0.75" />
         </linearGradient>
-        <linearGradient id={`${b.id}-c2`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${b.id}-${seed}-c2`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#bae6fd" stopOpacity="0.9" />
           <stop offset="100%" stopColor="#0891b2" stopOpacity="0.65" />
         </linearGradient>
-        <linearGradient id={`${b.id}-c3`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${b.id}-${seed}-c3`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#f0abfc" stopOpacity="0.92" />
           <stop offset="100%" stopColor="#a21caf" stopOpacity="0.7" />
         </linearGradient>
-        <radialGradient id={`${b.id}-glow`} cx="50%" cy="20%" r="60%">
-          <stop offset="0%" stopColor="#c4b5fd" stopOpacity="0.55" />
+        <radialGradient id={`${b.id}-${seed}-glow`} cx="50%" cy="20%" r="60%">
+          <stop offset="0%" stopColor={`hsl(${260 + tintHue} 70% 70%)`} stopOpacity="0.55" />
           <stop offset="100%" stopColor="#c4b5fd" stopOpacity="0" />
         </radialGradient>
       </defs>
-      {/* atmospheric backdrop */}
-      <rect width="400" height="600" fill={`url(#${b.id}-glow)`} />
-      {/* far mountain range — deep purple, hazy */}
-      <Mountain cx={80}  baseY={300} peakH={200} baseW={240} light="#3b2563" shadow="#1f1239" opacity={0.62} />
-      <Mountain cx={220} baseY={300} peakH={250} baseW={260} light="#4c2d80" shadow="#28184f" opacity={0.7} />
-      <Mountain cx={340} baseY={300} peakH={220} baseW={240} light="#3b2563" shadow="#1f1239" opacity={0.62} />
+      {/* atmospheric backdrop with per-tile hue tint */}
+      <rect width="400" height="600" fill={`url(#${b.id}-${seed}-glow)`} />
+      {/* far mountain range — procedural positions */}
+      {farMountains.map((m, i) => (
+        <Mountain key={`far-${i}`} cx={m.cx} baseY={m.baseY} peakH={m.peakH} baseW={m.baseW}
+          light={`hsl(${260 + m.hueShift} 50% 30%)`} shadow={`hsl(${260 + m.hueShift} 60% 18%)`}
+          opacity={0.55 + (i % 3) * 0.08} />
+      ))}
       {/* mid mountain range */}
-      <Mountain cx={120} baseY={420} peakH={160} baseW={220} light="#5b3d9c" shadow="#2a1c5e" />
-      <Mountain cx={300} baseY={420} peakH={180} baseW={240} light="#5b3d9c" shadow="#2a1c5e" />
-      {/* cavern arch */}
-      <path d="M 0 380 Q 100 240, 200 260 Q 300 240, 400 380 L 400 600 L 0 600 Z"
+      {midMountains.map((m, i) => (
+        <Mountain key={`mid-${i}`} cx={m.cx} baseY={m.baseY} peakH={m.peakH} baseW={m.baseW}
+          light="#5b3d9c" shadow="#2a1c5e" opacity={0.88} />
+      ))}
+      {/* cavern arch — control points jittered per tile */}
+      <path d={`M 0 ${archTopY + 20} Q ${archMidX1} ${archMidY1}, 200 260 Q ${archMidX2} ${archMidY2}, 400 ${archTopY + 20} L 400 600 L 0 600 Z`}
         fill={b.rock} opacity="0.92" />
-      <path d="M 40 360 Q 200 220, 360 360 L 360 460 L 40 460 Z"
+      <path d={`M 40 ${archTopY} Q 200 ${archMidY1 - 20}, 360 ${archTopY} L 360 460 L 40 460 Z`}
         fill="rgba(0,0,0,0.55)" />
-      {/* foreground crystal cluster — many sizes, deterministic placement */}
+      {/* foreground crystal cluster — procedural, varied count */}
       {crystals.map((c, i) => {
-        const grad = c.tone === 0 ? `url(#${b.id}-c1)`
-                   : c.tone === 1 ? `url(#${b.id}-c2)`
-                                  : `url(#${b.id}-c3)`;
+        const grad = c.tone === 0 ? `url(#${b.id}-${seed}-c1)`
+                   : c.tone === 1 ? `url(#${b.id}-${seed}-c2)`
+                                  : `url(#${b.id}-${seed}-c3)`;
         const stroke = c.tone === 0 ? '#c4b5fd'
                      : c.tone === 1 ? '#67e8f9' : '#f0abfc';
         return (
-          <g key={i}>
+          <g key={i} transform={c.flip ? `translate(${c.x + c.w} 0) scale(-1 1) translate(${-c.x} 0)` : undefined}>
             {/* shadow on ground */}
             <ellipse cx={c.x + c.w / 2 + 4} cy={c.baseY + 4}
               rx={c.w * 0.55} ry={c.w * 0.16} fill="#000" opacity="0.5" />
@@ -115,9 +142,9 @@ export const CrystalArt = ({ b, seed = 101 }: { b: Biome; seed?: number }) => {
           </g>
         );
       })}
-      {/* glowing dust motes */}
+      {/* glowing dust motes — seeded position so per-tile placement varies */}
       {Array.from({ length: 60 }).map((_, i) => (
-        <circle key={i} cx={(i * 37 + 7) % 400} cy={(i * 53 + 17) % 600}
+        <circle key={i} cx={(seed * 17 + i * 37 + 7) % 400} cy={(seed * 23 + i * 53 + 17) % 600}
           r={0.6 + (i % 3) * 0.5}
           fill="#e0f2fe" opacity={0.25 + ((i * 7) % 5) / 14} />
       ))}
@@ -127,53 +154,70 @@ export const CrystalArt = ({ b, seed = 101 }: { b: Biome; seed?: number }) => {
 
 export const FrostArt = ({ b, seed = 202 }: { b: Biome; seed?: number }) => {
   const rng = seeded(seed);
-  const pines = Array.from({ length: 18 }, (_, i) => ({
-    x: -10 + i * 24 + rng() * 8,
-    y: 470 + rng() * 60,
-    s: 0.8 + rng() * 0.6,
+  // Procedural peaks per tile so identical mountain silhouettes don't repeat.
+  const peaks = Array.from({ length: 4 }, () => ({
+    cx: rng() * 440 - 20,
+    baseY: 400 + rng() * 50,
+    peakH: 220 + rng() * 140,
+    baseW: 200 + rng() * 100,
+    tone: rng() > 0.5 ? 'light' : 'dark',
   }));
+  // Mid-ridge varies per tile too.
+  const ridgePoints = Array.from({ length: 7 }, (_, i) => {
+    const x = -20 + i * 75;
+    const y = i % 2 === 0 ? 440 + rng() * 30 : 320 + rng() * 50;
+    return `${x},${y}`;
+  }).join(' ');
+  // Pines drift positions per tile.
+  const pines = Array.from({ length: 22 }, (_, i) => ({
+    x: -10 + i * 20 + rng() * 12,
+    y: 460 + rng() * 70,
+    s: 0.7 + rng() * 0.8,
+  }));
+  const auroraOffsetA = rng() * 40 - 20;
+  const auroraOffsetB = rng() * 40 - 20;
   return (
     <g>
       <defs>
-        <linearGradient id={`${b.id}-aurora`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${b.id}-${seed}-aurora`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#5eead4" stopOpacity="0" />
-          <stop offset="40%" stopColor="#5eead4" stopOpacity="0.65" />
+          <stop offset="40%" stopColor={`hsl(${170 + Math.floor(rng() * 30)} 70% 60%)`} stopOpacity="0.65" />
           <stop offset="60%" stopColor="#a78bfa" stopOpacity="0.45" />
           <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
         </linearGradient>
-        <linearGradient id={`${b.id}-ice`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${b.id}-${seed}-ice`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#f0f9ff" stopOpacity="0.98" />
           <stop offset="100%" stopColor="#7dd3fc" stopOpacity="0.7" />
         </linearGradient>
-        <linearGradient id={`${b.id}-snow`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${b.id}-${seed}-snow`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#fff" stopOpacity="0.95" />
           <stop offset="100%" stopColor="#bae6fd" stopOpacity="0.6" />
         </linearGradient>
       </defs>
-      {/* aurora ribbons */}
-      <path d="M -20 80 Q 100 30, 220 100 Q 320 150, 420 60 L 420 240 L -20 240 Z"
-        fill={`url(#${b.id}-aurora)`} opacity="0.85" />
-      <path d="M -20 130 Q 120 90, 260 140 Q 360 170, 420 130 L 420 220 L -20 220 Z"
-        fill={`url(#${b.id}-aurora)`} opacity="0.55" />
-      {/* distant peaks */}
-      <Mountain cx={60}  baseY={420} peakH={260} baseW={220} light="#1e3a5f" shadow="#0c1a2f" opacity={0.85} />
-      <Mountain cx={200} baseY={420} peakH={320} baseW={280} light="#2a5b85" shadow="#102640" opacity={0.92} />
-      <Mountain cx={340} baseY={420} peakH={290} baseW={240} light="#1e3a5f" shadow="#0c1a2f" opacity={0.88} />
-      {/* mid ridge */}
-      <polygon points="-20,460 70,340 150,420 220,320 300,420 360,340 420,460"
-        fill="#3a6f95" opacity="0.85" />
+      {/* aurora ribbons — control points jittered per tile */}
+      <path d={`M -20 ${80 + auroraOffsetA} Q 100 ${30 + auroraOffsetA}, 220 ${100 + auroraOffsetA} Q 320 ${150 + auroraOffsetA}, 420 ${60 + auroraOffsetA} L 420 240 L -20 240 Z`}
+        fill={`url(#${b.id}-${seed}-aurora)`} opacity="0.85" />
+      <path d={`M -20 ${130 + auroraOffsetB} Q 120 ${90 + auroraOffsetB}, 260 ${140 + auroraOffsetB} Q 360 ${170 + auroraOffsetB}, 420 ${130 + auroraOffsetB} L 420 220 L -20 220 Z`}
+        fill={`url(#${b.id}-${seed}-aurora)`} opacity="0.55" />
+      {/* distant peaks — procedural */}
+      {peaks.map((p, i) => (
+        <Mountain key={i} cx={p.cx} baseY={p.baseY} peakH={p.peakH} baseW={p.baseW}
+          light={p.tone === 'light' ? '#2a5b85' : '#1e3a5f'}
+          shadow={p.tone === 'light' ? '#102640' : '#0c1a2f'}
+          opacity={0.82 + (i % 3) * 0.04} />
+      ))}
+      {/* mid ridge — vertices per tile */}
+      <polygon points={ridgePoints} fill="#3a6f95" opacity="0.85" />
       {/* snow plain */}
-      <path d="M 0 470 L 400 470 L 400 600 L 0 600 Z"
-        fill={`url(#${b.id}-snow)`} />
-      <path d="M 0 510 Q 200 488, 400 514 L 400 600 L 0 600 Z"
-        fill="#e0f2fe" opacity="0.9" />
+      <path d="M 0 470 L 400 470 L 400 600 L 0 600 Z" fill={`url(#${b.id}-${seed}-snow)`} />
+      <path d="M 0 510 Q 200 488, 400 514 L 400 600 L 0 600 Z" fill="#e0f2fe" opacity="0.9" />
       {/* ice shards on path */}
       {Array.from({ length: 14 }).map((_, i) => (
         <polygon key={i}
-          points={`${20 + i * 28},${478 + (i % 3) * 6} ${30 + i * 28},${462 + (i % 3) * 6} ${40 + i * 28},${478 + (i % 3) * 6}`}
-          fill={`url(#${b.id}-ice)`} opacity="0.95" stroke="#bae6fd" strokeWidth="0.5" />
+          points={`${20 + i * 28 + (seed % 10)},${478 + (i % 3) * 6} ${30 + i * 28 + (seed % 10)},${462 + (i % 3) * 6} ${40 + i * 28 + (seed % 10)},${478 + (i % 3) * 6}`}
+          fill={`url(#${b.id}-${seed}-ice)`} opacity="0.95" stroke="#bae6fd" strokeWidth="0.5" />
       ))}
-      {/* pine forest silhouette */}
+      {/* pine forest silhouette — varied positions per tile */}
       {pines.map((p, i) => (
         <g key={i} transform={`translate(${p.x} ${p.y}) scale(${p.s})`}>
           <polygon points="0,0 -10,24 10,24" fill="#0a1f1a" />
@@ -182,9 +226,9 @@ export const FrostArt = ({ b, seed = 202 }: { b: Biome; seed?: number }) => {
           <rect x="-2" y="22" width="4" height="6" fill="#3b2a1f" />
         </g>
       ))}
-      {/* falling snow */}
+      {/* falling snow — seeded */}
       {Array.from({ length: 30 }).map((_, i) => (
-        <circle key={i} cx={(i * 41 + 7) % 400} cy={(i * 23) % 480}
+        <circle key={i} cx={(seed * 11 + i * 41 + 7) % 400} cy={(seed * 19 + i * 23) % 480}
           r={1 + (i % 3) * 0.4} fill="#fff" opacity={0.55 + (i % 4) / 10} />
       ))}
     </g>
@@ -193,47 +237,48 @@ export const FrostArt = ({ b, seed = 202 }: { b: Biome; seed?: number }) => {
 
 export const EmberArt = ({ b, seed = 303 }: { b: Biome; seed?: number }) => {
   const rng = seeded(seed);
+  const v1cx = 80 + rng() * 80;
+  const v1peakH = 240 + rng() * 100;
+  const v2cx = 240 + rng() * 100;
+  const v2peakH = 280 + rng() * 120;
   const embers = Array.from({ length: 60 }, () => ({
     x: rng() * 400, y: 80 + rng() * 380, r: 0.8 + rng() * 1.4,
   }));
+  // Ridge vertices vary per tile so the charred horizon doesn't repeat.
+  const ridge = Array.from({ length: 8 }, (_, i) =>
+    `${-20 + i * 65},${i % 2 === 0 ? 460 + rng() * 40 : 360 + rng() * 60}`
+  ).join(' ');
   return (
     <g>
       <defs>
-        <radialGradient id={`${b.id}-lava`} cx="50%" cy="50%" r="50%">
+        <radialGradient id={`${b.id}-${seed}-lava`} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#fcd34d" />
           <stop offset="55%" stopColor="#f97316" />
           <stop offset="100%" stopColor="#7c2d12" />
         </radialGradient>
-        <linearGradient id={`${b.id}-sky`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${b.id}-${seed}-sky`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#7c2d12" stopOpacity="0.85" />
           <stop offset="100%" stopColor="#1c0a08" stopOpacity="0" />
         </linearGradient>
       </defs>
-      {/* hellish sky haze */}
-      <rect width="400" height="400" fill={`url(#${b.id}-sky)`} />
-      {/* distant smoking volcano */}
-      <Mountain cx={120} baseY={400} peakH={280} baseW={260} light="#3d1f15" shadow="#1c0a08" opacity={0.88} />
-      <Mountain cx={290} baseY={400} peakH={340} baseW={300} light="#4a2418" shadow="#22100b" opacity={0.95} />
-      {/* lava-glow crater rim on main volcano */}
-      <ellipse cx={290} cy={75} rx={24} ry={6} fill="#fbbf24" opacity="0.9" />
-      <path d="M 290 70 Q 282 50, 285 30 Q 290 8, 286 -6"
+      <rect width="400" height="400" fill={`url(#${b.id}-${seed}-sky)`} />
+      {/* twin volcanoes with jittered positions */}
+      <Mountain cx={v1cx} baseY={400} peakH={v1peakH} baseW={240 + rng() * 60} light="#3d1f15" shadow="#1c0a08" opacity={0.88} />
+      <Mountain cx={v2cx} baseY={400} peakH={v2peakH} baseW={260 + rng() * 80} light="#4a2418" shadow="#22100b" opacity={0.95} />
+      <ellipse cx={v2cx} cy={400 - v2peakH + 5} rx={24} ry={6} fill="#fbbf24" opacity="0.9" />
+      <path d={`M ${v2cx} ${400 - v2peakH} Q ${v2cx - 8} ${400 - v2peakH - 20}, ${v2cx - 5} ${400 - v2peakH - 40} Q ${v2cx} ${400 - v2peakH - 62}, ${v2cx - 4} ${400 - v2peakH - 76}`}
         stroke="#1c0a08" strokeWidth="20" fill="none" opacity="0.85" />
-      <path d="M 290 70 Q 282 50, 285 30 Q 290 8, 286 -6"
+      <path d={`M ${v2cx} ${400 - v2peakH} Q ${v2cx - 8} ${400 - v2peakH - 20}, ${v2cx - 5} ${400 - v2peakH - 40} Q ${v2cx} ${400 - v2peakH - 62}, ${v2cx - 4} ${400 - v2peakH - 76}`}
         stroke="#fbbf24" strokeWidth="3" fill="none" opacity="0.45" />
-      {/* charred foreground ridge */}
-      <polygon points="-20,490 60,360 140,470 220,380 300,460 380,400 420,500 420,600 -20,600"
-        fill="#1c0a08" />
-      <polygon points="-20,500 80,420 170,480 250,440 340,490 400,460 420,520 420,600 -20,600"
-        fill="#3d1f15" opacity="0.95" />
-      {/* lava cracks across ground */}
+      {/* charred ridge — vertices per tile */}
+      <polygon points={`${ridge} 420,600 -20,600`} fill="#1c0a08" />
+      <polygon points={`${ridge} 420,600 -20,600`} fill="#3d1f15" opacity="0.55" transform="translate(0 20)" />
       <path d="M 30 530 Q 80 510, 130 540 Q 180 565, 230 530 Q 280 500, 330 540 Q 380 565, 420 540"
         stroke="#fb923c" strokeWidth="4" fill="none" opacity="0.95" />
       <path d="M 0 560 Q 70 540, 140 562 Q 210 580, 280 560 Q 340 540, 400 562"
         stroke="#fcd34d" strokeWidth="2.5" fill="none" opacity="0.9" />
-      {/* main lava pool */}
-      <ellipse cx="200" cy="575" rx="200" ry="22" fill={`url(#${b.id}-lava)`} opacity="0.95" />
+      <ellipse cx="200" cy="575" rx="200" ry="22" fill={`url(#${b.id}-${seed}-lava)`} opacity="0.95" />
       <ellipse cx="200" cy="575" rx="120" ry="10" fill="#fcd34d" opacity="0.85" />
-      {/* embers floating */}
       {embers.map((e, i) => (
         <circle key={i} cx={e.x} cy={e.y} r={e.r}
           fill={i % 3 === 0 ? '#fbbf24' : '#fb923c'}
@@ -245,50 +290,55 @@ export const EmberArt = ({ b, seed = 303 }: { b: Biome; seed?: number }) => {
 
 export const VerdantArt = ({ b, seed = 404 }: { b: Biome; seed?: number }) => {
   const rng = seeded(seed);
-  const mushrooms = Array.from({ length: 10 }, () => ({
-    x: 20 + rng() * 360, y: 470 + rng() * 70, s: 12 + rng() * 16,
+  // Canopy positions per tile so the upper jungle silhouette varies.
+  const canopies = Array.from({ length: 3 }, () => ({
+    cx: rng() * 400, cy: 100 + rng() * 100, rx: 100 + rng() * 80, ry: 60 + rng() * 60,
   }));
-  const fireflies = Array.from({ length: 22 }, () => ({
+  // Tree trunk positions vary.
+  const trees = Array.from({ length: 3 }, () => ({
+    x: 60 + rng() * 280, y: 260 + rng() * 80, h: 130 + rng() * 40,
+  }));
+  const mushrooms = Array.from({ length: 12 }, () => ({
+    x: 10 + rng() * 380, y: 460 + rng() * 80, s: 10 + rng() * 18,
+  }));
+  const fireflies = Array.from({ length: 26 }, () => ({
     x: rng() * 400, y: 100 + rng() * 380, a: 0.5 + rng() * 0.5,
+  }));
+  const vines = Array.from({ length: 6 }, () => ({
+    vx: rng() * 400, sway: rng() * 16 - 8, len: 140 + rng() * 60,
   }));
   return (
     <g>
       <defs>
-        <radialGradient id={`${b.id}-glow`} cx="50%" cy="80%" r="60%">
+        <radialGradient id={`${b.id}-${seed}-glow`} cx="50%" cy="80%" r="60%">
           <stop offset="0%" stopColor="#fef08a" stopOpacity="0.55" />
           <stop offset="100%" stopColor="#86efac" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id={`${b.id}-leaf`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${b.id}-${seed}-leaf`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#86efac" stopOpacity="0.92" />
           <stop offset="100%" stopColor="#14352a" stopOpacity="0.9" />
         </linearGradient>
-        <linearGradient id={`${b.id}-trunk`} x1="0" y1="0" x2="1" y2="0">
+        <linearGradient id={`${b.id}-${seed}-trunk`} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor="#3b2218" />
           <stop offset="100%" stopColor="#1f140d" />
         </linearGradient>
       </defs>
-      {/* upper canopy */}
-      <ellipse cx="60"  cy="170" rx="140" ry="100" fill={`url(#${b.id}-leaf)`} />
-      <ellipse cx="340" cy="160" rx="160" ry="110" fill={`url(#${b.id}-leaf)`} />
-      <ellipse cx="200" cy="100" rx="120" ry="70" fill="#1f5236" opacity="0.95" />
-      {/* tree trunks */}
-      {[[80, 280], [340, 270], [200, 320]].map((t, i) => (
+      {canopies.map((c, i) => (
+        <ellipse key={i} cx={c.cx} cy={c.cy} rx={c.rx} ry={c.ry}
+          fill={i === 1 ? '#1f5236' : `url(#${b.id}-${seed}-leaf)`}
+          opacity={0.92 + (i % 2) * 0.05} />
+      ))}
+      {trees.map((t, i) => (
         <g key={i}>
-          <rect x={t[0] - 12} y={t[1]} width="24" height={150 - i * 10}
-            fill={`url(#${b.id}-trunk)`} />
-          <ellipse cx={t[0]} cy={t[1] + (150 - i * 10)}
-            rx={20} ry={6} fill="#000" opacity="0.5" />
+          <rect x={t.x - 12} y={t.y} width="24" height={t.h}
+            fill={`url(#${b.id}-${seed}-trunk)`} />
+          <ellipse cx={t.x} cy={t.y + t.h} rx={20} ry={6} fill="#000" opacity="0.5" />
+          <ellipse cx={t.x} cy={t.y} rx={56} ry={32} fill="#1f5236" opacity="0.95" />
         </g>
       ))}
-      {/* leaf clusters on trunks */}
-      <ellipse cx="80"  cy="280" rx="56" ry="32" fill="#1f5236" opacity="0.95" />
-      <ellipse cx="340" cy="270" rx="60" ry="36" fill="#1f5236" opacity="0.95" />
-      <ellipse cx="200" cy="320" rx="50" ry="28" fill="#1f5236" opacity="0.9" />
-      {/* moss ground */}
       <path d="M 0 470 Q 200 448, 400 478 L 400 600 L 0 600 Z" fill="#166534" />
       <path d="M 0 510 Q 200 490, 400 516 L 400 600 L 0 600 Z" fill="#15803d" opacity="0.88" />
-      <ellipse cx="200" cy="540" rx="220" ry="48" fill={`url(#${b.id}-glow)`} />
-      {/* mushrooms */}
+      <ellipse cx="200" cy="540" rx="220" ry="48" fill={`url(#${b.id}-${seed}-glow)`} />
       {mushrooms.map((m, i) => (
         <g key={i}>
           <rect x={m.x - 4} y={m.y} width="8" height={m.s} rx="3" fill="#f5f5f4" />
@@ -298,12 +348,10 @@ export const VerdantArt = ({ b, seed = 404 }: { b: Biome; seed?: number }) => {
           <circle cx={m.x + m.s * 0.32} cy={m.y - m.s * 0.06} r={m.s * 0.10} fill="#fef3c7" />
         </g>
       ))}
-      {/* hanging vines */}
-      {[60, 140, 220, 300, 380].map((vx, i) => (
-        <path key={i} d={`M ${vx} 70 Q ${vx + 8} 130, ${vx - 4} 190`}
+      {vines.map((v, i) => (
+        <path key={i} d={`M ${v.vx} 70 Q ${v.vx + 8 + v.sway} 130, ${v.vx - 4 + v.sway} ${v.len + 50}`}
           stroke="#22c55e" strokeWidth="2" fill="none" opacity="0.7" />
       ))}
-      {/* fireflies */}
       {fireflies.map((f, i) => (
         <g key={i}>
           <circle cx={f.x} cy={f.y} r={4} fill="#fef08a" opacity={f.a * 0.3} />
@@ -325,35 +373,35 @@ export const TideArt = ({ b, seed = 505 }: { b: Biome; seed?: number }) => {
   return (
     <g>
       <defs>
-        <radialGradient id={`${b.id}-deep`} cx="50%" cy="0%" r="100%">
+        <radialGradient id={`${b.id}-${seed}-deep`} cx="50%" cy="0%" r="100%">
           <stop offset="0%" stopColor="#7dd3fc" stopOpacity="0.7" />
           <stop offset="100%" stopColor="#0c1f3a" stopOpacity="0" />
         </radialGradient>
-        <radialGradient id={`${b.id}-coral`} cx="35%" cy="35%" r="65%">
+        <radialGradient id={`${b.id}-${seed}-coral`} cx="35%" cy="35%" r="65%">
           <stop offset="0%" stopColor="#fbcfe8" />
           <stop offset="100%" stopColor="#9d174d" />
         </radialGradient>
-        <linearGradient id={`${b.id}-kelp`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${b.id}-${seed}-kelp`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.85" />
           <stop offset="100%" stopColor="#0c4a6e" stopOpacity="0.65" />
         </linearGradient>
       </defs>
-      {/* god rays from above */}
-      <path d="M 40 0 L 120 600 L 0 600 Z"   fill={`url(#${b.id}-deep)`} opacity="0.55" />
-      <path d="M 180 0 L 240 600 L 140 600 Z" fill={`url(#${b.id}-deep)`} opacity="0.65" />
-      <path d="M 320 0 L 400 600 L 280 600 Z" fill={`url(#${b.id}-deep)`} opacity="0.55" />
-      {/* kelp forest swaying */}
-      {[40, 100, 160, 240, 320, 380].map((kx, i) => (
+      {/* god rays — origin shifts per tile */}
+      <path d={`M ${20 + rng() * 60} 0 L 120 600 L 0 600 Z`}   fill={`url(#${b.id}-${seed}-deep)`} opacity="0.55" />
+      <path d={`M ${160 + rng() * 60} 0 L 240 600 L 140 600 Z`} fill={`url(#${b.id}-${seed}-deep)`} opacity="0.65" />
+      <path d={`M ${300 + rng() * 60} 0 L 400 600 L 280 600 Z`} fill={`url(#${b.id}-${seed}-deep)`} opacity="0.55" />
+      {/* kelp forest swaying — positions varied per tile */}
+      {Array.from({ length: 6 }, () => 20 + rng() * 360).map((kx, i) => (
         <path key={i}
           d={`M ${kx} 600 Q ${kx + 16} 460, ${kx - 8} 320 Q ${kx + 4} 180, ${kx + 12} 80`}
-          stroke={`url(#${b.id}-kelp)`} strokeWidth={6 + (i % 2) * 2}
+          stroke={`url(#${b.id}-${seed}-kelp)`} strokeWidth={6 + (i % 2) * 2}
           fill="none" opacity="0.85" />
       ))}
       {/* coral towers */}
       {corals.map((c, i) => (
         <g key={i}>
           <rect x={c.x - 12} y={c.y} width="24" height={c.h} rx="8" fill="#0c2540" />
-          <circle cx={c.x} cy={c.y} r="18" fill={`url(#${b.id}-coral)`} />
+          <circle cx={c.x} cy={c.y} r="18" fill={`url(#${b.id}-${seed}-coral)`} />
           <circle cx={c.x - 12} cy={c.y + 10} r="10" fill="#ec4899" opacity="0.9" />
           <circle cx={c.x + 11} cy={c.y + 6} r="11" fill="#a5f3fc" opacity="0.78" />
           {/* polyp dots */}
@@ -384,32 +432,41 @@ export const DunesArt = ({ b, seed = 606 }: { b: Biome; seed?: number }) => {
   return (
     <g>
       <defs>
-        <radialGradient id={`${b.id}-sun`} cx="50%" cy="50%" r="50%">
+        <radialGradient id={`${b.id}-${seed}-sun`} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#fef3c7" stopOpacity="0.9" />
           <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id={`${b.id}-dune-a`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${b.id}-${seed}-dune-a`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#fde68a" />
           <stop offset="100%" stopColor="#b45309" />
         </linearGradient>
-        <linearGradient id={`${b.id}-dune-b`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${b.id}-${seed}-dune-b`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#fbbf24" />
           <stop offset="100%" stopColor="#92400e" />
         </linearGradient>
       </defs>
-      {/* haze sun */}
-      <circle cx="320" cy="160" r="110" fill={`url(#${b.id}-sun)`} />
-      <circle cx="320" cy="160" r="50" fill="#fbbf24" opacity="0.92" />
-      <circle cx="320" cy="160" r="38" fill="#fde68a" />
-      {/* layered dunes — atmospheric perspective */}
-      <path d="M -20 360 Q 80 320, 180 350 Q 280 380, 420 330 L 420 480 L -20 480 Z"
-        fill="#9a3412" opacity="0.6" />
-      <path d="M -20 400 Q 100 360, 220 390 Q 320 420, 420 370 L 420 600 L -20 600 Z"
-        fill={`url(#${b.id}-dune-a)`} />
-      <path d="M -20 460 Q 80 420, 200 450 Q 300 480, 420 430 L 420 600 L -20 600 Z"
-        fill={`url(#${b.id}-dune-b)`} />
-      <path d="M -20 520 Q 100 500, 220 515 Q 340 530, 420 510 L 420 600 L -20 600 Z"
-        fill="#f59e0b" opacity="0.92" />
+      {/* haze sun — position jittered per tile so it doesn't repeat */}
+      {(() => { const sx = 80 + rng() * 240, sy = 100 + rng() * 80; return (
+        <g>
+          <circle cx={sx} cy={sy} r="110" fill={`url(#${b.id}-${seed}-sun)`} />
+          <circle cx={sx} cy={sy} r="50" fill="#fbbf24" opacity="0.92" />
+          <circle cx={sx} cy={sy} r="38" fill="#fde68a" />
+        </g>
+      ); })()}
+      {/* layered dunes — wave amplitude per tile */}
+      {(() => {
+        const a1 = rng() * 30, a2 = rng() * 30, a3 = rng() * 30, a4 = rng() * 30;
+        return <g>
+          <path d={`M -20 360 Q 80 ${320 + a1}, 180 ${350 - a1} Q 280 ${380 + a1}, 420 ${330 - a1} L 420 480 L -20 480 Z`}
+            fill="#9a3412" opacity="0.6" />
+          <path d={`M -20 400 Q 100 ${360 + a2}, 220 ${390 - a2} Q 320 ${420 + a2}, 420 ${370 - a2} L 420 600 L -20 600 Z`}
+            fill={`url(#${b.id}-${seed}-dune-a)`} />
+          <path d={`M -20 460 Q 80 ${420 + a3}, 200 ${450 - a3} Q 300 ${480 + a3}, 420 ${430 - a3} L 420 600 L -20 600 Z`}
+            fill={`url(#${b.id}-${seed}-dune-b)`} />
+          <path d={`M -20 520 Q 100 ${500 + a4}, 220 ${515 - a4} Q 340 ${530 + a4}, 420 ${510 - a4} L 420 600 L -20 600 Z`}
+            fill="#f59e0b" opacity="0.92" />
+        </g>;
+      })()}
       {/* obelisks + pyramid */}
       <polygon points="40,540 60,440 80,540" fill="#3f2613" />
       <polygon points="60,540 60,440 80,540" fill="#1f1208" opacity="0.85" />
@@ -442,13 +499,13 @@ export const VoidArt = ({ b, seed = 707 }: { b: Biome; seed?: number }) => {
   return (
     <g>
       <defs>
-        <radialGradient id={`${b.id}-rift`} cx="50%" cy="50%" r="50%">
+        <radialGradient id={`${b.id}-${seed}-rift`} cx="50%" cy="50%" r="50%">
           <stop offset="0%"  stopColor="#fff" stopOpacity="0.95" />
           <stop offset="20%" stopColor="#f0abfc" />
           <stop offset="55%" stopColor="#a855f7" stopOpacity="0.55" />
           <stop offset="100%" stopColor="#1e1b4b" stopOpacity="0" />
         </radialGradient>
-        <radialGradient id={`${b.id}-pillar`} cx="50%" cy="0%" r="100%">
+        <radialGradient id={`${b.id}-${seed}-pillar`} cx="50%" cy="0%" r="100%">
           <stop offset="0%" stopColor="#c084fc" stopOpacity="0.9" />
           <stop offset="100%" stopColor="#0e0524" />
         </radialGradient>
@@ -458,20 +515,28 @@ export const VoidArt = ({ b, seed = 707 }: { b: Biome; seed?: number }) => {
         <circle key={i} cx={s.x} cy={s.y} r={s.r}
           fill="#fff" opacity={0.35 + ((i * 13) % 5) / 12} />
       ))}
-      {/* shooting stars */}
-      <line x1="320" y1="40"  x2="380" y2="10"  stroke="#fff" strokeWidth="1.5" opacity="0.7" />
-      <line x1="60"  y1="180" x2="100" y2="160" stroke="#fff" strokeWidth="1" opacity="0.55" />
-      {/* dimensional rift */}
-      <ellipse cx="200" cy="220" rx="200" ry="80" fill={`url(#${b.id}-rift)`} />
-      <ellipse cx="200" cy="220" rx="140" ry="42" fill="#f0abfc" opacity="0.55" />
-      <ellipse cx="200" cy="220" rx="70"  ry="18" fill="#fff" opacity="0.85" />
-      {/* obsidian pillars at different depths */}
-      <polygon points="14,560 32,200 50,560" fill={`url(#${b.id}-pillar)`} />
-      <polygon points="32,560 32,200 50,560" fill="#08031a" opacity="0.85" />
-      <polygon points="350,540 368,180 386,540" fill={`url(#${b.id}-pillar)`} />
-      <polygon points="368,540 368,180 386,540" fill="#08031a" opacity="0.85" />
-      <polygon points="100,560 116,340 132,560" fill="#1a0f3a" opacity="0.92" />
-      <polygon points="270,560 286,320 302,560" fill="#1a0f3a" opacity="0.92" />
+      {/* shooting stars — varied trajectory per tile */}
+      <line x1={280 + rng() * 80} y1={40 + rng() * 40} x2={360 + rng() * 40} y2={10 + rng() * 20} stroke="#fff" strokeWidth="1.5" opacity="0.7" />
+      <line x1={40 + rng() * 60}  y1={160 + rng() * 40} x2={90 + rng() * 30}  y2={150 + rng() * 30} stroke="#fff" strokeWidth="1" opacity="0.55" />
+      {/* dimensional rift — position + size per tile */}
+      {(() => {
+        const rcx = 160 + rng() * 80, rcy = 180 + rng() * 80, rrx = 160 + rng() * 80, rry = 60 + rng() * 40;
+        return <g>
+          <ellipse cx={rcx} cy={rcy} rx={rrx} ry={rry} fill={`url(#${b.id}-${seed}-rift)`} />
+          <ellipse cx={rcx} cy={rcy} rx={rrx * 0.7} ry={rry * 0.52} fill="#f0abfc" opacity="0.55" />
+          <ellipse cx={rcx} cy={rcy} rx={rrx * 0.35} ry={rry * 0.22} fill="#fff" opacity="0.85" />
+        </g>;
+      })()}
+      {/* obsidian pillars — positions varied per tile */}
+      {Array.from({ length: 4 }).map((_, i) => {
+        const px = 14 + i * 110 + rng() * 30;
+        return (
+          <g key={i}>
+            <polygon points={`${px},560 ${px + 18},${180 + rng() * 80} ${px + 36},560`} fill={`url(#${b.id}-${seed}-pillar)`} />
+            <polygon points={`${px + 18},560 ${px + 18},${180 + rng() * 80} ${px + 36},560`} fill="#08031a" opacity="0.85" />
+          </g>
+        );
+      })}
       {/* floating runic glyphs */}
       {[[90, 320], [320, 280], [200, 370], [60, 420], [340, 400]].map((p, i) => (
         <g key={i} transform={`translate(${p[0]} ${p[1]})`}>
@@ -494,36 +559,46 @@ export const ApexArt = ({ b, seed = 808 }: { b: Biome; seed?: number }) => {
   return (
     <g>
       <defs>
-        <radialGradient id={`${b.id}-halo`} cx="50%" cy="38%" r="55%">
+        <radialGradient id={`${b.id}-${seed}-halo`} cx="50%" cy="38%" r="55%">
           <stop offset="0%"  stopColor="#fff" stopOpacity="0.95" />
           <stop offset="35%" stopColor="#fbbf24" stopOpacity="0.6" />
           <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id={`${b.id}-obelisk`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${b.id}-${seed}-obelisk`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#7e22ce" />
           <stop offset="100%" stopColor="#1a0524" />
         </linearGradient>
       </defs>
-      {/* radial divine rays */}
-      {Array.from({ length: 36 }).map((_, i) => {
-        const a = (i * Math.PI * 2) / 36;
-        const x2 = 200 + Math.cos(a) * 480;
-        const y2 = 220 + Math.sin(a) * 480;
+      {/* radial divine rays — center position shifts per tile */}
+      {(() => {
+        const hcx = 160 + rng() * 80, hcy = 180 + rng() * 80;
+        return <g>
+          {Array.from({ length: 36 }).map((_, i) => {
+            const a = (i * Math.PI * 2) / 36;
+            const x2 = hcx + Math.cos(a) * 480;
+            const y2 = hcy + Math.sin(a) * 480;
+            return (
+              <line key={i} x1={hcx} y1={hcy} x2={x2} y2={y2}
+                stroke="#fbbf24" strokeWidth="1" opacity="0.16" />
+            );
+          })}
+          <circle cx={hcx} cy={hcy} r="220" fill={`url(#${b.id}-${seed}-halo)`} />
+          <circle cx={hcx} cy={hcy} r="84"  fill="none" stroke="#fef3c7" strokeWidth="3" opacity="0.85" />
+          <circle cx={hcx} cy={hcy} r="56"  fill="none" stroke="#fbbf24" strokeWidth="2" opacity="0.7" />
+          <circle cx={hcx} cy={hcy} r="34"  fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.55" />
+        </g>;
+      })()}
+      {/* obelisk colonnade — positions varied per tile */}
+      {Array.from({ length: 4 }).map((_, i) => {
+        const ox = 30 + i * 110 + rng() * 20;
+        const oh = 180 + rng() * 100;
         return (
-          <line key={i} x1="200" y1="220" x2={x2} y2={y2}
-            stroke="#fbbf24" strokeWidth="1" opacity="0.16" />
+          <polygon key={i}
+            points={`${ox},540 ${ox + 16},${540 - oh} ${ox + 32},540`}
+            fill={`url(#${b.id}-${seed}-obelisk)`}
+            stroke="#fbbf24" strokeWidth="0.8" />
         );
       })}
-      {/* great halo */}
-      <circle cx="200" cy="220" r="220" fill={`url(#${b.id}-halo)`} />
-      <circle cx="200" cy="220" r="84"  fill="none" stroke="#fef3c7" strokeWidth="3" opacity="0.85" />
-      <circle cx="200" cy="220" r="56"  fill="none" stroke="#fbbf24" strokeWidth="2" opacity="0.7" />
-      <circle cx="200" cy="220" r="34"  fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.55" />
-      {/* obelisk colonnade */}
-      <polygon points="44,540 60,180 76,540"  fill={`url(#${b.id}-obelisk)`} stroke="#fbbf24" strokeWidth="0.8" />
-      <polygon points="324,540 340,180 356,540" fill={`url(#${b.id}-obelisk)`} stroke="#fbbf24" strokeWidth="0.8" />
-      <polygon points="120,560 132,260 144,560" fill="#2a0e3a" opacity="0.92" stroke="#fbbf24" strokeWidth="0.5" />
-      <polygon points="256,560 268,260 280,560" fill="#2a0e3a" opacity="0.92" stroke="#fbbf24" strokeWidth="0.5" />
       {/* central altar */}
       <rect x="160" y="450" width="80" height="150" fill="#1a0524" stroke="#fbbf24" strokeWidth="1.2" />
       <rect x="150" y="438" width="100" height="16" fill="#fbbf24" opacity="0.92" />

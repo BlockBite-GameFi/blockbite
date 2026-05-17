@@ -12,18 +12,37 @@ function shortenAddress(address: string) {
 }
 
 export default function CustomWalletButton() {
-  const { wallet, publicKey, disconnect, connecting, connected, select } = useWallet();
+  const { wallet, wallets, publicKey, disconnect, connecting, connected, select } = useWallet();
   const { setVisible } = useWalletModal();
 
-  // Defensive opener: if the adapter is stuck mid-connect, clear the selected
-  // wallet first so the modal can show the picker again instead of silently
-  // waiting for the dead connect promise to resolve.
+  // Inline picker — bypasses the @solana/wallet-adapter-react-ui modal entirely
+  // for environments where wallet-extension content scripts eat the modal's
+  // click handlers or where its CSS gets stripped by an aggressive blocker.
+  // Shows our own dropdown with the same wallet list and calls `select(name)`
+  // directly. The react-ui modal is still attempted in parallel as a fallback.
+  const [inlinePicker, setInlinePicker] = useState(false);
+
   const openPicker = useCallback(() => {
     if (connecting && !connected) {
       try { select(null as unknown as Parameters<typeof select>[0]); } catch { /* ignore */ }
     }
-    setVisible(true);
+    // 1) Try the standard modal — works in most browsers, headless tests confirm
+    try { setVisible(true); } catch { /* ignore */ }
+    // 2) Also flip our own inline picker after a short delay, so if the standard
+    //    modal is blocked by an extension content script the user still has a way
+    //    to pick a wallet from our UI.
+    setTimeout(() => setInlinePicker(true), 200);
   }, [connecting, connected, select, setVisible]);
+
+  const pickWallet = useCallback((adapterName: string) => {
+    setInlinePicker(false);
+    try {
+      // select() is type-narrowed to WalletName | null in the adapter; cast at the call site
+      select(adapterName as unknown as Parameters<typeof select>[0]);
+    } catch (e) {
+      console.warn('[wallet] inline select failed:', e);
+    }
+  }, [select]);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [subPanel, setSubPanel] = useState<'none' | 'avatar'>('none');
@@ -75,19 +94,101 @@ export default function CustomWalletButton() {
   // ── Disconnected ──────────────────────────────────────────────
   if (!connected || !publicKey) {
     return (
-      <button
-        type="button"
-        className="btn btn-primary"
-        onClick={openPicker}
-        title={connecting ? 'Click again to reset and pick a wallet' : 'Connect a Solana wallet'}
-        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 20px', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}
-      >
-        {connecting ? (
-          <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />Connecting...</>
-        ) : (
-          <>Connect Wallet</>
+      <div style={{ position: 'relative' }} ref={dropdownRef}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={openPicker}
+          title={connecting ? 'Click again to reset and pick a wallet' : 'Connect a Solana wallet'}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 20px', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}
+        >
+          {connecting ? (
+            <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />Connecting...</>
+          ) : (
+            <>Connect Wallet</>
+          )}
+        </button>
+
+        {/* Inline fallback picker — appears 200 ms after click in case the
+            standard wallet-adapter-react-ui modal is blocked by a browser
+            extension. Lists every adapter that's been installed by the
+            WalletProvider with a "Detected" badge for browser extensions
+            actually present on this device. */}
+        {inlinePicker && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 8px)',
+              right: 0,
+              minWidth: 280,
+              zIndex: 10000,
+              background: 'rgba(10,10,24,0.96)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(125,211,252,0.35)',
+              borderRadius: 14,
+              padding: 12,
+              boxShadow: '0 12px 40px rgba(0,0,0,0.55), 0 0 22px rgba(125,211,252,0.15)',
+              fontFamily: '"Space Grotesk", system-ui, sans-serif',
+            }}
+            role="dialog"
+            aria-label="Select a wallet"
+          >
+            <div style={{
+              fontSize: 10, letterSpacing: 2.5, color: '#7dd3fc',
+              fontWeight: 800, marginBottom: 10, textTransform: 'uppercase',
+            }}>
+              Choose a wallet
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {wallets.map(w => {
+                const ready = w.readyState === 'Installed' || w.readyState === 'Loadable';
+                return (
+                  <button
+                    key={w.adapter.name}
+                    type="button"
+                    onClick={() => pickWallet(w.adapter.name)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 12px', borderRadius: 10,
+                      background: ready ? 'rgba(125,211,252,0.10)' : 'rgba(255,255,255,0.03)',
+                      border: ready ? '1px solid rgba(125,211,252,0.30)' : '1px solid rgba(255,255,255,0.07)',
+                      color: '#fff', fontSize: 14, fontWeight: 600,
+                      cursor: 'pointer', textAlign: 'left',
+                    }}
+                  >
+                    {w.adapter.icon && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={w.adapter.icon} alt="" width={22} height={22} style={{ borderRadius: 6 }} />
+                    )}
+                    <span style={{ flex: 1 }}>{w.adapter.name}</span>
+                    {ready && (
+                      <span style={{
+                        fontSize: 9, letterSpacing: 1.5, color: '#86efac',
+                        background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(134,239,172,0.35)',
+                        padding: '3px 7px', borderRadius: 999,
+                      }}>
+                        DETECTED
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => setInlinePicker(false)}
+              style={{
+                width: '100%', marginTop: 10, padding: '8px 12px',
+                background: 'transparent', color: '#94a3b8',
+                border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8,
+                fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
         )}
-      </button>
+      </div>
     );
   }
 

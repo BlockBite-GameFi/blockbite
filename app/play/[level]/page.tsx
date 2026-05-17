@@ -95,7 +95,20 @@ export default function PlayLevelPage() {
           </span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 24px 40px' }}>
-          <GameCanvas initialLevel={level} onBack={() => router.back()} />
+          {/* Biome-themed frame around the canvas. Border + soft glow tint
+              the game container with the current Act's accent so the player
+              always sees what biome they're in, even before looking at the
+              header chip. */}
+          <div style={{
+            padding: 14,
+            borderRadius: 24,
+            background: `radial-gradient(ellipse at 50% 0%, ${biome.accent}22 0%, transparent 70%), rgba(8,8,22,0.55)`,
+            border: `1px solid ${biome.accent}66`,
+            boxShadow: `0 0 80px ${biome.accent}33, inset 0 0 32px ${biome.glow}11`,
+            backdropFilter: 'blur(6px)',
+          }}>
+            <GameCanvas initialLevel={level} onBack={() => router.back()} biome={biome} />
+          </div>
         </div>
       </main>
     </>

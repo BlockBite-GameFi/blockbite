@@ -17,6 +17,7 @@ import { getStageName } from '@/lib/game/stages';
 import MysteryBoxModal from './MysteryBoxModal';
 import { BoxResult } from '@/lib/game/mysteryBox';
 import { reportError } from '@/lib/analytics/errorReporter';
+import type { Biome } from '@/lib/game/biomes';
 import styles from './GameCanvas.module.css';
 
 const BOARD_PX = BOARD_COLS * (CELL_SIZE + CELL_GAP) - CELL_GAP;
@@ -98,7 +99,7 @@ function drawTrayPiece(
   ctx.restore();
 }
 
-export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?: number; onBack?: () => void }) {
+export default function GameCanvas({ initialLevel = 1, onBack, biome }: { initialLevel?: number; onBack?: () => void; biome?: Biome }) {
   const { connected, publicKey, connecting, select } = useWallet();
   const { setVisible: setWalletModalVisible } = useWalletModal();
   const openWalletPicker = useCallback(() => {
@@ -387,7 +388,8 @@ export default function GameCanvas({ initialLevel = 1, onBack }: { initialLevel?
       const dt = time - lastTime;
       lastTime = time;
       ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-      drawIdleBackground(ctx, idleBlocksRef.current, time, CANVAS_W, CANVAS_H);
+      drawIdleBackground(ctx, idleBlocksRef.current, time, CANVAS_W, CANVAS_H,
+        biome ? { accent: biome.accent, glow: biome.glow, rock: biome.rock } : undefined);
 
       let shakeX = 0, shakeY = 0;
       if (shakeRef.current > 0) {

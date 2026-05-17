@@ -447,6 +447,7 @@ export function drawIdleBackground(
   time: number,
   width: number,
   height: number,
+  biomeTint?: { accent: string; glow: string; rock: string },
 ): void {
   for (const b of blocks) {
     const yOff = Math.sin(time * b.speed * 0.001 + b.phase) * 15;
@@ -457,15 +458,28 @@ export function drawIdleBackground(
     ctx.rotate(b.rotation + time * b.rotSpeed);
     ctx.globalAlpha = alpha;
 
-    const palette = BLOCK_COLORS[b.color];
+    // When a biome tint is supplied, the idle background harmonizes with the
+    // current Act's palette (Crystal cyan, Frost teal, Ember orange, etc.)
+    // instead of always cycling through the same fixed seven block colors.
+    let gradStart: string, gradEnd: string, glowColor: string;
+    if (biomeTint) {
+      gradStart = biomeTint.glow;
+      gradEnd   = biomeTint.rock;
+      glowColor = biomeTint.accent;
+    } else {
+      const palette = BLOCK_COLORS[b.color];
+      gradStart = palette.gradStart;
+      gradEnd   = palette.gradEnd;
+      glowColor = palette.glow;
+    }
     const grad = ctx.createLinearGradient(-b.size / 2, -b.size / 2, b.size / 2, b.size / 2);
-    grad.addColorStop(0, palette.gradStart);
-    grad.addColorStop(1, palette.gradEnd);
+    grad.addColorStop(0, gradStart);
+    grad.addColorStop(1, gradEnd);
 
     ctx.beginPath();
     roundRect(ctx, -b.size / 2, -b.size / 2, b.size, b.size, 10);
     ctx.fillStyle = grad;
-    ctx.shadowColor = palette.glow;
+    ctx.shadowColor = glowColor;
     ctx.shadowBlur = 20;
     ctx.fill();
     ctx.restore();

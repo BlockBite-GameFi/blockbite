@@ -15,18 +15,27 @@ export const revalidate = 30;
  * If either is missing we treat the prize pool as "not yet initialized"
  * and return 0 — the frontend renders that gracefully ("PRIZE POOL · 0 USDC").
  */
-// Production fallbacks — these are public on-chain addresses, not secrets, so
-// hardcoding them lets the API work in any environment (Vercel preview/prod,
-// local dev, CI) without having to copy env vars by hand. Env vars still
-// override these for mainnet swap-overs.
+// Production fallbacks for non-sensitive on-chain config. The PRIZE POOL
+// AUTHORITY is intentionally NOT hardcoded — the address 35z7X59rty... is
+// the compromised wallet (see project memory: RULE-G8, and MASTER_TODO P0-1).
+// If the env var isn't set we honestly return balance: 0 instead of pulling
+// from the burned wallet and presenting it to users as the "live prize pool."
 const DEFAULT_PROGRAM_ID = 'DvhxiL5PF8Cq3icqcjdbQvtMhJcj6LWheUgovRpaXTFf';
-const DEFAULT_AUTHORITY  = '35z7X59rtyts557Up1RAwpyYN7x2cFqcDc7RjPuNxFzr';
 const DEFAULT_STREAM_ID  = '1';
 
 export async function GET() {
   const programId   = process.env.NEXT_PUBLIC_VESTING_PROGRAM_ID   ?? DEFAULT_PROGRAM_ID;
-  const authority   = process.env.NEXT_PUBLIC_PRIZE_POOL_AUTHORITY ?? DEFAULT_AUTHORITY;
+  const authority   = process.env.NEXT_PUBLIC_PRIZE_POOL_AUTHORITY ?? '';
   const streamIdStr = process.env.NEXT_PUBLIC_PRIZE_POOL_STREAM_ID ?? DEFAULT_STREAM_ID;
+
+  // No authority configured → honest empty state, never read the compromised PDA.
+  if (!authority) {
+    return NextResponse.json({
+      balance: 0,
+      source: 'uninitialized',
+      note: 'Set NEXT_PUBLIC_PRIZE_POOL_AUTHORITY env var to the new vesting authority.',
+    });
+  }
 
   try {
     const { Connection, PublicKey } = await import('@solana/web3.js');

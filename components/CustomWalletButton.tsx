@@ -24,22 +24,47 @@ export default function CustomWalletButton() {
 
   const openPicker = useCallback(() => {
     // eslint-disable-next-line no-console
-    console.info('[BlockBite] wallet picker invoked — build v5-dedup-pickers');
+    console.info('[BlockBite] wallet picker invoked — build v6-observer-dedup');
+    // Always start hidden — the observer below decides whether to show it.
+    setInlinePicker(false);
     if (connecting && !connected) {
       try { select(null as unknown as Parameters<typeof select>[0]); } catch { /* ignore */ }
     }
     // 1) Try the standard modal — works in most browsers (CSP fix in 65ee8e1
     //    means the wallet adapter's network handshake no longer fails silently).
     try { setVisible(true); } catch { /* ignore */ }
-    // 2) Probe the standard modal at 300 ms. If it failed to mount (extension
-    //    content script ate it), fall back to OUR inline picker. This avoids
-    //    showing BOTH pickers at once, which production users find confusing.
-    setTimeout(() => {
-      const standardModalUp = !!document.querySelector('.wallet-adapter-modal.wallet-adapter-modal-fade-in');
-      if (!standardModalUp) {
+    // 2) Use a MutationObserver to watch for the standard modal. If it ever
+    //    appears (any time within 1500 ms), we DON'T show inline. If it never
+    //    appears, we fall back to inline. Active observer also catches the case
+    //    where the standard modal mounts AFTER our initial probe — in that case
+    //    we close the inline picker so only one is ever visible.
+    let standardSeen = false;
+    const isStandardModalVisible = () => {
+      const m = document.querySelector('.wallet-adapter-modal-container, .wallet-adapter-modal');
+      if (!m) return false;
+      const rect = (m as HTMLElement).getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const observer = new MutationObserver(() => {
+      if (isStandardModalVisible()) {
+        standardSeen = true;
+        setInlinePicker(false);
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    // Initial check in case the modal was already there
+    if (isStandardModalVisible()) standardSeen = true;
+    // Fallback timer — if no standard modal after 600 ms, show inline.
+    const fallbackTimer = window.setTimeout(() => {
+      if (!standardSeen && !isStandardModalVisible()) {
         setInlinePicker(true);
       }
-    }, 300);
+    }, 600);
+    // Stop observing after 1500 ms either way (modal animations complete by then).
+    window.setTimeout(() => {
+      observer.disconnect();
+      window.clearTimeout(fallbackTimer);
+    }, 1500);
   }, [connecting, connected, select, setVisible]);
 
   const pickWallet = useCallback((adapterName: string) => {
@@ -125,7 +150,7 @@ export default function CustomWalletButton() {
         {inlinePicker && (
           <div
             data-testid="bb-inline-wallet-picker"
-            data-build="v3-2026-05-17-force-rebuild"
+            data-build="v6-2026-05-18-observer-dedup"
             style={{
               position: 'absolute',
               top: 'calc(100% + 8px)',

@@ -12,8 +12,19 @@ function shortenAddress(address: string) {
 }
 
 export default function CustomWalletButton() {
-  const { wallet, wallets, publicKey, disconnect, connecting, connected, select } = useWallet();
+  const { wallet, wallets, publicKey, disconnect, connecting, connected, select, connect } = useWallet();
   const { setVisible } = useWalletModal();
+
+  // autoConnect is disabled globally (prevents stuck-connecting on page load).
+  // But that means after the user picks a wallet via the standard modal,
+  // select() is called but connect() never fires — so nothing happens.
+  // This effect bridges the gap: whenever a wallet becomes selected and we
+  // are not yet connected/connecting, trigger connect() explicitly.
+  useEffect(() => {
+    if (wallet && !connected && !connecting) {
+      connect().catch(() => {});
+    }
+  }, [wallet, connected, connecting, connect]);
 
   // Inline picker — bypasses the @solana/wallet-adapter-react-ui modal entirely
   // for environments where wallet-extension content scripts eat the modal's

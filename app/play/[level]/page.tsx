@@ -95,17 +95,19 @@ export default function PlayLevelPage() {
           </span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 24px 40px' }}>
-          {/* Biome-themed frame around the canvas. Border + soft glow tint
-              the game container with the current Act's accent so the player
-              always sees what biome they're in, even before looking at the
-              header chip. */}
+          {/* Biome-themed frame around the canvas. Border + accent tint give
+              players a visual cue of which Act they're in.
+              NOTE: backdrop-filter: blur() and large box-shadow blur radii were
+              removed here — both are GPU-heavy compositor operations that
+              crashed the renderer on lower-end mobile devices, leaving users
+              with a blank /play/[level] page. The visual identity is now
+              carried by the border + flat translucent fill, which costs zero
+              GPU and renders identically on every device. */}
           <div style={{
             padding: 14,
             borderRadius: 24,
-            background: `radial-gradient(ellipse at 50% 0%, ${biome.accent}22 0%, transparent 70%), rgba(8,8,22,0.55)`,
+            background: `linear-gradient(180deg, ${biome.accent}1a 0%, rgba(8,8,22,0.55) 60%)`,
             border: `1px solid ${biome.accent}66`,
-            boxShadow: `0 0 80px ${biome.accent}33, inset 0 0 32px ${biome.glow}11`,
-            backdropFilter: 'blur(6px)',
           }}>
             <GameCanvas initialLevel={level} onBack={() => router.back()} biome={biome} />
           </div>

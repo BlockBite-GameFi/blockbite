@@ -26,16 +26,17 @@ export default function CustomWalletButton() {
     // Build-marker so the user can verify in DevTools console that the latest
     // bundle is loaded — if they see this log, the inline-picker fix is live.
     // eslint-disable-next-line no-console
-    console.info('[BlockBite] wallet picker invoked — build v3-2026-05-17 (inline fallback active)');
+    console.info('[BlockBite] wallet picker invoked — build v4-inline-sync (always-on inline picker)');
     if (connecting && !connected) {
       try { select(null as unknown as Parameters<typeof select>[0]); } catch { /* ignore */ }
     }
-    // 1) Try the standard modal — works in most browsers, headless tests confirm
+    // 1) Try the standard modal — works in most browsers (headless tests confirm).
     try { setVisible(true); } catch { /* ignore */ }
-    // 2) Also flip our own inline picker after a short delay, so if the standard
-    //    modal is blocked by an extension content script the user still has a way
-    //    to pick a wallet from our UI.
-    setTimeout(() => setInlinePicker(true), 200);
+    // 2) Open OUR own inline picker SYNCHRONOUSLY in the same React tick. The
+    //    previous 200 ms setTimeout was getting clobbered by the standard
+    //    modal's backdrop mousedown firing the outside-click handler, which
+    //    re-rendered and dropped the queued state update before it committed.
+    setInlinePicker(true);
   }, [connecting, connected, select, setVisible]);
 
   const pickWallet = useCallback((adapterName: string) => {

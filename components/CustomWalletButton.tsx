@@ -23,6 +23,10 @@ export default function CustomWalletButton() {
   const [inlinePicker, setInlinePicker] = useState(false);
 
   const openPicker = useCallback(() => {
+    // Build-marker so the user can verify in DevTools console that the latest
+    // bundle is loaded — if they see this log, the inline-picker fix is live.
+    // eslint-disable-next-line no-console
+    console.info('[BlockBite] wallet picker invoked — build v3-2026-05-17 (inline fallback active)');
     if (connecting && !connected) {
       try { select(null as unknown as Parameters<typeof select>[0]); } catch { /* ignore */ }
     }
@@ -116,6 +120,8 @@ export default function CustomWalletButton() {
             actually present on this device. */}
         {inlinePicker && (
           <div
+            data-testid="bb-inline-wallet-picker"
+            data-build="v3-2026-05-17-force-rebuild"
             style={{
               position: 'absolute',
               top: 'calc(100% + 8px)',
@@ -137,7 +143,7 @@ export default function CustomWalletButton() {
               fontSize: 10, letterSpacing: 2.5, color: '#7dd3fc',
               fontWeight: 800, marginBottom: 10, textTransform: 'uppercase',
             }}>
-              Choose a wallet
+              Pick your Solana wallet
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {wallets.map(w => {

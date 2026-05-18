@@ -95,11 +95,17 @@
 }
 
 .overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  /* All three call-sites (`!connected`, `isCheckingTicket`, `NO TICKETS`)
+     return this overlay as a standalone block — NOT layered on top of the
+     game canvas. Using position:absolute here collapsed the box inside the
+     play-page wrapper (whose `backdrop-filter` creates a containing block),
+     squeezing all text into a ~28px column. Use normal flow with a sane
+     min-width so the overlay sizes itself instead. */
+  width: 100%;
+  min-width: min(420px, 100%);
+  max-width: 560px;
+  margin: 0 auto;
+  min-height: 360px;
   background: linear-gradient(135deg, rgba(6,6,20,0.97) 0%, rgba(10,10,35,0.98) 50%, rgba(6,6,25,0.97) 100%);
   backdrop-filter: blur(12px);
   display: flex;

@@ -70,13 +70,14 @@ export async function recordScore(entry: LeaderboardEntry): Promise<void> {
       : Promise.resolve(),
 
     // Layer 2a: all-time sorted set (GT = only update if new score is higher)
-    kv.zadd(keys.all, { gt: true, score: entry.score, member: entry.walletAddress }),
+    // @vercel/kv v3 signature: zadd(key, opts, scoreMember) — opts is separate arg
+    kv.zadd(keys.all,     { gt: true }, { score: entry.score, member: entry.walletAddress }),
 
     // Layer 2b: monthly sorted set
-    kv.zadd(keys.monthly, { gt: true, score: entry.score, member: entry.walletAddress }),
+    kv.zadd(keys.monthly, { gt: true }, { score: entry.score, member: entry.walletAddress }),
 
     // Layer 2c: daily sorted set
-    kv.zadd(keys.daily, { gt: true, score: entry.score, member: entry.walletAddress }),
+    kv.zadd(keys.daily,   { gt: true }, { score: entry.score, member: entry.walletAddress }),
 
     // Layer 3: metadata hash (always update to latest entry)
     kv.hset(LB_META_KEY, { [entry.walletAddress]: JSON.stringify(entry) }),

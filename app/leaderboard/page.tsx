@@ -47,14 +47,24 @@ export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LiveEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Map tab names to API period param
+  const tabPeriod: Record<Tab, string> = {
+    'Monthly':    'monthly',
+    'All-Time':   'all',
+    'Daily':      'daily',
+    'Whale Room': 'all',
+  };
+
   useEffect(() => {
     setLoading(true);
-    fetch('/api/leaderboard?limit=20')
+    const period = tabPeriod[activeTab];
+    fetch(`/api/leaderboard?limit=20&period=${period}`)
       .then(r => r.ok ? r.json() : { entries: [] })
       .then(data => setEntries(Array.isArray(data.entries) ? data.entries : []))
       .catch(() => setEntries([]))
       .finally(() => setLoading(false));
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   return (
     <main className={styles.main} style={{ background: 'var(--ds-bg)', color: 'var(--ds-text)' }}>

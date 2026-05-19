@@ -1,47 +1,42 @@
 /**
- * GET /api/leaderboard?limit=10
- * Returns top-N entries sorted by score descending.
- * Backed by Vercel KV (persists across cold starts) with in-memory fallback.
+ * GET /api/leaderboard?limit=20&period=monthly|daily|all
+ *
+ * Double-database leaderboard:
+ *   - Reads from KV sorted sets (period-partitioned) for fast, accurate results
+ *   - Falls back to in-memory Map on cold start
+ *   - period param drives Monthly / Daily / All-Time tabs on the frontend
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { LEADERBOARD, hydrateFromKV } from '@/lib/leaderboard/store';
-import { MOCK_LEADERBOARD } from '@/lib/game/constants';
+import { LEADERBOARD, hydrateFromKV, getTopScores } from '@/lib/leaderboard/store';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') ?? 10)));
+  const url    = new URL(req.url);
+  const limit  = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') ?? 20)));
+  const period = (url.searchParams.get('period') ?? 'all') as 'all' | 'monthly' | 'daily';
 
-  // Hydrate from KV on cold start (no-op if already warm)
+  // Warm the in-memory cache from KV on cold start
   await hydrateFromKV();
 
-  const live = [...LEADERBOARD.values()]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((e, i) => ({
-      rank: i + 1,
-      wallet: e.walletAddress.slice(0, 4) + '...' + e.walletAddress.slice(-4),
-      walletFull: e.walletAddress,
-      score: e.score,
-      level: e.level,
-      submittedAt: e.submittedAt,
-      live: true,
-    }));
+  // Read from time-partitioned sorted sets (double-database Layer 2)
+  const entries = await getTopScores(period, limit);
 
-  // Fall back to mock data only when no real entries exist
-  const entries = live.length > 0
-    ? live
-    : MOCK_LEADERBOARD.slice(0, limit).map(e => ({
-        rank: e.rank,
-        wallet: e.wallet,
-        walletFull: null,
-        score: e.score,
-        level: null,
-        submittedAt: null,
-        live: false,
-      }));
+  const live = entries.map((e, i) => ({
+    rank:        i + 1,
+    wallet:      e.walletAddress.slice(0, 4) + '...' + e.walletAddress.slice(-4),
+    walletFull:  e.walletAddress,
+    score:       e.score,
+    level:       e.level,
+    submittedAt: e.submittedAt,
+    txSignature: e.txSignature ?? null, // blockchain proof
+    live:        true,
+  }));
 
-  return NextResponse.json({ entries, total: LEADERBOARD.size });
+  return NextResponse.json({
+    entries: live,
+    total:   LEADERBOARD.size,
+    period,
+  });
 }

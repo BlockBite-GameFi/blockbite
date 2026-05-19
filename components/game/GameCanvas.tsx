@@ -216,17 +216,37 @@ export default function GameCanvas({ initialLevel = 1, onBack, biome }: { initia
         localStorage.setItem('bb_games_played', String(prevGames + 1));
       }
 
-      // Submit score to leaderboard API (placements no longer sent — server-computed)
+      // ── Score submission: double-database strategy ──────────────────
+      // Primary path: session-token verified submit (when SESSION_SECRET is set)
+      // Fallback path: simplified submit (always runs as safety net)
+      // Both paths write to KV sorted sets (monthly/daily/all-time).
+
+      const scorePayload = {
+        score: state.score,
+        level: initialLevel,
+        walletAddress: publicKey.toBase58(),
+      };
+
       if (sessionTokenRef.current) {
+        // Primary: full HMAC-verified submission
         fetch('/api/session/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            token: sessionTokenRef.current,
-            score: state.score,
-            level: initialLevel,
-            walletAddress: publicKey.toBase58(),
-          }),
+          body: JSON.stringify({ token: sessionTokenRef.current, ...scorePayload }),
+        }).catch(() => {
+          // Primary failed — fall through to fallback
+          fetch('/api/score/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(scorePayload),
+          }).catch(() => { /* best-effort */ });
+        });
+      } else {
+        // Fallback: direct submit (no session token — devnet / SESSION_SECRET not set)
+        fetch('/api/score/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(scorePayload),
         }).catch(() => { /* best-effort */ });
       }
     }

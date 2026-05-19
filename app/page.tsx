@@ -1,45 +1,60 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useRef } from 'react';
 import { useApp } from '@/lib/useApp';
 import Navbar from '@/components/Navbar';
-import { MascotSVG, BRAND_MASCOTS, PALETTES } from '@/components/Mascot';
 
 const BLOCK_COLORS = ['#a78bfa','#5eead4','#fbbf24','#f472b6','#7dd3fc','#fb923c'];
 const BLOCK_ICONS: string[] = ['◆', '◈', '◉', '⬡', '◇', '✦'];
 
 const FEATURES = {
   en: [
-    { ic:'01', t:'On-chain Proofs',       d:'Every Act completion writes a ProofCache PDA to Solana. Your progress is permanent and verifiable.' },
-    { ic:'02', t:'Real USDC Rewards',      d:'70% of ticket revenue goes to the prize pool. Claim USDC directly to your wallet — no intermediaries.' },
-    { ic:'03', t:'Skill-Based Match-3',    d:'4,000 levels across 8 biomes. Boards seeded by keccak256 — same level, identical for every player.' },
-    { ic:'04', t:'Vesting Cooldown',       d:'24-hour on-chain cooldown between claims. Enforced by the Solana program — not just a UI check.' },
-    { ic:'05', t:'Transparent Tokenomics', d:'70% prize · 15% team · 10% dev · 5% referral. All splits happen atomically on-chain.' },
-    { ic:'06', t:'Immutable Contract',     d:'Upgrade authority will be burned before mainnet. After burn: contract is permanently autonomous — no admin can alter on-chain logic or vault rules.' },
+    { ic:'01', t:'Verifiable Transparency',
+      d:'Rewards are anchored to public on-chain milestones and prize pools, ensuring a trustless system with zero intermediaries.' },
+    { ic:'02', t:'Fair-Play Competition',
+      d:'Skill-based matching ensures a level playing field with identical conditions for every participant.' },
+    { ic:'03', t:'Secure Distribution Architecture',
+      d:'Our unique flow eliminates direct vault-to-wallet interactions, significantly reducing the surface for smart contract exploits.' },
+    { ic:'04', t:'Human-Centric Filter',
+      d:'Leverages competition-based mechanics as a natural barrier to filter out bots and prioritize real human supporters.' },
+    { ic:'05', t:'Active Retention Loop',
+      d:'Gamified milestones transform passive holders into active participants, driving deeper community engagement.' },
+    { ic:'06', t:'Operational Efficiency',
+      d:'Automated distribution workflows eliminate manual administration, allowing builders to focus on scaling, not overhead.' },
   ],
   id: [
-    { ic:'01', t:'Bukti On-chain',         d:'Setiap Babak selesai menulis ProofCache PDA ke Solana. Progresmu permanen.' },
-    { ic:'02', t:'Hadiah USDC Nyata',      d:'70% pendapatan tiket masuk ke pool hadiah. Klaim USDC langsung ke wallet.' },
-    { ic:'03', t:'Match-3 Berbasis Skill', d:'4.000 level di 8 bioma. Papan diacak oleh keccak256.' },
-    { ic:'04', t:'Cooldown Vesting',       d:'Cooldown 24 jam on-chain dipaksa oleh program Solana.' },
-    { ic:'05', t:'Tokenomik Transparan',   d:'Pembagian 70/15/10/5 terjadi secara atomik on-chain.' },
-    { ic:'06', t:'Kontrak Imutabel',       d:'Upgrade authority akan dibakar sebelum mainnet. Setelah dibakar: kontrak permanen otonom — tidak ada admin yang bisa mengubah logika on-chain.' },
+    { ic:'01', t:'Transparansi Terverifikasi',
+      d:'Reward terikat ke milestone dan prize pool publik on-chain — sistem trustless tanpa perantara.' },
+    { ic:'02', t:'Kompetisi Fair-Play',
+      d:'Matching berbasis skill memastikan arena yang sama rata: kondisi identik untuk setiap peserta.' },
+    { ic:'03', t:'Arsitektur Distribusi Aman',
+      d:'Alur unik kami menghilangkan interaksi langsung vault-ke-wallet, memangkas permukaan serangan smart contract.' },
+    { ic:'04', t:'Filter Berbasis Manusia',
+      d:'Mekanik kompetisi jadi penghalang alami untuk bot — prioritas ke pendukung manusia nyata.' },
+    { ic:'05', t:'Loop Retensi Aktif',
+      d:'Milestone tergamifikasi mengubah holder pasif jadi peserta aktif — engagement komunitas lebih dalam.' },
+    { ic:'06', t:'Efisiensi Operasional',
+      d:'Workflow distribusi otomatis menghilangkan administrasi manual — builder fokus scaling, bukan overhead.' },
   ],
 };
 
+// Step 3 was "Clear Acts" — too gamer-jargon for a B2B audience. Reframed
+// as "Climb the Leaderboard" so founders + recipients both grok it: the
+// game is the human-filter competition layer, not a hidden goal.
 const STEPS = {
   en: [
-    { t:'Connect Wallet',  d:'Phantom, Solflare, Backpack, or any Solana wallet.' },
-    { t:'Buy Tickets',     d:'From $1 USDC. Tickets fuel gameplay and unlock reward tiers.' },
-    { t:'Clear Acts',      d:'Complete 500 levels to finish an Act and write your proof on-chain.' },
-    { t:'Claim USDC',      d:'After the 24h cooldown, claim your tier reward directly to your wallet.' },
+    { t:'Connect Wallet',         d:'Phantom, Solflare, Backpack, or any Solana wallet.' },
+    { t:'Buy Tickets',            d:'Tickets fuel gameplay and unlock reward tiers — competition is the human-filter for distribution.' },
+    { t:'Climb the Leaderboard',  d:'Play through skill-based Acts. Top performers earn the largest share of the on-chain prize pool.' },
+    { t:'Claim Rewards',          d:'After the 24h cooldown, claim your tier reward directly to your wallet.' },
   ],
   id: [
-    { t:'Hubungkan Wallet',  d:'Phantom, Solflare, Backpack, atau wallet Solana apapun.' },
-    { t:'Beli Tiket',        d:'Mulai dari $1 USDC. Tiket untuk bermain dan membuka tingkat hadiah.' },
-    { t:'Selesaikan Babak',  d:'Selesaikan 500 level untuk menyelesaikan Babak dan tulis bukti on-chain.' },
-    { t:'Klaim USDC',        d:'Setelah cooldown 24 jam, klaim hadiahmu langsung ke wallet.' },
+    { t:'Hubungkan Wallet',       d:'Phantom, Solflare, Backpack, atau wallet Solana apapun.' },
+    { t:'Beli Tiket',             d:'Tiket untuk bermain dan membuka tingkat reward — kompetisi adalah filter manusia untuk distribusi.' },
+    { t:'Naik di Leaderboard',    d:'Mainkan Babak berbasis skill. Performer terbaik dapat bagian terbesar dari prize pool on-chain.' },
+    { t:'Klaim Reward',           d:'Setelah cooldown 24 jam, klaim reward tier-mu langsung ke wallet.' },
   ],
 };
 
@@ -89,7 +104,7 @@ export default function Home() {
   const B = BIOMES[lang]   ?? BIOMES.en;
 
   return (
-    <div style={{ minHeight:'100vh', background:'var(--ds-bg)', color:'var(--ds-text)', fontFamily:'var(--font-sg)', overflowX:'hidden', transition:'background .25s,color .25s' }}>
+    <div style={{ minHeight:'100vh', background:'var(--ds-bg)', color:'var(--ds-text)', fontFamily:"'Montserrat', var(--font-sg), system-ui, sans-serif", overflowX:'hidden', transition:'background .25s,color .25s' }}>
       <canvas ref={cvs} style={{ position:'fixed', inset:0, pointerEvents:'none', zIndex:0, opacity:.18 }} />
       <Navbar />
 
@@ -100,25 +115,30 @@ export default function Home() {
           {lang==='id' ? 'SEGERA HADIR · SOLANA DEVNET' : 'COMING SOON · SOLANA DEVNET'}
         </div>
 
-        <h1 style={{ fontSize:'clamp(38px,9vw,92px)', fontWeight:900, lineHeight:.95, letterSpacing:'-2px', margin:0 }}>
-          {lang==='id' ? <>Main Blok.<br/><span style={{ background:'var(--ds-grad)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>Dapat USDC Asli.</span></>
-                       : <>Play Blocks.<br/><span style={{ background:'var(--ds-grad)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>Earn Real USDC.</span></>}
+        <h1 style={{ fontFamily:"'Montserrat', 'Space Grotesk', system-ui, sans-serif", fontSize:'clamp(38px,9vw,92px)', fontWeight:900, lineHeight:.95, letterSpacing:'-2px', margin:0 }}>
+          {lang==='id' ? <>Naik di Leaderboard,<br/><span style={{ background:'var(--ds-grad)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>Dapat Reward Nyata.</span></>
+                       : <>Climb the Board,<br/><span style={{ background:'var(--ds-grad)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>Earn Real Rewards.</span></>}
         </h1>
 
-        <p style={{ fontSize:'clamp(14px,2vw,18px)', color:'var(--ds-text-dim)', maxWidth:520, lineHeight:1.65, margin:0 }}>
+        <p style={{ fontSize:'clamp(14px,2vw,18px)', color:'var(--ds-text-dim)', maxWidth:560, lineHeight:1.65, margin:0 }}>
           {lang==='id'
-            ? 'BlockBite adalah game puzzle match-3 on-chain di Solana. Selesaikan Babak, tulis bukti on-chain, dan klaim hadiah USDC nyata.'
-            : 'BlockBite is an on-chain match-3 puzzle game on Solana. Clear Acts, write proofs on-chain, and claim real USDC rewards.'}
+            ? 'Distribusi berbasis milestone yang otomatis dan terverifikasi — untuk builder dan user.'
+            : 'Automated, verifiable milestones-based distribution for builders and users.'}
         </p>
 
-        {/* Brand mascots */}
-        <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap', alignItems:'flex-end' }}>
-          {BRAND_MASCOTS.map((m, i) => (
-            <Link key={m.id} href="/mascots" style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6, textDecoration:'none', animation:`bbFloat ${2.6+i*.35}s ease-in-out infinite`, animationDelay:`${i*.22}s` }}>
-              <MascotSVG cfg={m} size={90}/>
-              <span style={{ fontSize:10, fontWeight:800, color: PALETTES[m.palKey][0], letterSpacing:'.5px' }}>{m.name}</span>
-            </Link>
-          ))}
+        {/* BlockBite mascot — the 3D logo character is the brand mascot.
+            Replaces the generic procedural MascotSVG set (Brawler/Sunny/...). */}
+        <div style={{ display:'flex', justifyContent:'center', alignItems:'center', position:'relative' }}>
+          {/* soft accent glow behind the mascot */}
+          <div aria-hidden style={{
+            position:'absolute', width:240, height:240, borderRadius:'50%',
+            background:'radial-gradient(circle, rgba(167,139,250,0.45) 0%, rgba(167,139,250,0) 70%)',
+            filter:'blur(8px)', zIndex:0,
+          }}/>
+          <div style={{ position:'relative', zIndex:1, animation:'bbFloat 3.4s ease-in-out infinite' }}>
+            <Image src="/logo.png" alt="BlockBite" width={200} height={200} priority
+              style={{ objectFit:'contain', filter:'drop-shadow(0 10px 24px rgba(0,0,0,0.45))' }}/>
+          </div>
         </div>
 
         <div style={{ display:'flex', gap:10, justifyContent:'center', flexWrap:'wrap' }}>

@@ -31,7 +31,7 @@
 }
 
 .logoText {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-family: 'Montserrat', 'Space Grotesk', system-ui, sans-serif;
   font-size: 18px;
   font-weight: 900;
   color: var(--text, #fff);

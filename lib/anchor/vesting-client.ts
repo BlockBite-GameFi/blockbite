@@ -24,7 +24,12 @@ import {
   getAccount,
   createAssociatedTokenAccountInstruction,
 } from '@solana/spl-token';
-import IDL from '@/target/idl/blockbite_vesting.json';
+// IDL is co-located in lib/anchor/ because .vercelignore excludes target/.
+// The Anchor build still writes target/idl/blockbite_vesting.json on CI;
+// when it changes substantively, run `cp target/idl/blockbite_vesting.json
+// lib/anchor/idl.json` to keep this copy in sync (or wire a postbuild
+// script in Anchor.toml).
+import IDL from './idl.json';
 
 export const VESTING_PROGRAM_ID = new PublicKey(IDL.address);
 

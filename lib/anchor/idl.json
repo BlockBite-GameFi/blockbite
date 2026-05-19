@@ -1,0 +1,557 @@
+{
+  "address": "DvhxiL5PF8Cq3icqcjdbQvtMhJcj6LWheUgovRpaXTFf",
+  "metadata": {
+    "name": "blockbite_vesting",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "BlockBite token vesting — linear unlock with partial withdrawal on Solana devnet"
+  },
+  "instructions": [
+    {
+      "name": "cancel",
+      "docs": [
+        "Creator cancels stream: remaining unvested tokens return to creator."
+      ],
+      "discriminator": [
+        232,
+        219,
+        223,
+        41,
+        219,
+        236,
+        220,
+        190
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "stream",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  114,
+                  101,
+                  97,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "stream.authority",
+                "account": "StreamAccount"
+              },
+              {
+                "kind": "account",
+                "path": "stream.stream_id",
+                "account": "StreamAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "stream.authority",
+                "account": "StreamAccount"
+              },
+              {
+                "kind": "account",
+                "path": "stream.stream_id",
+                "account": "StreamAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority_ata",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_stream",
+      "docs": [
+        "Lock `amount` tokens from creator into a PDA vault.",
+        "Vesting is linear from `start_ts` to `end_ts`.",
+        "`cliff_ts = 0` means no cliff (behaves as start_ts).",
+        "Pass cliff_ts between start_ts and end_ts to enforce a cliff period."
+      ],
+      "discriminator": [
+        71,
+        188,
+        111,
+        127,
+        108,
+        40,
+        229,
+        158
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "beneficiary"
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "stream",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  114,
+                  101,
+                  97,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              },
+              {
+                "kind": "arg",
+                "path": "stream_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "PDA token account; authority = stream PDA so withdraw can sign via seeds."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              },
+              {
+                "kind": "arg",
+                "path": "stream_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority_ata",
+          "docs": [
+            "Creator's token account to debit."
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "stream_id",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "start_ts",
+          "type": "i64"
+        },
+        {
+          "name": "cliff_ts",
+          "type": "i64"
+        },
+        {
+          "name": "end_ts",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "withdraw",
+      "docs": [
+        "Beneficiary claims however many tokens have vested since last withdrawal.",
+        "VGPV: tracks withdrawal velocity; enforcement logic added in W5."
+      ],
+      "discriminator": [
+        183,
+        18,
+        70,
+        156,
+        148,
+        109,
+        161,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "beneficiary",
+          "signer": true
+        },
+        {
+          "name": "stream",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  114,
+                  101,
+                  97,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "stream.authority",
+                "account": "StreamAccount"
+              },
+              {
+                "kind": "account",
+                "path": "stream.stream_id",
+                "account": "StreamAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "stream.authority",
+                "account": "StreamAccount"
+              },
+              {
+                "kind": "account",
+                "path": "stream.stream_id",
+                "account": "StreamAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "beneficiary_ata",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "StreamAccount",
+      "discriminator": [
+        243,
+        60,
+        164,
+        106,
+        199,
+        192,
+        110,
+        53
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "Cancelled",
+      "discriminator": [
+        136,
+        23,
+        42,
+        65,
+        143,
+        233,
+        234,
+        46
+      ]
+    },
+    {
+      "name": "StreamCreated",
+      "discriminator": [
+        93,
+        150,
+        91,
+        15,
+        166,
+        8,
+        251,
+        166
+      ]
+    },
+    {
+      "name": "Withdrawn",
+      "discriminator": [
+        20,
+        89,
+        223,
+        198,
+        194,
+        124,
+        219,
+        13
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ZeroAmount",
+      "msg": "Amount must be greater than zero"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidTimeRange",
+      "msg": "end_ts must be strictly after start_ts"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidCliff",
+      "msg": "cliff_ts must be between start_ts and end_ts (or 0 for no cliff)"
+    },
+    {
+      "code": 6003,
+      "name": "NothingToWithdraw",
+      "msg": "Nothing available to withdraw yet"
+    },
+    {
+      "code": 6004,
+      "name": "Unauthorized",
+      "msg": "Caller is not authorized for this action"
+    },
+    {
+      "code": 6005,
+      "name": "StreamCancelled",
+      "msg": "Stream has already been cancelled"
+    },
+    {
+      "code": 6006,
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6007,
+      "name": "VelocityViolation",
+      "msg": "Velocity exceeds human threshold — VGPV violation (enforced W5)"
+    }
+  ],
+  "types": [
+    {
+      "name": "Cancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "stream",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "refunded",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StreamAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "beneficiary",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_total",
+            "type": "u64"
+          },
+          {
+            "name": "amount_withdrawn",
+            "type": "u64"
+          },
+          {
+            "name": "start_ts",
+            "type": "i64"
+          },
+          {
+            "name": "cliff_ts",
+            "type": "i64"
+          },
+          {
+            "name": "end_ts",
+            "type": "i64"
+          },
+          {
+            "name": "stream_id",
+            "type": "u64"
+          },
+          {
+            "name": "cancelled",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "velocity_strikes",
+            "type": "u8"
+          },
+          {
+            "name": "last_action_ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StreamCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "stream",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "beneficiary",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "start_ts",
+            "type": "i64"
+          },
+          {
+            "name": "cliff_ts",
+            "type": "i64"
+          },
+          {
+            "name": "end_ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Withdrawn",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "stream",
+            "type": "pubkey"
+          },
+          {
+            "name": "beneficiary",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    }
+  ]
+}

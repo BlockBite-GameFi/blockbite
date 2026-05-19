@@ -5,6 +5,13 @@ import Image from 'next/image';
 import { useEffect, useRef } from 'react';
 import { useApp } from '@/lib/useApp';
 import Navbar from '@/components/Navbar';
+// Final 3D PNG mascots replacing SVG placeholders
+const FINAL_MASCOTS = [
+  { src:'/mascots/mascot-brawler.png', name:'Brawler', color:'#d94553' },
+  { src:'/mascots/mascot-sunny.png',   name:'Sunny',   color:'#e1a438' },
+  { src:'/mascots/mascot-rex.png',     name:'Rex',     color:'#9499e8' },
+  { src:'/mascots/mascot-tide.png',    name:'Tide',    color:'#6ec8e0' },
+];
 
 const BLOCK_COLORS = ['#a78bfa','#5eead4','#fbbf24','#f472b6','#7dd3fc','#fb923c'];
 const BLOCK_ICONS: string[] = ['◆', '◈', '◉', '⬡', '◇', '✦'];
@@ -126,19 +133,20 @@ export default function Home() {
             : 'Automated, verifiable milestones-based distribution for builders and users.'}
         </p>
 
-        {/* BlockBite mascot — the 3D logo character is the brand mascot.
-            Replaces the generic procedural MascotSVG set (Brawler/Sunny/...). */}
-        <div style={{ display:'flex', justifyContent:'center', alignItems:'center', position:'relative' }}>
-          {/* soft accent glow behind the mascot */}
-          <div aria-hidden style={{
-            position:'absolute', width:240, height:240, borderRadius:'50%',
-            background:'radial-gradient(circle, rgba(167,139,250,0.45) 0%, rgba(167,139,250,0) 70%)',
-            filter:'blur(8px)', zIndex:0,
-          }}/>
-          <div style={{ position:'relative', zIndex:1, animation:'bbFloat 3.4s ease-in-out infinite' }}>
-            <Image src="/logo.png" alt="BlockBite" width={200} height={200} priority
-              style={{ objectFit:'contain', filter:'drop-shadow(0 10px 24px rgba(0,0,0,0.45))' }}/>
-          </div>
+        {/* Brand mascots — final 3D PNG characters */}
+        <div style={{ display:'flex', gap:20, justifyContent:'center', flexWrap:'wrap', alignItems:'flex-end' }}>
+          {FINAL_MASCOTS.map((m, i) => (
+            <Link key={m.name} href="/mascots" style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8, textDecoration:'none', animation:`bbFloat ${2.6+i*.35}s ease-in-out infinite`, animationDelay:`${i*.22}s` }}>
+              <div style={{
+                width:110, height:110, borderRadius:22, overflow:'hidden',
+                background:'rgba(255,255,255,0.95)',
+                boxShadow:`0 6px 32px ${m.color}55, 0 0 0 2px ${m.color}44`,
+              }}>
+                <Image src={m.src} alt={m.name} width={110} height={110} style={{ objectFit:'contain' }} />
+              </div>
+              <span style={{ fontSize:11, fontWeight:800, color:m.color, letterSpacing:'.6px' }}>{m.name}</span>
+            </Link>
+          ))}
         </div>
 
         <div style={{ display:'flex', gap:10, justifyContent:'center', flexWrap:'wrap' }}>

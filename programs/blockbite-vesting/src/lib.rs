@@ -148,6 +148,184 @@ pub mod blockbite_vesting {
         Ok(())
     }
 
+    /// Add tokens to an existing stream's vault with atomic revenue split.
+    ///
+    /// Required by MASTER_TODO P1-2 #2 (fund_vault). The funder deposits
+    /// `amount` USDC (or any SPL token of the correct mint). The amount is
+    /// split atomically — one transaction, four transfers, all-or-nothing:
+    ///
+    ///   70%  → stream vault     (compounds the prize pool)
+    ///   15%  → team wallet      (operations)
+    ///   10%  → dev wallet       (protocol development)
+    ///    5%  → referral wallet  (optional — funder picks)
+    ///
+    /// If `referrer_amount` would round to 0 (very small deposits), the 5%
+    /// is folded back into the vault portion so no fraction is lost on-chain.
+    ///
+    /// All percentages match constants.ts PRIZE_POOL_PERCENTAGE,
+    /// TEAM_REVENUE_PERCENTAGE, DEV_FUND_PERCENTAGE, REFERRAL_PERCENTAGE.
+    pub fn fund_vault(ctx: Context<FundVault>, amount: u64) -> Result<()> {
+        require!(amount > 0, VestingError::ZeroAmount);
+        require!(!ctx.accounts.stream.cancelled, VestingError::StreamCancelled);
+
+        // Integer math: floor() each split so the sum is <= amount.
+        let vault_portion    = amount.checked_mul(70).ok_or(VestingError::Overflow)? / 100;
+        let team_portion     = amount.checked_mul(15).ok_or(VestingError::Overflow)? / 100;
+        let dev_portion      = amount.checked_mul(10).ok_or(VestingError::Overflow)? / 100;
+        let referral_portion = amount.checked_mul(5).ok_or(VestingError::Overflow)?  / 100;
+
+        // Any rounding remainder folds back into the vault portion.
+        let distributed = vault_portion
+            .checked_add(team_portion).ok_or(VestingError::Overflow)?
+            .checked_add(dev_portion).ok_or(VestingError::Overflow)?
+            .checked_add(referral_portion).ok_or(VestingError::Overflow)?;
+        let dust = amount.checked_sub(distributed).ok_or(VestingError::Overflow)?;
+        let vault_total = vault_portion.checked_add(dust).ok_or(VestingError::Overflow)?;
+
+        // Update on-chain accounting BEFORE transfers (CEI).
+        ctx.accounts.stream.amount_total = ctx.accounts.stream.amount_total
+            .checked_add(vault_total)
+            .ok_or(VestingError::Overflow)?;
+
+        let token_program_info = ctx.accounts.token_program.to_account_info();
+        let funder_info        = ctx.accounts.funder.to_account_info();
+        let funder_ata_info    = ctx.accounts.funder_ata.to_account_info();
+
+        // 1. Funder ATA → stream vault
+        if vault_total > 0 {
+            token::transfer(
+                CpiContext::new(
+                    token_program_info.clone(),
+                    Transfer {
+                        from:      funder_ata_info.clone(),
+                        to:        ctx.accounts.vault.to_account_info(),
+                        authority: funder_info.clone(),
+                    },
+                ),
+                vault_total,
+            )?;
+        }
+
+        // 2. Funder ATA → team ATA
+        if team_portion > 0 {
+            token::transfer(
+                CpiContext::new(
+                    token_program_info.clone(),
+                    Transfer {
+                        from:      funder_ata_info.clone(),
+                        to:        ctx.accounts.team_ata.to_account_info(),
+                        authority: funder_info.clone(),
+                    },
+                ),
+                team_portion,
+            )?;
+        }
+
+        // 3. Funder ATA → dev ATA
+        if dev_portion > 0 {
+            token::transfer(
+                CpiContext::new(
+                    token_program_info.clone(),
+                    Transfer {
+                        from:      funder_ata_info.clone(),
+                        to:        ctx.accounts.dev_ata.to_account_info(),
+                        authority: funder_info.clone(),
+                    },
+                ),
+                dev_portion,
+            )?;
+        }
+
+        // 4. Funder ATA → referral ATA (5%)
+        if referral_portion > 0 {
+            token::transfer(
+                CpiContext::new(
+                    token_program_info,
+                    Transfer {
+                        from:      funder_ata_info,
+                        to:        ctx.accounts.referral_ata.to_account_info(),
+                        authority: funder_info,
+                    },
+                ),
+                referral_portion,
+            )?;
+        }
+
+        emit!(VaultFunded {
+            stream:           ctx.accounts.stream.key(),
+            funder:           ctx.accounts.funder.key(),
+            amount_total:     amount,
+            vault_portion:    vault_total,
+            team_portion,
+            dev_portion,
+            referral_portion,
+        });
+
+        Ok(())
+    }
+
+    /// Write or update a ProofCache PDA for (stream, player).
+    ///
+    /// Callable by the schedule's admin OR via CPI from a game program
+    /// (W6 will add a CPI gate). For Week 5 the admin gate is sufficient
+    /// to validate the on-chain write path + the VGPV velocity check.
+    ///
+    /// Velocity-Gated Proof Validation:
+    ///   - tracks last_proof_ts per (stream, player)
+    ///   - if a new proof arrives faster than VGPV_MIN_SECONDS_PER_ACT,
+    ///     velocity_strikes increments
+    ///   - at VGPV_MAX_VELOCITY_STRIKES the proof is rejected with
+    ///     VelocityViolation, preventing bot-speed claims
+    pub fn update_proof(
+        ctx: Context<UpdateProof>,
+        cohort_id:    u8,
+        tier_reached: u8,
+    ) -> Result<()> {
+        require!(
+            ctx.accounts.admin.key() == ctx.accounts.stream.authority,
+            VestingError::Unauthorized,
+        );
+        require!(tier_reached <= 2, VestingError::InvalidTier);
+
+        let now = Clock::get()?.unix_timestamp;
+        let cache = &mut ctx.accounts.proof_cache;
+        let is_new = cache.player == Pubkey::default();
+
+        // VGPV: if this isn't the first proof and it arrives too quickly,
+        // accumulate a strike. Reject once the threshold is hit.
+        if !is_new {
+            let elapsed = now.saturating_sub(cache.last_proof_ts);
+            if elapsed < VGPV_MIN_SECONDS_PER_ACT {
+                cache.velocity_strikes = cache.velocity_strikes
+                    .checked_add(1)
+                    .ok_or(VestingError::Overflow)?;
+                require!(
+                    cache.velocity_strikes < VGPV_MAX_VELOCITY_STRIKES,
+                    VestingError::VelocityViolation,
+                );
+            }
+        }
+
+        cache.schedule         = ctx.accounts.stream.key();
+        cache.player           = ctx.accounts.player.key();
+        cache.cohort_id        = cohort_id;
+        cache.tier_reached     = tier_reached;
+        cache.last_proof_ts    = now;
+        if is_new {
+            cache.bump = ctx.bumps.proof_cache;
+        }
+
+        emit!(ProofUpdated {
+            stream:       ctx.accounts.stream.key(),
+            player:       ctx.accounts.player.key(),
+            cohort_id,
+            tier_reached,
+            timestamp:    now,
+        });
+
+        Ok(())
+    }
+
     /// Creator cancels stream.
     /// Already-vested but unclaimed tokens go to the beneficiary.
     /// Truly unvested tokens return to the creator.
@@ -299,6 +477,81 @@ pub struct Withdraw<'info> {
 }
 
 #[derive(Accounts)]
+pub struct FundVault<'info> {
+    #[account(mut)]
+    pub funder: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"stream", stream.authority.as_ref(), &stream.stream_id.to_le_bytes()],
+        bump = stream.bump,
+    )]
+    pub stream: Account<'info, StreamAccount>,
+
+    #[account(
+        mut,
+        seeds = [b"vault", stream.authority.as_ref(), &stream.stream_id.to_le_bytes()],
+        bump,
+        token::mint = stream.mint,
+        token::authority = stream,
+    )]
+    pub vault: Account<'info, TokenAccount>,
+
+    /// Funder's source ATA — debited four times in one tx (atomic).
+    #[account(
+        mut,
+        token::mint = stream.mint,
+        token::authority = funder,
+    )]
+    pub funder_ata: Account<'info, TokenAccount>,
+
+    /// Team operations wallet ATA (15%)
+    #[account(mut, token::mint = stream.mint)]
+    pub team_ata: Account<'info, TokenAccount>,
+
+    /// Dev fund ATA (10%)
+    #[account(mut, token::mint = stream.mint)]
+    pub dev_ata: Account<'info, TokenAccount>,
+
+    /// Referral wallet ATA (5%) — funder picks; protocol address if no referrer.
+    #[account(mut, token::mint = stream.mint)]
+    pub referral_ata: Account<'info, TokenAccount>,
+
+    pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+pub struct UpdateProof<'info> {
+    /// Schedule admin is the only caller in Week 5. Week 6+ adds a game-
+    /// program CPI gate via `Signer<'info>` ↔ instruction caller check.
+    pub admin: Signer<'info>,
+
+    #[account(
+        seeds = [b"stream", stream.authority.as_ref(), &stream.stream_id.to_le_bytes()],
+        bump = stream.bump,
+    )]
+    pub stream: Account<'info, StreamAccount>,
+
+    /// CHECK: the player whose progress is being recorded. We don't read or
+    /// write their account — only use the address as part of the PDA seed.
+    pub player: AccountInfo<'info>,
+
+    /// ProofCache PDA: created on first proof, updated thereafter.
+    /// init_if_needed is intentional — VGPV state needs to persist across
+    /// proofs for the same (stream, player) pair.
+    #[account(
+        init_if_needed,
+        payer = admin,
+        space = 8 + ProofCache::LEN,
+        seeds = [b"proof_cache", stream.key().as_ref(), player.key().as_ref()],
+        bump,
+    )]
+    pub proof_cache: Account<'info, ProofCache>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct Cancel<'info> {
     pub authority: Signer<'info>,
 
@@ -403,6 +656,43 @@ pub struct Cancelled {
     pub refunded:  u64,
 }
 
+#[event]
+pub struct VaultFunded {
+    pub stream:           Pubkey,
+    pub funder:           Pubkey,
+    pub amount_total:     u64,
+    pub vault_portion:    u64,
+    pub team_portion:     u64,
+    pub dev_portion:      u64,
+    pub referral_portion: u64,
+}
+
+#[event]
+pub struct ProofUpdated {
+    pub stream:       Pubkey,
+    pub player:       Pubkey,
+    pub cohort_id:    u8,
+    pub tier_reached: u8,
+    pub timestamp:    i64,
+}
+
+/// ProofCache: one PDA per (stream, player). Tracks the player's progress
+/// against this stream's cohort tier thresholds, plus VGPV velocity state.
+#[account]
+pub struct ProofCache {
+    pub schedule:         Pubkey, // 32
+    pub player:           Pubkey, // 32
+    pub cohort_id:        u8,     // 1
+    pub tier_reached:     u8,     // 1  — 0=none, 1=tier1, 2=tier2
+    pub last_proof_ts:    i64,    // 8  — VGPV: when the last proof landed
+    pub velocity_strikes: u8,     // 1  — VGPV: bot-speed counter
+    pub bump:             u8,     // 1
+}
+
+impl ProofCache {
+    pub const LEN: usize = 32 + 32 + 1 + 1 + 8 + 1 + 1; // 76
+}
+
 // ─── Errors ───────────────────────────────────────────────────────────────────
 
 #[error_code]
@@ -423,4 +713,6 @@ pub enum VestingError {
     Overflow,
     #[msg("Velocity exceeds human threshold — VGPV violation (enforced W5)")]
     VelocityViolation,
+    #[msg("Tier must be 0, 1, or 2")]
+    InvalidTier,
 }

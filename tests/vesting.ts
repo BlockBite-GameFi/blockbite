@@ -573,4 +573,228 @@ describe("blockbite-vesting — Week 4 acceptance criteria", () => {
     assert(typeof stream.lastActionTs.toNumber === "function", "last_action_ts field must exist");
     console.log(`  ✓ VGPV: velocityStrikes=${stream.velocityStrikes}, lastActionTs=${stream.lastActionTs.toNumber()}`);
   });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Week 5: fund_vault — atomic 70/15/10/5 split
+  // ──────────────────────────────────────────────────────────────────────────
+  it("W5 fund_vault: 70/15/10/5 split lands atomically", async () => {
+    const teamWallet     = Keypair.generate();
+    const devWallet      = Keypair.generate();
+    const referralWallet = Keypair.generate();
+    for (const kp of [teamWallet, devWallet, referralWallet]) {
+      const sig = await provider.connection.requestAirdrop(kp.publicKey, 1e9);
+      await provider.connection.confirmTransaction(sig, "confirmed");
+    }
+    const teamAta     = await createAssociatedTokenAccount(provider.connection, creator, mint, teamWallet.publicKey);
+    const devAta      = await createAssociatedTokenAccount(provider.connection, creator, mint, devWallet.publicKey);
+    const referralAta = await createAssociatedTokenAccount(provider.connection, creator, mint, referralWallet.publicKey);
+
+    const fundStreamId = new BN(900);
+    const [fundStreamPDA] = await deriveStreamPDA(creator.publicKey, fundStreamId);
+    const [fundVaultPDA]  = await deriveVaultPDA(creator.publicKey, fundStreamId);
+    const now = Math.floor(Date.now() / 1000);
+    await program.methods
+      .createStream(fundStreamId, new BN(1), new BN(now), new BN(0), new BN(now + 1000))
+      .accounts({
+        authority:    creator.publicKey,
+        beneficiary:  recipient.publicKey,
+        mint,
+        stream:       fundStreamPDA,
+        vault:        fundVaultPDA,
+        authorityAta: creatorAta,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([creator])
+      .rpc();
+
+    const FUND_AMOUNT = 1_000_000;
+    const vaultBefore    = await getAccount(provider.connection, fundVaultPDA);
+    const teamBefore     = await getAccount(provider.connection, teamAta);
+    const devBefore      = await getAccount(provider.connection, devAta);
+    const referralBefore = await getAccount(provider.connection, referralAta);
+
+    await program.methods
+      .fundVault(new BN(FUND_AMOUNT))
+      .accounts({
+        funder:        creator.publicKey,
+        stream:        fundStreamPDA,
+        vault:         fundVaultPDA,
+        funderAta:     creatorAta,
+        teamAta,
+        devAta,
+        referralAta,
+        tokenProgram:  TOKEN_PROGRAM_ID,
+      })
+      .signers([creator])
+      .rpc();
+
+    const vaultAfter    = await getAccount(provider.connection, fundVaultPDA);
+    const teamAfter     = await getAccount(provider.connection, teamAta);
+    const devAfter      = await getAccount(provider.connection, devAta);
+    const referralAfter = await getAccount(provider.connection, referralAta);
+
+    const vaultDelta    = Number(BigInt(vaultAfter.amount.toString())    - BigInt(vaultBefore.amount.toString()));
+    const teamDelta     = Number(BigInt(teamAfter.amount.toString())     - BigInt(teamBefore.amount.toString()));
+    const devDelta      = Number(BigInt(devAfter.amount.toString())      - BigInt(devBefore.amount.toString()));
+    const referralDelta = Number(BigInt(referralAfter.amount.toString()) - BigInt(referralBefore.amount.toString()));
+
+    assert.strictEqual(vaultDelta,    Math.floor(FUND_AMOUNT * 0.70), "vault must receive 70%");
+    assert.strictEqual(teamDelta,     Math.floor(FUND_AMOUNT * 0.15), "team must receive 15%");
+    assert.strictEqual(devDelta,      Math.floor(FUND_AMOUNT * 0.10), "dev must receive 10%");
+    assert.strictEqual(referralDelta, Math.floor(FUND_AMOUNT * 0.05), "referral must receive 5%");
+    assert.strictEqual(vaultDelta + teamDelta + devDelta + referralDelta, FUND_AMOUNT, "must fully distribute");
+    console.log(`  ✓ fund_vault: 70/15/10/5 = ${vaultDelta}/${teamDelta}/${devDelta}/${referralDelta}`);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Week 5: fund_vault — dust folds back into vault portion (no fractional loss)
+  // ──────────────────────────────────────────────────────────────────────────
+  it("W5 fund_vault: dust from rounding folds back into vault", async () => {
+    const teamWallet     = Keypair.generate();
+    const devWallet      = Keypair.generate();
+    const referralWallet = Keypair.generate();
+    for (const kp of [teamWallet, devWallet, referralWallet]) {
+      const sig = await provider.connection.requestAirdrop(kp.publicKey, 1e9);
+      await provider.connection.confirmTransaction(sig, "confirmed");
+    }
+    const teamAta     = await createAssociatedTokenAccount(provider.connection, creator, mint, teamWallet.publicKey);
+    const devAta      = await createAssociatedTokenAccount(provider.connection, creator, mint, devWallet.publicKey);
+    const referralAta = await createAssociatedTokenAccount(provider.connection, creator, mint, referralWallet.publicKey);
+
+    const dustStreamId = new BN(901);
+    const [dustStreamPDA] = await deriveStreamPDA(creator.publicKey, dustStreamId);
+    const [dustVaultPDA]  = await deriveVaultPDA(creator.publicKey, dustStreamId);
+    const now = Math.floor(Date.now() / 1000);
+    await program.methods
+      .createStream(dustStreamId, new BN(1), new BN(now), new BN(0), new BN(now + 1000))
+      .accounts({
+        authority: creator.publicKey, beneficiary: recipient.publicKey, mint,
+        stream: dustStreamPDA, vault: dustVaultPDA, authorityAta: creatorAta,
+        tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId, rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([creator])
+      .rpc();
+
+    // 103 doesn't divide by 100; expect dust=3 to fold into vault portion
+    const DUST_AMOUNT = 103;
+    const vBefore = await getAccount(provider.connection, dustVaultPDA);
+    await program.methods
+      .fundVault(new BN(DUST_AMOUNT))
+      .accounts({
+        funder: creator.publicKey, stream: dustStreamPDA, vault: dustVaultPDA,
+        funderAta: creatorAta, teamAta, devAta, referralAta, tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([creator])
+      .rpc();
+    const vAfter  = await getAccount(provider.connection, dustVaultPDA);
+    const vDelta  = Number(BigInt(vAfter.amount.toString()) - BigInt(vBefore.amount.toString()));
+
+    // vault = floor(103*0.70) + dust = 72 + 3 = 75; team=15, dev=10, ref=5 → sum 103
+    assert.strictEqual(vDelta, 75, `vault should absorb dust (got ${vDelta}, expected 75)`);
+    console.log(`  ✓ fund_vault dust: vault delta = ${vDelta} on 103 amount`);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Week 5: update_proof — admin writes ProofCache (cohort + tier persisted)
+  // ──────────────────────────────────────────────────────────────────────────
+  it("W5 update_proof: admin writes ProofCache; cohort + tier persisted", async () => {
+    const player = Keypair.generate();
+    const sig = await provider.connection.requestAirdrop(player.publicKey, 1e9);
+    await provider.connection.confirmTransaction(sig, "confirmed");
+
+    const [streamPDA] = await deriveStreamPDA(creator.publicKey, STREAM_ID);
+    const [proofPDA]  = PublicKey.findProgramAddressSync(
+      [Buffer.from("proof_cache"), streamPDA.toBuffer(), player.publicKey.toBuffer()],
+      PROGRAM_ID
+    );
+
+    await program.methods
+      .updateProof(1, 2)
+      .accounts({
+        admin:         creator.publicKey,
+        stream:        streamPDA,
+        player:        player.publicKey,
+        proofCache:    proofPDA,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([creator])
+      .rpc();
+
+    const cache = await program.account.proofCache.fetch(proofPDA);
+    assert.strictEqual(cache.cohortId, 1, "cohort_id must be 1");
+    assert.strictEqual(cache.tierReached, 2, "tier_reached must be 2");
+    assert(cache.player.equals(player.publicKey), "player must match");
+    assert(cache.schedule.equals(streamPDA), "schedule must match");
+    console.log(`  ✓ update_proof: ProofCache written; cohort=${cache.cohortId} tier=${cache.tierReached}`);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Week 5: update_proof — non-admin rejected
+  // ──────────────────────────────────────────────────────────────────────────
+  it("W5 update_proof: non-admin caller is rejected", async () => {
+    const player = Keypair.generate();
+    const [streamPDA] = await deriveStreamPDA(creator.publicKey, STREAM_ID);
+    const [proofPDA]  = PublicKey.findProgramAddressSync(
+      [Buffer.from("proof_cache"), streamPDA.toBuffer(), player.publicKey.toBuffer()],
+      PROGRAM_ID
+    );
+
+    let rejected = false;
+    try {
+      await program.methods
+        .updateProof(0, 1)
+        .accounts({
+          admin:         wrongUser.publicKey,
+          stream:        streamPDA,
+          player:        player.publicKey,
+          proofCache:    proofPDA,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([wrongUser])
+        .rpc();
+    } catch (e: unknown) {
+      rejected = true;
+      const msg = e instanceof Error ? e.message : String(e);
+      assert(msg.includes("Unauthorized") || msg.toLowerCase().includes("constraint"),
+        `expected Unauthorized, got: ${msg}`);
+    }
+    assert(rejected, "non-admin update_proof should have thrown");
+    console.log("  ✓ update_proof rejects non-admin caller");
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Week 5: update_proof — invalid tier (> 2) is rejected as InvalidTier
+  // ──────────────────────────────────────────────────────────────────────────
+  it("W5 update_proof: tier_reached > 2 is rejected", async () => {
+    const player = Keypair.generate();
+    const [streamPDA] = await deriveStreamPDA(creator.publicKey, STREAM_ID);
+    const [proofPDA]  = PublicKey.findProgramAddressSync(
+      [Buffer.from("proof_cache"), streamPDA.toBuffer(), player.publicKey.toBuffer()],
+      PROGRAM_ID
+    );
+
+    let rejected = false;
+    try {
+      await program.methods
+        .updateProof(0, 5)
+        .accounts({
+          admin:         creator.publicKey,
+          stream:        streamPDA,
+          player:        player.publicKey,
+          proofCache:    proofPDA,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([creator])
+        .rpc();
+    } catch (e: unknown) {
+      rejected = true;
+      const msg = e instanceof Error ? e.message : String(e);
+      assert(msg.includes("InvalidTier") || msg.toLowerCase().includes("tier"),
+        `expected InvalidTier, got: ${msg}`);
+    }
+    assert(rejected, "tier=5 update_proof should have thrown");
+    console.log("  ✓ update_proof rejects tier > 2");
+  });
 });

@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // ESLint errors must not block production builds — linting is a CI step,
+  // not a deploy gate. TypeScript errors still block builds.
+  eslint: { ignoreDuringBuilds: true },
+
   // Expose safe public env vars to the browser bundle
   env: {
     NEXT_PUBLIC_APP_NAME: 'BlockBite',

@@ -5,12 +5,19 @@ import Image from 'next/image';
 import { useEffect, useRef } from 'react';
 import { useApp } from '@/lib/useApp';
 import Navbar from '@/components/Navbar';
-// Final 3D PNG mascots replacing SVG placeholders
+// Final 3D PNG mascots. NOTE: the PNG asset filenames don't match the
+// characters they actually depict — file-naming pre-dates the final art.
+// Re-pair each asset path to the character it actually shows, with the
+// matching label color so the on-screen label color = character's hue.
+//   mascot-brawler.png → purple crowned king  → Rex     (#9499e8)
+//   mascot-sunny.png   → teal cube wave       → Tide    (#6ec8e0)
+//   mascot-rex.png     → red blocky fighter   → Brawler (#d94553)
+//   mascot-tide.png    → yellow happy cube    → Sunny   (#e1a438)
 const FINAL_MASCOTS = [
-  { src:'/mascots/mascot-brawler.png', name:'Brawler', color:'#d94553' },
-  { src:'/mascots/mascot-sunny.png',   name:'Sunny',   color:'#e1a438' },
-  { src:'/mascots/mascot-rex.png',     name:'Rex',     color:'#9499e8' },
-  { src:'/mascots/mascot-tide.png',    name:'Tide',    color:'#6ec8e0' },
+  { src:'/mascots/mascot-brawler.png', name:'Rex',     color:'#9499e8' },
+  { src:'/mascots/mascot-sunny.png',   name:'Tide',    color:'#6ec8e0' },
+  { src:'/mascots/mascot-rex.png',     name:'Brawler', color:'#d94553' },
+  { src:'/mascots/mascot-tide.png',    name:'Sunny',   color:'#e1a438' },
 ];
 
 const BLOCK_COLORS = ['#a78bfa','#5eead4','#fbbf24','#f472b6','#7dd3fc','#fb923c'];

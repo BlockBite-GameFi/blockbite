@@ -107,6 +107,14 @@ export default function CreateStreamPage() {
         sendTransaction,
       });
       setSig(signature);
+      // Record stream_id in localStorage so /distribute/streams can discover it
+      // without doing a heavy getProgramAccounts scan against devnet RPC.
+      try {
+        const idxKey = `bb_streams_${publicKey.toBase58()}`;
+        const stored = JSON.parse(localStorage.getItem(idxKey) ?? '[]') as string[];
+        const next = Array.from(new Set([streamId.toString(), ...stored]));
+        localStorage.setItem(idxKey, JSON.stringify(next));
+      } catch { /* localStorage off — non-fatal */ }
       // Roll the stream_id forward so a second create in the same session
       // doesn't collide with the just-claimed PDA seed.
       setStreamId(BigInt(Math.floor(Date.now() / 1000)));

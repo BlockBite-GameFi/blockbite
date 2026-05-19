@@ -25,6 +25,31 @@ const nextConfig = {
     return config;
   },
 
+  // Permanent redirects for uppercase route variants. Next.js App Router
+  // is case-sensitive — visitors typing /PARTNERSHIP, /DISTRIBUTE, etc.
+  // (often pasted from chat / docs / press) would hit a 404. These rewrites
+  // normalize to the canonical lowercase path with a 308 (preserves the
+  // HTTP method, friendly for any future POST endpoints under same path).
+  async redirects() {
+    const upper = [
+      'PARTNERSHIP', 'DISTRIBUTE', 'QUESTS', 'LEADERBOARD',
+      'SHOP', 'GUIDE', 'MAP', 'PROFILE', 'WAITLIST',
+      'GAME', 'PLAY', 'CLAIM',
+    ];
+    return [
+      ...upper.map((seg) => ({
+        source: `/${seg}/:path*`,
+        destination: `/${seg.toLowerCase()}/:path*`,
+        permanent: true,
+      })),
+      ...upper.map((seg) => ({
+        source: `/${seg}`,
+        destination: `/${seg.toLowerCase()}`,
+        permanent: true,
+      })),
+    ];
+  },
+
   // Security headers applied globally (can be overridden per-route in vercel.json)
   async headers() {
     return [

@@ -133,16 +133,28 @@ export default function Home() {
             : 'Automated, verifiable milestones-based distribution for builders and users.'}
         </p>
 
-        {/* Brand mascots — final 3D PNG characters */}
-        <div style={{ display:'flex', gap:20, justifyContent:'center', flexWrap:'wrap', alignItems:'flex-end' }}>
+        {/* Brand mascots — transparent 3D PNG characters, NO white card.
+            Each mascot floats freely on the page background with only a
+            soft per-character color glow as visual anchor. Court order
+            article 86: no opaque backgrounds allowed behind mascots. */}
+        <div style={{ display:'flex', gap:24, justifyContent:'center', flexWrap:'wrap', alignItems:'flex-end' }}>
           {FINAL_MASCOTS.map((m, i) => (
             <Link key={m.name} href="/mascots" style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8, textDecoration:'none', animation:`bbFloat ${2.6+i*.35}s ease-in-out infinite`, animationDelay:`${i*.22}s` }}>
               <div style={{
-                width:110, height:110, borderRadius:22, overflow:'hidden',
-                background:'rgba(255,255,255,0.95)',
-                boxShadow:`0 6px 32px ${m.color}55, 0 0 0 2px ${m.color}44`,
+                width:120, height:120, position:'relative',
+                display:'flex', alignItems:'center', justifyContent:'center',
               }}>
-                <Image src={m.src} alt={m.name} width={110} height={110} style={{ objectFit:'contain' }} />
+                {/* soft accent glow only — no opaque background, PNG alpha shows through */}
+                <div aria-hidden style={{
+                  position:'absolute', inset:'10%', borderRadius:'50%',
+                  background:`radial-gradient(circle, ${m.color}55 0%, ${m.color}00 70%)`,
+                  filter:'blur(10px)', zIndex:0,
+                }}/>
+                <Image
+                  src={m.src} alt={m.name}
+                  width={120} height={120}
+                  style={{ objectFit:'contain', position:'relative', zIndex:1, filter:`drop-shadow(0 6px 12px ${m.color}66)` }}
+                />
               </div>
               <span style={{ fontSize:11, fontWeight:800, color:m.color, letterSpacing:'.6px' }}>{m.name}</span>
             </Link>

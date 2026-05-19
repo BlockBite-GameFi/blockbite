@@ -46,7 +46,13 @@ const MEM_COMPLETIONS: Map<string, QuestCompletion> = new Map();
 const compKey = (questId: string, wallet: string) => `${questId}:${wallet}`;
 
 // ── KV access (graceful if unavailable) ────────────────────────────
+// @vercel/kv reads KV_REST_API_URL + KV_REST_API_TOKEN lazily on first call.
+// If those env vars are missing in production, every kv operation throws
+// — we want to fall back to the in-memory Map silently instead of
+// surfacing 500s. So we additionally probe the env vars before returning
+// the kv client.
 async function kv() {
+  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) return null;
   try {
     const mod = await import('@vercel/kv');
     return mod.kv;

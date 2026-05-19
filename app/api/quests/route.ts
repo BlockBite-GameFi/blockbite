@@ -13,13 +13,23 @@ import { createQuest, listQuests, type Quest, type QuestType } from '@/lib/quest
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const all = await listQuests();
-  // Show only active + non-expired to the public feed
-  const now = Date.now();
-  const visible = all
-    .filter((q) => q.active && (!q.expiresAt || q.expiresAt > now))
-    .sort((a, b) => b.createdAt - a.createdAt);
-  return NextResponse.json({ quests: visible });
+  try {
+    const all = await listQuests();
+    const now = Date.now();
+    const visible = all
+      .filter((q) => q.active && (!q.expiresAt || q.expiresAt > now))
+      .sort((a, b) => b.createdAt - a.createdAt);
+    return NextResponse.json({ quests: visible });
+  } catch (e) {
+    // KV misconfig in prod was returning empty 500. Honest empty state
+    // is the right fallback — the in-memory map will catch up once a
+    // quest is created.
+    return NextResponse.json({
+      quests: [],
+      degraded: true,
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
 }
 
 function isValidType(t: string): t is QuestType {

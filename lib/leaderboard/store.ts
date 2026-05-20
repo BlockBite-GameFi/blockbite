@@ -139,13 +139,15 @@ export async function getTopScores(
     // If the period sorted set is empty (all scores were in legacy hash before
     // the zadd bug fix), fall back gracefully:
     //   • monthly/daily → try all-time sorted set first
-    //   • still empty   → read from legacy hash directly
+    //   • still empty   → read from legacy hash + fire background recovery
     if (!wallets || wallets.length === 0) {
       if (period !== 'all') {
         wallets = await kv.zrange(keys.all, 0, limit - 1, { rev: true }) as string[] ?? [];
       }
       if (!wallets || wallets.length === 0) {
-        // Last resort: legacy hash (all historical data lives here)
+        // Last resort: legacy hash (all historical data lives here).
+        // Also fire background recovery so the NEXT request hits sorted sets.
+        _backgroundRecover(kv);
         return _topFromLegacyHash(kv, limit);
       }
     }
@@ -229,10 +231,23 @@ async function _topFromLegacyHash(kv: Awaited<ReturnType<typeof getKV>>, limit: 
   }
 }
 
+// Guard: only fire one background recovery per serverless instance lifetime.
+let _recovering = false;
+
+/**
+ * Fire-and-forget background recovery. Does nothing if already running.
+ * Called automatically when sorted sets are empty but legacy hash has data.
+ */
+function _backgroundRecover(kv: Awaited<ReturnType<typeof getKV>>): void {
+  if (_recovering || !kv) return;
+  _recovering = true;
+  recoverLegacyData().finally(() => { _recovering = false; });
+}
+
 /**
  * Migrate all legacy hash data into sorted sets + ensure ticket counts exist.
  * Safe to call multiple times — uses GT flag so no score is downgraded.
- * Returns { wallets, ops } counts.
+ * Returns { wallets, errors } counts.
  */
 export async function recoverLegacyData(): Promise<{ wallets: number; errors: number }> {
   const kv = await getKV();

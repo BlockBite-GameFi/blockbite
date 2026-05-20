@@ -18,27 +18,34 @@ export async function GET(req: NextRequest) {
   const limit  = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') ?? 20)));
   const period = (url.searchParams.get('period') ?? 'all') as 'all' | 'monthly' | 'daily';
 
-  // Warm the in-memory cache from KV on cold start
-  await hydrateFromKV();
+  try {
+    // Warm the in-memory cache from KV on cold start
+    await hydrateFromKV();
 
-  // Read from time-partitioned sorted sets (with fallback to legacy hash)
-  const entries = await getTopScores(period, limit);
+    // Read from time-partitioned sorted sets (with fallback to legacy hash)
+    const entries = await getTopScores(period, limit);
 
-  const live = entries.map((e, i) => ({
-    rank:          i + 1,
-    wallet:        e.walletAddress.slice(0, 4) + '...' + e.walletAddress.slice(-4),
-    walletAddress: e.walletAddress,
-    score:         e.score,
-    level:         e.level,
-    submittedAt:   e.submittedAt,
-    txSignature:   e.txSignature ?? null,
-    ticketsUsed:   e.ticketsUsed ?? null,
-    live:          true,
-  }));
+    const live = entries.map((e, i) => ({
+      rank:          i + 1,
+      wallet:        e.walletAddress.slice(0, 4) + '...' + e.walletAddress.slice(-4),
+      walletAddress: e.walletAddress,
+      score:         e.score,
+      level:         e.level,
+      submittedAt:   e.submittedAt,
+      txSignature:   e.txSignature ?? null,
+      ticketsUsed:   e.ticketsUsed ?? null,
+      live:          true,
+    }));
 
-  return NextResponse.json({
-    entries: live,
-    total:   LEADERBOARD.size,
-    period,
-  });
+    return NextResponse.json({
+      entries: live,
+      total:   LEADERBOARD.size,
+      period,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // eslint-disable-next-line no-console
+    console.error('[/api/leaderboard] error:', msg);
+    return NextResponse.json({ error: msg, entries: [], total: 0, period }, { status: 500 });
+  }
 }

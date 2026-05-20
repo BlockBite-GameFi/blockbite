@@ -25,25 +25,26 @@ Creates a new vesting stream, locking tokens from the creator's ATA into a vault
 
 | Parameter | Type | Description | Constraints |
 |---|---|---|---|
+| `stream_id` | `u64` | Unique stream ID (part of PDA seed) | Chosen by creator |
 | `amount` | `u64` | Total tokens to vest | Must be > 0 (`ZeroAmount`) |
 | `start_ts` | `i64` | Unix timestamp — vesting clock starts | Must be < `end_ts` |
+| `cliff_ts` | `i64` | Unix timestamp — first possible unlock | In `[start_ts, end_ts]`, or 0 = no cliff |
 | `end_ts` | `i64` | Unix timestamp — fully vested | Must be > `start_ts` (`InvalidTimeRange`) |
-| `cliff_ts` | `i64` | Unix timestamp — first possible unlock | Must be in `[start_ts, end_ts]` (`InvalidCliff`) |
 | `required_tier` | `u8` | Milestone gate (0=none, 1=Tier1, 2=Tier2) | Must be <= 2 (`InvalidTier`) |
 
 ### Accounts
 
 | Account | Type | Description |
 |---|---|---|
-| `creator` | `Signer` | Pays rent, must own `creator_ata` |
-| `beneficiary` | `AccountInfo` | Token recipient |
-| `stream` | `Account<StreamAccount>` | PDA: `["stream", creator, beneficiary]` |
-| `vault` | `Account<TokenAccount>` | PDA: `["vault", stream]` — token escrow |
-| `creator_ata` | `Account<TokenAccount>` | Creator's source token account |
+| `authority` | `Signer` | Creator — pays rent, owns `authority_ata` |
+| `beneficiary` | `AccountInfo` | Token recipient (stored, validated on withdraw) |
 | `mint` | `Account<Mint>` | SPL token mint |
+| `stream` | `Account<StreamAccount>` | PDA: `["stream", authority, stream_id_le8]` |
+| `vault` | `Account<TokenAccount>` | PDA: `["vault", authority, stream_id_le8]` — escrow |
+| `authority_ata` | `Account<TokenAccount>` | Creator's source token account (debited) |
 | `token_program` | `Program<Token>` | SPL Token program |
 | `system_program` | `Program<System>` | System program |
-| `associated_token_program` | `Program<AssociatedToken>` | ATA program |
+| `rent` | `Sysvar<Rent>` | Rent sysvar |
 
 ### Behavior
 
@@ -56,35 +57,39 @@ Creates a new vesting stream, locking tokens from the creator's ATA into a vault
 ### TypeScript (Anchor client)
 
 ```typescript
+const streamId = new BN(1); // choose any unique u64
+const streamIdBuffer = streamId.toArrayLike(Buffer, "le", 8);
+
 const [streamPDA] = PublicKey.findProgramAddressSync(
-  [Buffer.from("stream"), creator.publicKey.toBuffer(), beneficiary.toBuffer()],
+  [Buffer.from("stream"), authority.publicKey.toBuffer(), streamIdBuffer],
   program.programId
 );
 const [vaultPDA] = PublicKey.findProgramAddressSync(
-  [Buffer.from("vault"), streamPDA.toBuffer()],
+  [Buffer.from("vault"), authority.publicKey.toBuffer(), streamIdBuffer],
   program.programId
 );
 
 await program.methods
   .createStream(
-    new BN(amount),
-    new BN(startTs),
-    new BN(endTs),
-    new BN(cliffTs),
-    requiredTier  // 0 | 1 | 2
+    streamId,          // stream_id: u64
+    new BN(amount),    // amount: u64
+    new BN(startTs),   // start_ts: i64
+    new BN(cliffTs),   // cliff_ts: i64 (0 = no cliff)
+    new BN(endTs),     // end_ts: i64
+    requiredTier       // required_tier: u8 (0 | 1 | 2)
   )
   .accounts({
-    creator: creator.publicKey,
+    authority: authority.publicKey,
     beneficiary,
+    mint,
     stream: streamPDA,
     vault: vaultPDA,
-    creatorAta,
-    mint,
+    authorityAta,
     tokenProgram: TOKEN_PROGRAM_ID,
     systemProgram: SystemProgram.programId,
-    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+    rent: SYSVAR_RENT_PUBKEY,
   })
-  .signers([creator])
+  .signers([authority])
   .rpc();
 ```
 
@@ -155,7 +160,6 @@ await program.methods
     stream: streamPDA,
     vault: vaultPDA,
     beneficiaryAta,
-    mint,
     tokenProgram: TOKEN_PROGRAM_ID,
     proofCache: SystemProgram.programId,  // dummy for no gate
   })
@@ -164,7 +168,7 @@ await program.methods
 
 // With milestone gate (required_tier > 0)
 const [proofCachePDA] = PublicKey.findProgramAddressSync(
-  [Buffer.from("proof"), streamPDA.toBuffer(), beneficiary.publicKey.toBuffer()],
+  [Buffer.from("proof_cache"), streamPDA.toBuffer(), beneficiary.publicKey.toBuffer()],
   program.programId
 );
 
@@ -356,12 +360,12 @@ Admin writes a player's activity tier to their `ProofCache` PDA. Gated by VGPV b
 
 ```typescript
 const [proofCachePDA] = PublicKey.findProgramAddressSync(
-  [Buffer.from("proof"), streamPDA.toBuffer(), player.toBuffer()],
+  [Buffer.from("proof_cache"), streamPDA.toBuffer(), player.toBuffer()],
   program.programId
 );
 
 await program.methods
-  .updateProof(tier)  // 0 | 1 | 2
+  .updateProof(cohortId, tier)  // cohort_id: u8, tier_reached: u8
   .accounts({
     admin: admin.publicKey,
     stream: streamPDA,
@@ -412,20 +416,21 @@ pub const VGPV_MAX_VELOCITY_STRIKES: u8  = 3;        // 3 strikes = blocked
 
 ```typescript
 // StreamAccount
+const streamIdBuffer = streamId.toArrayLike(Buffer, "le", 8); // BN to 8-byte LE
 const [streamPDA, streamBump] = PublicKey.findProgramAddressSync(
-  [Buffer.from("stream"), creator.toBuffer(), beneficiary.toBuffer()],
+  [Buffer.from("stream"), authority.toBuffer(), streamIdBuffer],
   programId
 );
 
 // Vault (TokenAccount for stream)
 const [vaultPDA] = PublicKey.findProgramAddressSync(
-  [Buffer.from("vault"), streamPDA.toBuffer()],
+  [Buffer.from("vault"), authority.toBuffer(), streamIdBuffer],
   programId
 );
 
 // ProofCache (per-player per-stream)
 const [proofCachePDA] = PublicKey.findProgramAddressSync(
-  [Buffer.from("proof"), streamPDA.toBuffer(), player.toBuffer()],
+  [Buffer.from("proof_cache"), streamPDA.toBuffer(), player.toBuffer()],
   programId
 );
 ```

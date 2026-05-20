@@ -33,12 +33,12 @@ Creates a new vesting stream and locks tokens in a vault PDA.
 | `required_tier` | `u8` | Minimum ProofCache tier needed to withdraw (0 = no gate, 1 or 2 = game milestone required) |
 
 **Accounts:**
-- `creator` — signer, pays rent
-- `beneficiary` — token recipient
-- `stream` — StreamAccount PDA (`["stream", creator, beneficiary]`)
-- `vault` — Vault TokenAccount PDA (`["vault", stream]`) — holds locked tokens
-- `creator_ata` — creator's token account (deducted)
-- `mint`, `token_program`, `system_program`, `associated_token_program`
+- `authority` — signer (creator), pays rent
+- `beneficiary` — token recipient (stored in stream, validated on withdraw)
+- `stream` — StreamAccount PDA (`["stream", authority, stream_id_le8]`)
+- `vault` — Vault TokenAccount PDA (`["vault", authority, stream_id_le8]`) — holds locked tokens
+- `authority_ata` — authority's token account (deducted)
+- `mint`, `token_program`, `system_program`, `rent`
 
 **Errors:** `ZeroAmount`, `InvalidTimeRange`, `InvalidCliff`, `InvalidTier`
 
@@ -190,9 +190,9 @@ All arithmetic uses `u128` intermediate values to prevent overflow on large toke
 
 | Account | Seeds |
 |---|---|
-| StreamAccount | `["stream", creator.key(), beneficiary.key()]` |
-| Vault (TokenAccount) | `["vault", stream.key()]` |
-| ProofCache | `["proof", stream.key(), player.key()]` |
+| StreamAccount | `["stream", authority.key(), &stream_id.to_le_bytes()]` |
+| Vault (TokenAccount) | `["vault", authority.key(), &stream_id.to_le_bytes()]` |
+| ProofCache | `["proof_cache", stream.key(), player.key()]` |
 
 ---
 

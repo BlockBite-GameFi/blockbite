@@ -86,20 +86,20 @@
 - [x] TDP_FIRST_ARCHITECTURE.md — 10 flowcharts + mathematics + pivot narrative
 
 ### 1.2 Program-Level Documentation
-- [ ] programs/blockbite-vesting/README.md — program-specific TDP docs
-- [ ] docs/INSTRUCTION_REFERENCE.md — all 5 instructions documented
-- [ ] docs/INTEGRATION_GUIDE.md — how other projects use this TDP
-- [ ] docs/ARCHITECTURE_DECISIONS.md — 3+ ADRs (Week 9 requirement)
-- [ ] docs/SECURITY_CHECKLIST.md — Week 7 security audit template
+- [x] programs/blockbite-vesting/README.md — program-specific TDP docs
+- [x] docs/INSTRUCTION_REFERENCE.md — all 5 instructions documented
+- [x] docs/INTEGRATION_GUIDE.md — how other projects use this TDP
+- [x] docs/ARCHITECTURE_DECISIONS.md — 6 ADRs (ADR-001 through ADR-006)
+- [x] docs/SECURITY_CHECKLIST.md — Week 7 audit template (37/39 PASS)
 
 ### 1.3 Root-Level Positioning
-- [ ] README.md — update to TDP-first (not game-first)
-- [ ] PITCH.md — BD team one-pager for outreach
-- [ ] DEPLOYMENT_GUIDE.md — step-by-step devnet instructions
+- [x] README.md — update to TDP-first (not game-first)
+- [x] PITCH.md — BD team one-pager for outreach
+- [x] DEPLOYMENT_GUIDE.md — step-by-step devnet instructions
 
 ### 1.4 Submission Materials
 - [x] WEEK5_REPORT.md — ready to submit
-- [ ] WEEK5_PR_DESCRIPTION.md — GitHub PR body
+- [x] WEEK5_PR_DESCRIPTION.md — GitHub PR body
 
 ---
 
@@ -113,9 +113,9 @@
 - [x] No token loss in fund_vault (dust → vault invariant)
 - [x] Cancelled stream cannot be re-cancelled
 - [x] Fully-vested stream cannot be cancelled
-- [ ] Verify vault PDA authority is StreamAccount (not user wallet)
-- [ ] Verify no re-entrancy vectors (Solana CEI)
-- [ ] Verify init_if_needed flag is needed for ProofCache
+- [x] Vault PDA authority is stream PDA (token::authority = stream) — confirmed in code
+- [x] No re-entrancy: Solana single-threaded + CEI pattern in all handlers
+- [x] init_if_needed justified: ProofCache must persist VGPV state across multiple update_proof calls
 
 ### 2.2 Mathematical Verification
 - [x] unlock(t) = amount × (t - start) / (end - start) formula verified
@@ -123,7 +123,7 @@
 - [x] Rate R = amount / duration (tokens per second)
 - [x] Revenue split: floor arithmetic, dust → vault, sum = D
 - [x] VGPV: bot detection with 3-strike limit
-- [ ] Edge case: amount = 1 (minimum token)
+- [x] Edge case: amount = 1 (minimum token) — verified via EC1 test
 - [ ] Edge case: duration = 1 second (minimum stream)
 - [ ] Edge case: all tokens withdrawn before cancel
 
@@ -138,7 +138,7 @@
 ## PHASE 3: FRONTEND (Week 6 Preparation)
 
 ### 3.1 TDP Dashboard (Week 6 Required)
-- [ ] /dashboard route — TDP stream management
+- [x] /dashboard route — TDP stream management scaffold (app/dashboard/page.tsx)
 - [ ] Wallet connection: Phantom, Solflare support
 - [ ] Create Stream form: cliff, amount, end date, recipient, required_tier
 - [ ] Active Streams list: vested %, claimable amount, time remaining
@@ -192,11 +192,11 @@
 - [x] 20+ tests across two describe blocks
 - [x] All Week 4 criteria (AC1-AC7, cliff, VGPV, fund_vault, update_proof)
 - [x] All Week 5 criteria (W5.1-W5.10)
-- [ ] Edge case: amount = 1 minimum
-- [ ] Edge case: cliff_ts = start_ts (no cliff)
-- [ ] Edge case: required_tier = 2 (higher tier gate)
+- [x] Edge case: amount = 1 minimum — EC1 test added
+- [x] Edge case: cliff_ts = start_ts (no cliff) — EC2 test added
+- [x] Edge case: required_tier = 2 (higher tier gate) — EC3 test added
 - [ ] Edge case: double withdrawal in same block
-- [ ] Edge case: cancel after partial withdrawal
+- [x] Edge case: cancel after partial withdrawal — EC4 test added
 
 ### 5.2 Integration Tests (Week 7 Required)
 - [ ] Full user flow: create → wait cliff → update_proof → withdraw → fully vest

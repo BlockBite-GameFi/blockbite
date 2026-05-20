@@ -22,11 +22,12 @@ pub mod blockbite_vesting {
     /// Pass cliff_ts between start_ts and end_ts to enforce a cliff period.
     pub fn create_stream(
         ctx: Context<CreateStream>,
-        stream_id: u64,
-        amount:    u64,
-        start_ts:  i64,
-        cliff_ts:  i64, // 0 = no cliff
-        end_ts:    i64,
+        stream_id:     u64,
+        amount:        u64,
+        start_ts:      i64,
+        cliff_ts:      i64, // 0 = no cliff
+        end_ts:        i64,
+        required_tier: u8,  // 0 = no milestone gate, 1/2 = require proof tier
     ) -> Result<()> {
         require!(amount > 0, VestingError::ZeroAmount);
         require!(end_ts > start_ts, VestingError::InvalidTimeRange);
@@ -51,6 +52,7 @@ pub mod blockbite_vesting {
         stream.bump              = ctx.bumps.stream;
         stream.velocity_strikes  = 0;
         stream.last_action_ts    = start_ts;
+        stream.required_tier     = required_tier;
 
         token::transfer(
             CpiContext::new(
@@ -78,13 +80,25 @@ pub mod blockbite_vesting {
     }
 
     /// Beneficiary claims however many tokens have vested since last withdrawal.
-    /// VGPV: tracks withdrawal velocity; enforcement logic added in W5.
+    /// Milestone gate: if stream.required_tier > 0, proof_cache must show tier reached.
+    /// VGPV: tracks withdrawal velocity to block bot-speed claims.
     pub fn withdraw(ctx: Context<Withdraw>) -> Result<()> {
         require!(!ctx.accounts.stream.cancelled, VestingError::StreamCancelled);
         require!(
             ctx.accounts.beneficiary.key() == ctx.accounts.stream.beneficiary,
             VestingError::Unauthorized
         );
+
+        // Milestone gate: only enforce if stream was created with required_tier > 0.
+        if ctx.accounts.stream.required_tier > 0 {
+            let cache_data = ctx.accounts.proof_cache.try_borrow_data()?;
+            // Skip 8-byte Anchor discriminator then deserialize
+            let cache = ProofCache::try_deserialize(&mut &cache_data[..])?;
+            require!(
+                cache.tier_reached >= ctx.accounts.stream.required_tier,
+                VestingError::MilestoneNotMet,
+            );
+        }
 
         let now = Clock::get()?.unix_timestamp;
         let stream = &ctx.accounts.stream;
@@ -329,6 +343,7 @@ pub mod blockbite_vesting {
     /// Creator cancels stream.
     /// Already-vested but unclaimed tokens go to the beneficiary.
     /// Truly unvested tokens return to the creator.
+    /// Fails if stream is already cancelled or already fully vested.
     pub fn cancel(ctx: Context<Cancel>) -> Result<()> {
         require!(!ctx.accounts.stream.cancelled, VestingError::StreamCancelled);
         require!(
@@ -338,6 +353,10 @@ pub mod blockbite_vesting {
 
         let now = Clock::get()?.unix_timestamp;
         let stream = &ctx.accounts.stream;
+
+        // Cannot cancel after full vest — nothing to return to creator.
+        let fully_vested = stream.unlocked_amount(now) >= stream.amount_total;
+        require!(!fully_vested, VestingError::FullyVested);
 
         // Split at the vested boundary as of now
         let vested_at_cancel        = stream.unlocked_amount(now);
@@ -472,6 +491,12 @@ pub struct Withdraw<'info> {
         token::authority = beneficiary,
     )]
     pub beneficiary_ata: Account<'info, TokenAccount>,
+
+    /// ProofCache PDA for (stream, beneficiary).
+    /// Checked in handler only when stream.required_tier > 0.
+    /// Pass SystemProgram (or any account) when required_tier == 0.
+    /// CHECK: manually deserialized and validated in handler
+    pub proof_cache: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token>,
 }
@@ -611,10 +636,11 @@ pub struct StreamAccount {
     pub bump:             u8,     // 1
     pub velocity_strikes: u8,     // 1  — VGPV: bot-speed counter
     pub last_action_ts:   i64,    // 8  — VGPV: timestamp of last withdraw
+    pub required_tier:    u8,     // 1  — 0=no milestone gate, 1/2=min ProofCache tier
 }
 
 impl StreamAccount {
-    pub const LEN: usize = 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 8; // 155
+    pub const LEN: usize = 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + 8 + 1; // 156
 
     /// Linear vesting with optional cliff.
     /// Returns 0 before cliff_ts, then increases linearly from start_ts to end_ts.
@@ -709,9 +735,13 @@ pub enum VestingError {
     Unauthorized,
     #[msg("Stream has already been cancelled")]
     StreamCancelled,
+    #[msg("Stream is fully vested — nothing left to cancel")]
+    FullyVested,
+    #[msg("Milestone not met — required proof tier not yet reached")]
+    MilestoneNotMet,
     #[msg("Arithmetic overflow")]
     Overflow,
-    #[msg("Velocity exceeds human threshold — VGPV violation (enforced W5)")]
+    #[msg("Velocity exceeds human threshold — VGPV violation")]
     VelocityViolation,
     #[msg("Tier must be 0, 1, or 2")]
     InvalidTier,

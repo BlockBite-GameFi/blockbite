@@ -17,6 +17,7 @@ const NAV_LINKS = [
   { name: 'PLAY',        href: '/game',        play: true  },
   { name: 'LEADERBOARD', href: '/leaderboard', play: false },
   { name: 'SHOP',        href: '/shop',        play: false },
+  { name: 'STREAMS',     href: '/streams',     play: false },
   { name: 'GUIDE',       href: '/how-to-play', play: false },
 ] as const;
 

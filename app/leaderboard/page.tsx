@@ -23,11 +23,12 @@ const TAB_PERIOD: Record<Tab, string> = {
 
 interface LiveEntry {
   rank: number;
-  walletAddress: string; // API returns 'walletAddress' for live entries
-  wallet?: string;       // API also returns truncated 'wallet'
-  score: number;
+  walletAddress: string; // full address
+  wallet?: string;       // truncated display alias
+  score: number;         // best (highest) single-game score
   level: number | null;
   submittedAt: number | null;
+  ticketsUsed: number | null;
   live?: boolean;
 }
 
@@ -134,7 +135,8 @@ export default function LeaderboardPage() {
           <div className={styles.tableHeader}>
             <span>RANK</span>
             <span>PLAYER</span>
-            <span style={{ textAlign: 'right' }}>SCORE</span>
+            <span style={{ textAlign: 'right' }}>BEST / TICKET</span>
+            <span style={{ textAlign: 'right' }}>TICKETS USED</span>
             <span style={{ textAlign: 'right' }}>EST. REWARD</span>
           </div>
 
@@ -164,11 +166,14 @@ export default function LeaderboardPage() {
               const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
               return (
                 <div key={entry.walletAddress} className={`${styles.tableRow} ${isTop ? styles.rowTop : ''}`}>
+                  {/* RANK */}
                   <div className={styles.rankCol}>
                     <span className={styles.rankNum} style={{ color: isTop ? rankColors[i] : undefined }}>
                       #{entry.rank}
                     </span>
                   </div>
+
+                  {/* PLAYER */}
                   <div className={styles.playerCol}>
                     <div style={{ fontWeight: 700, color: isTop ? '#FFFFFF' : '#CCCCCC', fontFamily: "'Orbitron', monospace", fontSize: 13 }}>
                       {entry.wallet ?? shortWallet(entry.walletAddress ?? '')}
@@ -177,9 +182,21 @@ export default function LeaderboardPage() {
                       <div style={{ fontSize: 11, color: '#55557A' }}>Level {entry.level}</div>
                     )}
                   </div>
+
+                  {/* BEST SCORE / TICKET */}
                   <div style={{ textAlign: 'right' }} className="neon-cyan orbitron">
                     {entry.score.toLocaleString()}
                   </div>
+
+                  {/* TICKETS USED */}
+                  <div style={{ textAlign: 'right', fontFamily: "'Orbitron', monospace", fontSize: 12 }}>
+                    {entry.ticketsUsed != null
+                      ? <span style={{ color: '#a78bfa', fontWeight: 700 }}>{entry.ticketsUsed.toLocaleString()}</span>
+                      : <span style={{ color: '#55557A' }}>—</span>
+                    }
+                  </div>
+
+                  {/* EST. REWARD */}
                   <div style={{ textAlign: 'right', color: '#55557A', fontFamily: "'Orbitron', monospace", fontSize: 12 }}>
                     —
                   </div>

@@ -75,9 +75,10 @@
 }
 
 /* ── Table ── */
+/* cols: RANK | PLAYER | BEST SCORE | TICKETS | EST. REWARD */
 .tableHeader {
   display: grid;
-  grid-template-columns: 60px 1fr 140px 140px;
+  grid-template-columns: 60px 1fr 130px 110px 120px;
   gap: 12px;
   padding: 12px 24px;
   font-family: 'Orbitron', monospace;
@@ -94,7 +95,7 @@
 
 .tableRow {
   display: grid;
-  grid-template-columns: 60px 1fr 140px 140px;
+  grid-template-columns: 60px 1fr 130px 110px 120px;
   gap: 12px;
   padding: 16px 24px;
   align-items: center;
@@ -146,10 +147,13 @@
 @media (max-width: 640px) {
   .tableHeader,
   .tableRow {
-    grid-template-columns: 48px 1fr 100px;
+    grid-template-columns: 48px 1fr 90px;
   }
-  .tableHeader > *:last-child,
-  .tableRow > *:last-child {
+  /* hide TICKETS and EST. REWARD on mobile */
+  .tableHeader > *:nth-child(4),
+  .tableHeader > *:nth-child(5),
+  .tableRow > *:nth-child(4),
+  .tableRow > *:nth-child(5) {
     display: none;
   }
 }

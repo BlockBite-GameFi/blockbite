@@ -3,7 +3,8 @@
  *
  * Double-database leaderboard:
  *   - Reads from KV sorted sets (period-partitioned) for fast, accurate results
- *   - Falls back to in-memory Map on cold start
+ *   - Falls back to legacy hash on empty sorted sets (recovery path)
+ *   - Falls back to in-memory Map on cold start / KV unavailable
  *   - period param drives Monthly / Daily / All-Time tabs on the frontend
  */
 
@@ -20,18 +21,19 @@ export async function GET(req: NextRequest) {
   // Warm the in-memory cache from KV on cold start
   await hydrateFromKV();
 
-  // Read from time-partitioned sorted sets (double-database Layer 2)
+  // Read from time-partitioned sorted sets (with fallback to legacy hash)
   const entries = await getTopScores(period, limit);
 
   const live = entries.map((e, i) => ({
-    rank:        i + 1,
-    wallet:      e.walletAddress.slice(0, 4) + '...' + e.walletAddress.slice(-4),
-    walletFull:  e.walletAddress,
-    score:       e.score,
-    level:       e.level,
-    submittedAt: e.submittedAt,
-    txSignature: e.txSignature ?? null, // blockchain proof
-    live:        true,
+    rank:          i + 1,
+    wallet:        e.walletAddress.slice(0, 4) + '...' + e.walletAddress.slice(-4),
+    walletAddress: e.walletAddress,
+    score:         e.score,
+    level:         e.level,
+    submittedAt:   e.submittedAt,
+    txSignature:   e.txSignature ?? null,
+    ticketsUsed:   e.ticketsUsed ?? null,
+    live:          true,
   }));
 
   return NextResponse.json({

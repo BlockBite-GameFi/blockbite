@@ -147,7 +147,7 @@ export async function getTopScores(
       if (!wallets || wallets.length === 0) {
         // Last resort: legacy hash (all historical data lives here).
         // Also fire background recovery so the NEXT request hits sorted sets.
-        _backgroundRecover(kv);
+        _backgroundRecover();
         return _topFromLegacyHash(kv, limit);
       }
     }
@@ -238,10 +238,11 @@ let _recovering = false;
  * Fire-and-forget background recovery. Does nothing if already running.
  * Called automatically when sorted sets are empty but legacy hash has data.
  */
-function _backgroundRecover(kv: Awaited<ReturnType<typeof getKV>>): void {
-  if (_recovering || !kv) return;
+function _backgroundRecover(): void {
+  if (_recovering) return;
   _recovering = true;
-  recoverLegacyData().finally(() => { _recovering = false; });
+  // Suppress all rejections — this is fire-and-forget; errors are non-fatal.
+  recoverLegacyData().catch(() => {}).finally(() => { _recovering = false; });
 }
 
 /**
@@ -253,10 +254,16 @@ export async function recoverLegacyData(): Promise<{ wallets: number; errors: nu
   const kv = await getKV();
   if (!kv) return { wallets: 0, errors: 0 };
 
-  const [legacyRaw, metaRaw] = await Promise.all([
-    kv.hgetall<Record<string, unknown>>(LB_HASH_KEY),
-    kv.hgetall<Record<string, unknown>>(LB_META_KEY),
-  ]);
+  let legacyRaw: Record<string, unknown> | null = null;
+  let metaRaw: Record<string, unknown> | null = null;
+  try {
+    [legacyRaw, metaRaw] = await Promise.all([
+      kv.hgetall<Record<string, unknown>>(LB_HASH_KEY),
+      kv.hgetall<Record<string, unknown>>(LB_META_KEY),
+    ]);
+  } catch {
+    return { wallets: 0, errors: 1 };
+  }
 
   if (!legacyRaw && !metaRaw) return { wallets: 0, errors: 0 };
 

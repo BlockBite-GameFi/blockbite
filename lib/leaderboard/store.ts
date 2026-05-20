@@ -31,6 +31,10 @@ export const LEADERBOARD = new Map<string, LeaderboardEntry>();
 async function getKV() {
   try {
     const { kv } = await import('@vercel/kv');
+    // Verify the client is actually usable before returning — @vercel/kv v3 can
+    // import successfully but throw "Missing required env vars" on first method call.
+    // A lightweight ping confirms connectivity without doing real work.
+    await kv.ping();
     return kv;
   } catch {
     return null;
@@ -88,8 +92,11 @@ export async function recordScore(entry: LeaderboardEntry): Promise<void> {
       ? kv.hset(LB_META_KEY, { [entry.walletAddress]: JSON.stringify(entry) })
       : Promise.resolve(),
 
-    // Ticket counter: increment regardless of whether score is best
-    kv.hincrby(LB_TICKETS_KEY, entry.walletAddress, 1),
+    // Ticket counter: increment regardless of whether score is best.
+    // Use hincrby (standard Redis HINCRBY — supported by @upstash/redis via @vercel/kv).
+    (kv as unknown as { hincrby: (k: string, f: string, n: number) => Promise<number> })
+      .hincrby(LB_TICKETS_KEY, entry.walletAddress, 1)
+      .catch(() => { /* non-critical — tickets count degrades gracefully */ }),
   ]);
 }
 

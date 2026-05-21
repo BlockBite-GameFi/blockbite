@@ -189,7 +189,7 @@ export default function Home() {
           <Link href="/quests" style={{ padding:'14px 28px', borderRadius:12, background:'transparent', border:'1px solid var(--ds-border)', color:'var(--ds-text)', fontWeight:700, fontSize:16, textDecoration:'none' }}>
             {lang==='id' ? 'KLAIM TOKEN' : 'CLAIM TOKENS'}
           </Link>
-          <Link href="/game" style={{ padding:'14px 28px', borderRadius:12, background:'transparent', border:'1px solid var(--ds-border)', color:'var(--ds-text)', fontWeight:700, fontSize:16, textDecoration:'none' }}>
+          <Link href="/tutorial" style={{ padding:'14px 28px', borderRadius:12, background:'transparent', border:'1px solid var(--ds-border)', color:'var(--ds-text)', fontWeight:700, fontSize:16, textDecoration:'none' }}>
             {lang==='id' ? 'MAIN GAME' : 'PLAY GAME'}
           </Link>
         </div>
@@ -279,7 +279,7 @@ export default function Home() {
           ))}
         </div>
         <div style={{ textAlign:'center', marginTop:24 }}>
-          <Link href="/game" style={{ padding:'10px 22px', borderRadius:10, background:'transparent', border:'1px solid var(--ds-border)', color:'var(--ds-text)', fontWeight:700, fontSize:13, textDecoration:'none' }}>
+          <Link href="/map" style={{ padding:'10px 22px', borderRadius:10, background:'transparent', border:'1px solid var(--ds-border)', color:'var(--ds-text)', fontWeight:700, fontSize:13, textDecoration:'none' }}>
             {lang==='id' ? 'MAIN SEKARANG' : 'PLAY NOW'}
           </Link>
         </div>

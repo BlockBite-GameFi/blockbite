@@ -22,7 +22,7 @@ interface NavLink {
 
 const NAV_LINKS: NavLink[] = [
   { name: 'DISTRIBUTE', href: '/distribute', tdp:  true  },
-  { name: 'PLAY',        href: '/game',       play: true  },
+  { name: 'PLAY',        href: '/map',        play: true  },
   { name: 'LEADERBOARD', href: '/leaderboard'             },
   { name: 'SHOP',        href: '/shop'                    },
   { name: 'GUIDE',       href: '/how-to-play'             },

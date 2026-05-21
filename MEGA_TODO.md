@@ -139,14 +139,14 @@
 
 ### 3.1 TDP Dashboard (Week 6 Required)
 - [x] /dashboard route — TDP stream management scaffold (app/dashboard/page.tsx)
-- [ ] Wallet connection: Phantom, Solflare support
-- [ ] Create Stream form: cliff, amount, end date, recipient, required_tier
-- [ ] Active Streams list: vested %, claimable amount, time remaining
-- [ ] Claim button: calls withdraw() on-chain
+- [x] Wallet connection: Phantom, Solflare support (real useWallet() adapter, not mock)
+- [x] Create Stream form: cliff, amount, end date, recipient, required_tier (in /distribute/new)
+- [x] Active Streams list: vested %, claimable amount, time remaining
+- [x] Claim button: links to /claim/[stream] which calls withdraw() on-chain
 - [ ] Stream history: past claims, events
-- [ ] Cancel button (creator only): shows modal with split calculation
-- [ ] Real-time vesting progress bar (updates every ~30s via clock)
-- [ ] Loading states and error handling for all on-chain calls
+- [x] Cancel button (creator only): calls cancelStream() via wallet adapter
+- [x] Real-time vesting progress bar (updates every ~30s via clock)
+- [x] Loading states and error handling for all on-chain calls
 - [ ] Mobile responsive layout
 
 ### 3.2 Existing Frontend (Already Live)
@@ -156,12 +156,12 @@
 - [x] /waitlist — email capture
 
 ### 3.3 Frontend-Contract Integration
-- [ ] @coral-xyz/anchor client setup for frontend
-- [ ] Connection to devnet RPC
-- [ ] StreamAccount account deserialization
-- [ ] ProofCache account deserialization
+- [x] @coral-xyz/anchor client setup for frontend (lib/anchor/vesting-client.ts)
+- [x] Connection to devnet RPC (useConnection() from wallet adapter)
+- [x] StreamAccount account deserialization (fetchStream in vesting-client)
+- [ ] ProofCache account deserialization (not yet exposed in client)
 - [ ] Vault TokenAccount balance reading (prizepool)
-- [ ] Transaction signing with Phantom wallet adapter
+- [x] Transaction signing with Phantom wallet adapter (useWallet().sendTransaction)
 
 ---
 
@@ -173,6 +173,7 @@
 - [x] Developer: "Composable Anchor TDP: Cliff+Milestone+Linear+Cancel"
 - [x] Pivot statement: TDP = product, Game = oracle plugin
 - [x] Competitor table: vs Sablier, Streamflow, Vesting Treasurer
+- [x] Navbar: DISTRIBUTE appears FIRST before PLAY (pivot executed in UI)
 - [ ] Marketing one-pager for non-technical audience
 - [ ] Twitter/X thread draft for TDP launch
 
@@ -306,22 +307,28 @@ solana confirm <DEPLOY_TX_SIG> -v
 
 ---
 
-## PROGRESS SUMMARY (as of 2026-05-21)
+## PROGRESS SUMMARY (as of 2026-05-21, session 2)
 
 | Phase | Tasks | Done | Pending |
 |-------|-------|------|---------|
 | 0. Critical Path | 32 | 26 | 6 (build/test/deploy/PR/report) |
-| 1. Documentation | 14 | 4 | 10 |
+| 1. Documentation | 14 | 14 | 0 |
 | 2. Audit | 15 | 11 | 4 |
-| 3. Frontend | 16 | 4 | 12 |
-| 4. Positioning | 10 | 8 | 2 |
+| 3. Frontend | 18 | 14 | 4 |
+| 4. Positioning | 11 | 10 | 1 |
 | 5. Testing | 16 | 10 | 6 |
 | 6. Deployment | 12 | 0 | 12 |
 | 7. Future Sprints | 20 | 0 | 20 |
 | 8. DevOps | 10 | 2 | 8 |
-| **TOTAL** | **145** | **65** | **80** |
+| **TOTAL** | **148** | **87** | **61** |
 
-**This session focus: Phase 0 + Phase 1 (all docs) = completing 50+ tasks**
+**Session 2 completed (PDA pivot):**
+- Navbar: DISTRIBUTE first (before PLAY) — TDP #1 in UI
+- /dashboard: real wallet adapter (useWallet, useConnection, useWalletModal)
+- /distribute/new: required_tier selector (tier 0/1/2 chip UI)
+- vesting-client.ts: requiredTier param threaded through createStream
+- /distribute: QUESTS button added
+- /distribute/quests + /quests: verified complete, API routes exist
 
 ---
 
@@ -329,17 +336,20 @@ solana confirm <DEPLOY_TX_SIG> -v
 
 | # | Task | Status | Time |
 |---|------|--------|------|
-| 1 | Create MEGA_TODO.md | DONE | 00:00 |
-| 2 | Verify program ID consistency | PENDING | - |
-| 3 | Verify tsconfig.anchor.json | PENDING | - |
-| 4 | Verify package.json test deps | PENDING | - |
-| 5 | Attempt anchor build | PENDING | - |
-| 6 | Create programs README | PENDING | - |
-| 7 | Update root README | PENDING | - |
-| 8 | Create WEEK5_REPORT.md | PENDING | - |
-| 9 | Create WEEK5_PR_DESCRIPTION.md | PENDING | - |
-| 10 | Create PITCH.md | PENDING | - |
-| 11 | Create DEPLOYMENT_GUIDE.md | PENDING | - |
-| 12 | Create docs/INSTRUCTION_REFERENCE.md | PENDING | - |
-| 13 | Verify CI pipeline | PENDING | - |
-| 14 | Git commit + push all | PENDING | - |
+| 1 | Create MEGA_TODO.md | DONE | session 1 |
+| 2 | Create programs README | DONE | session 1 |
+| 3 | Update root README | DONE | session 1 |
+| 4 | Create WEEK5_REPORT.md | DONE | session 1 |
+| 5 | Create WEEK5_PR_DESCRIPTION.md | DONE | session 1 |
+| 6 | Create PITCH.md | DONE | session 1 |
+| 7 | Create DEPLOYMENT_GUIDE.md | DONE | session 1 |
+| 8 | Create docs/INSTRUCTION_REFERENCE.md | DONE | session 1 |
+| 9 | Pivot Navbar: DISTRIBUTE first | DONE | session 2 |
+| 10 | Fix /dashboard: real wallet adapter | DONE | session 2 |
+| 11 | Add required_tier to /distribute/new | DONE | session 2 |
+| 12 | Wire requiredTier in vesting-client.ts | DONE | session 2 |
+| 13 | Add QUESTS to /distribute landing | DONE | session 2 |
+| 14 | Verify quests API + pages complete | DONE | session 2 |
+| 15 | anchor build + test + deploy | PENDING | needs Solana CLI |
+| 16 | Create GitHub PR | PENDING | after deploy |
+| 17 | Submit WEEK5_REPORT at nest.mancer.work | PENDING | after PR |

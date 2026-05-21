@@ -74,15 +74,16 @@ function readonlyProgram(connection: Connection): Program {
 }
 
 export interface CreateStreamParams {
-  connection:   Connection;
-  authority:    PublicKey;     // creator (signer)
-  beneficiary:  PublicKey;     // recipient
-  mint:         PublicKey;     // SPL token mint
-  streamId:     bigint;        // unique per (authority, mint) — frontend picks
-  amount:       bigint;        // in raw token units (already × 10^decimals)
-  startTs:      number;        // unix seconds
-  cliffTs:      number;        // unix seconds — 0 = no cliff
-  endTs:        number;        // unix seconds
+  connection:    Connection;
+  authority:     PublicKey;     // creator (signer)
+  beneficiary:   PublicKey;     // recipient
+  mint:          PublicKey;     // SPL token mint
+  streamId:      bigint;        // unique per (authority, mint) — frontend picks
+  amount:        bigint;        // in raw token units (already × 10^decimals)
+  startTs:       number;        // unix seconds
+  cliffTs:       number;        // unix seconds — 0 = no cliff
+  endTs:         number;        // unix seconds
+  requiredTier?: 0 | 1 | 2;    // oracle milestone gate; 0 = no gate
   sendTransaction: SendTx;
 }
 
@@ -107,6 +108,7 @@ export async function createStream(p: CreateStreamParams): Promise<string> {
       new BN(p.startTs),
       new BN(p.cliffTs),
       new BN(p.endTs),
+      p.requiredTier ?? 0,
     )
     .accounts({
       authority:     p.authority,
@@ -228,6 +230,54 @@ export async function fetchStream(connection: Connection, streamPda: PublicKey) 
     };
   } catch {
     return null;
+  }
+}
+
+/** Derive the ProofCache PDA for a (stream, player) pair. */
+export function deriveProofCachePDA(stream: PublicKey, player: PublicKey) {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('proof'), stream.toBuffer(), player.toBuffer()],
+    VESTING_PROGRAM_ID,
+  );
+}
+
+/** Read a ProofCache account. Returns null if not found (player has no proof yet). */
+export async function fetchProofCache(
+  connection: Connection,
+  stream:     PublicKey,
+  player:     PublicKey,
+) {
+  try {
+    const [pda] = deriveProofCachePDA(stream, player);
+    const program = readonlyProgram(connection);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = await (program.account as any).proofCache.fetch(pda);
+    return data as {
+      stream:        PublicKey;
+      player:        PublicKey;
+      tierReached:   number;
+      lastActionTs:  BN;
+      velocityStrikes: number;
+      bump:          number;
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read the raw SPL token balance of a vault PDA.
+ * Returns 0n if the vault account doesn't exist yet.
+ */
+export async function fetchVaultBalance(
+  connection: Connection,
+  vault:      PublicKey,
+): Promise<bigint> {
+  try {
+    const info = await getAccount(connection, vault);
+    return info.amount;
+  } catch {
+    return 0n;
   }
 }
 

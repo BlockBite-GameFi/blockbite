@@ -42,6 +42,7 @@ export default function CreateStreamPage() {
   const [decimals,      setDecimals]     = useState<number | null>(null);
   const [cliffSeconds,  setCliffSeconds] = useState(0);
   const [durationSec,   setDurationSec]  = useState(ONE_YEAR);
+  const [requiredTier,  setRequiredTier] = useState<0 | 1 | 2>(0);
   const [streamId,      setStreamId]     = useState<bigint>(() => BigInt(Math.floor(Date.now() / 1000)));
 
   const [busy,    setBusy]   = useState(false);
@@ -96,14 +97,15 @@ export default function CreateStreamPage() {
       const rawAmount = BigInt(Math.floor(parseFloat(amountInput) * 10 ** decimals));
       const signature = await createStream({
         connection,
-        authority:   publicKey,
-        beneficiary: new PublicKey(recipientInput.trim()),
-        mint:        new PublicKey(mintInput.trim()),
+        authority:    publicKey,
+        beneficiary:  new PublicKey(recipientInput.trim()),
+        mint:         new PublicKey(mintInput.trim()),
         streamId,
-        amount:      rawAmount,
-        startTs:     preview.startTs,
-        cliffTs:     preview.cliffTs,
-        endTs:       preview.endTs,
+        amount:       rawAmount,
+        startTs:      preview.startTs,
+        cliffTs:      preview.cliffTs,
+        endTs:        preview.endTs,
+        requiredTier,
         sendTransaction,
       });
       setSig(signature);
@@ -245,6 +247,32 @@ export default function CreateStreamPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Milestone gate (required_tier) */}
+          <div>
+            <label style={lblStyle}>Milestone gate (required_tier)</label>
+            <div style={chipsRow}>
+              {([
+                { label: 'None (tier 0)',          value: 0 as const, desc: 'Anyone can claim after cliff' },
+                { label: 'Activity tier 1',         value: 1 as const, desc: 'Recipient must reach oracle Tier 1' },
+                { label: 'Activity tier 2',         value: 2 as const, desc: 'Recipient must reach oracle Tier 2' },
+              ] satisfies { label: string; value: 0 | 1 | 2; desc: string }[]).map((p) => (
+                <button
+                  type="button" key={p.value}
+                  onClick={() => setRequiredTier(p.value)}
+                  title={p.desc}
+                  style={chipStyle(requiredTier === p.value)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <small style={{ color: 'var(--ds-text-dim)', fontSize: 11 }}>
+              {requiredTier === 0
+                ? 'No oracle gate — cliff + linear only.'
+                : `Recipient must reach Tier ${requiredTier} via game or admin oracle before claiming.`}
+            </small>
           </div>
 
           {/* Live preview */}

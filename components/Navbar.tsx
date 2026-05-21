@@ -13,12 +13,20 @@ const CustomWalletButton = dynamic(
   { ssr: false, loading: () => <div className={styles.walletPlaceholder} /> }
 );
 
-const NAV_LINKS = [
-  { name: 'PLAY',        href: '/game',        play: true  },
-  { name: 'LEADERBOARD', href: '/leaderboard', play: false },
-  { name: 'SHOP',        href: '/shop',        play: false },
-  { name: 'GUIDE',       href: '/how-to-play', play: false },
-] as const;
+interface NavLink {
+  name: string;
+  href: string;
+  play?: boolean;
+  tdp?: boolean;
+}
+
+const NAV_LINKS: NavLink[] = [
+  { name: 'DISTRIBUTE', href: '/distribute', tdp:  true  },
+  { name: 'PLAY',        href: '/game',       play: true  },
+  { name: 'LEADERBOARD', href: '/leaderboard'             },
+  { name: 'SHOP',        href: '/shop'                    },
+  { name: 'GUIDE',       href: '/how-to-play'             },
+];
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -57,7 +65,7 @@ export default function Navbar() {
             <li key={link.name}>
               <Link
                 href={link.href}
-                className={`${styles.link} ${link.play ? styles.playLink : ''} ${pathname === link.href ? styles.active : ''}`}
+                className={`${styles.link} ${link.play ? styles.playLink : ''} ${link.tdp ? styles.tdpLink : ''} ${pathname === link.href || pathname?.startsWith(link.href + '/') ? styles.active : ''}`}
               >
                 {link.name}
               </Link>
@@ -106,7 +114,7 @@ export default function Navbar() {
             <Link
               key={link.name}
               href={link.href}
-              className={`${styles.mobileLink} ${pathname === link.href ? styles.active : ''}`}
+              className={`${styles.mobileLink} ${link.tdp ? styles.mobileTdpLink : ''} ${pathname === link.href || pathname?.startsWith(link.href + '/') ? styles.active : ''}`}
               onClick={() => setMenuOpen(false)}
             >
               <span className={styles.mobileLinkInner}>

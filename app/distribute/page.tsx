@@ -54,6 +54,13 @@ export default function DistributeLanding() {
             }}>
               MY STREAMS
             </Link>
+            <Link href="/distribute/quests" style={{
+              padding: '14px 28px', borderRadius: 12, background: 'transparent',
+              border: '1px solid var(--ds-border)', color: 'var(--ds-text)',
+              fontWeight: 700, fontSize: 16, textDecoration: 'none',
+            }}>
+              QUESTS
+            </Link>
           </div>
         </section>
 

@@ -32,7 +32,7 @@ const I18N = {
       { v: '', l: 'WAITLIST', dynamic: true },
     ],
     features: [
-      { color: MAGENTA, t: 'Milestone-Based Distribution (W5)', d: 'Coming in W5: Set unlock conditions tied to real project milestones — not just time. Current release supports time-based linear vesting with cliff.' },
+      { color: MAGENTA, t: 'Milestone-Based Distribution', d: 'Coming in W5: Set unlock conditions tied to real project milestones — not just time. Current release supports time-based linear vesting with cliff.' },
       { color: TEAL,    t: 'Automated & Trustless', d: 'Smart contract enforces all distribution rules on-chain. No manual transfers, no oversight gaps, no rug-pull vectors.' },
       { color: GOLD,    t: 'Cliff + Linear Vesting', d: 'Configure cliff periods and linear unlock schedules. After upgrade authority is burned pre-mainnet, even the team cannot bypass on-chain rules.' },
       { color: PURPLE,  t: 'Smart Contract Enforced', d: 'Distribution logic enforced on-chain. Upgrade authority will be burned before mainnet — after burn, contract is permanently immutable. No admin can alter vesting schedules post-deploy.' },
@@ -66,7 +66,7 @@ const I18N = {
       { v: '', l: 'WAITLIST', dynamic: true },
     ],
     features: [
-      { color: MAGENTA, t: 'Distribusi Berbasis Milestone (W5)', d: 'Segera hadir di W5: Tetapkan kondisi unlock yang terikat pada milestone nyata. Rilis saat ini mendukung vesting linear berbasis waktu dengan cliff.' },
+      { color: MAGENTA, t: 'Distribusi Berbasis Milestone', d: 'Segera hadir di W5: Tetapkan kondisi unlock yang terikat pada milestone nyata. Rilis saat ini mendukung vesting linear berbasis waktu dengan cliff.' },
       { color: TEAL,    t: 'Otomatis & Trustless', d: 'Smart contract menegakkan semua aturan distribusi on-chain. Tanpa transfer manual, tanpa celah pengawasan.' },
       { color: GOLD,    t: 'Cliff + Vesting Linear', d: 'Konfigurasi periode cliff dan jadwal unlock linear. Setelah upgrade authority dibakar sebelum mainnet, bahkan tim tidak bisa melewati aturan on-chain.' },
       { color: PURPLE,  t: 'Smart Contract Terverifikasi', d: 'Logika distribusi ditegakkan on-chain. Upgrade authority akan dibakar sebelum mainnet — setelah dibakar, kontrak permanen imutabel. Admin tidak bisa mengubah jadwal vesting setelah deploy.' },

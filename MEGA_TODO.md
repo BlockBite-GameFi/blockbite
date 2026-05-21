@@ -64,10 +64,10 @@
 - [ ] Confirm Week 4 no regressions
 
 ### 0.3 GitHub Pull Request (MUST HAVE for submission)
-- [ ] Create PR: "Week 5 — Bryan — Cliff + Milestone + Cancel"
-- [ ] PR body with: what was built, cliff logic, edge cases
-- [ ] Link devnet transaction as proof of deployment
-- [ ] PR URL in Week 5 report submission
+- [x] Create PR: "Week 5 — Bryan — Cliff + Milestone + Cancel + TDP-First Pivot"
+- [x] PR body with: what was built, cliff logic, edge cases, TDP pivot
+- [ ] Link devnet transaction as proof of deployment (pending anchor deploy)
+- [x] PR URL: https://github.com/nayrbryanGaming/blockblast/pull/2
 
 ### 0.4 Mancer Work Report Submission
 - [ ] Complete WEEK5_REPORT.md
@@ -159,8 +159,8 @@
 - [x] @coral-xyz/anchor client setup for frontend (lib/anchor/vesting-client.ts)
 - [x] Connection to devnet RPC (useConnection() from wallet adapter)
 - [x] StreamAccount account deserialization (fetchStream in vesting-client)
-- [ ] ProofCache account deserialization (not yet exposed in client)
-- [ ] Vault TokenAccount balance reading (prizepool)
+- [x] ProofCache account deserialization (fetchProofCache + deriveProofCachePDA)
+- [x] Vault TokenAccount balance reading (fetchVaultBalance)
 - [x] Transaction signing with Phantom wallet adapter (useWallet().sendTransaction)
 
 ---
@@ -326,9 +326,16 @@ solana confirm <DEPLOY_TX_SIG> -v
 - Navbar: DISTRIBUTE first (before PLAY) — TDP #1 in UI
 - /dashboard: real wallet adapter (useWallet, useConnection, useWalletModal)
 - /distribute/new: required_tier selector (tier 0/1/2 chip UI)
-- vesting-client.ts: requiredTier param threaded through createStream
+- vesting-client.ts: requiredTier + fetchProofCache + fetchVaultBalance
 - /distribute: QUESTS button added
 - /distribute/quests + /quests: verified complete, API routes exist
+
+**Session 3 completed (BIG TDP pivot + push + PR):**
+- app/page.tsx: FULL homepage pivot — TDP hero, protocol spec band, feature rewrite, builder how-it-works, oracle section framing
+- Committed: 97a7a63 feat(pivot): TDP #1 — homepage + navbar + dashboard + vesting-client
+- Pushed to origin/main → Vercel rebuilding at https://blockbite.vercel.app
+- week-5-cliff-cancel-bryan branch updated + pushed
+- PR #2 updated: https://github.com/nayrbryanGaming/blockblast/pull/2
 
 ---
 

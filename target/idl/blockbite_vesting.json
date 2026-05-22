@@ -4,554 +4,254 @@
     "name": "blockbite_vesting",
     "version": "0.1.0",
     "spec": "0.1.0",
-    "description": "BlockBite token vesting — linear unlock with partial withdrawal on Solana devnet"
+    "description": "BlockBite TDP — Token Distribution Protocol with milestone verification on Solana"
   },
   "instructions": [
     {
       "name": "cancel",
-      "docs": [
-        "Creator cancels stream: remaining unvested tokens return to creator."
-      ],
-      "discriminator": [
-        232,
-        219,
-        223,
-        41,
-        219,
-        236,
-        220,
-        190
-      ],
+      "docs": ["Creator cancels stream. Vested-but-unclaimed → beneficiary. Unvested → creator."],
+      "discriminator": [232,219,223,41,219,236,220,190],
       "accounts": [
-        {
-          "name": "authority",
-          "signer": true
-        },
-        {
-          "name": "stream",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  115,
-                  116,
-                  114,
-                  101,
-                  97,
-                  109
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "stream.authority",
-                "account": "StreamAccount"
-              },
-              {
-                "kind": "account",
-                "path": "stream.stream_id",
-                "account": "StreamAccount"
-              }
-            ]
-          }
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "stream.authority",
-                "account": "StreamAccount"
-              },
-              {
-                "kind": "account",
-                "path": "stream.stream_id",
-                "account": "StreamAccount"
-              }
-            ]
-          }
-        },
-        {
-          "name": "authority_ata",
-          "writable": true
-        },
-        {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        }
+        { "name": "authority", "signer": true },
+        { "name": "beneficiary" },
+        { "name": "stream", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [115,116,114,101,97,109] }, { "kind": "account", "path": "stream.authority", "account": "StreamAccount" }, { "kind": "account", "path": "stream.stream_id", "account": "StreamAccount" }] } },
+        { "name": "vault", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [118,97,117,108,116] }, { "kind": "account", "path": "stream.authority", "account": "StreamAccount" }, { "kind": "account", "path": "stream.stream_id", "account": "StreamAccount" }] } },
+        { "name": "authority_ata", "writable": true },
+        { "name": "beneficiary_ata", "writable": true },
+        { "name": "token_program", "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" }
       ],
       "args": []
     },
     {
-      "name": "create_stream",
-      "docs": [
-        "Lock `amount` tokens from creator into a PDA vault.",
-        "Vesting is linear from `start_ts` to `end_ts`.",
-        "`cliff_ts = 0` means no cliff (behaves as start_ts).",
-        "Pass cliff_ts between start_ts and end_ts to enforce a cliff period."
-      ],
-      "discriminator": [
-        71,
-        188,
-        111,
-        127,
-        108,
-        40,
-        229,
-        158
-      ],
+      "name": "configure_milestones",
+      "docs": ["Set the milestone quota for a stream. count milestones (1-4), pct[i] = allocation %. Sum must be 100. Authority-only. Can only be called once."],
+      "discriminator": [90,181,169,208,4,41,100,53],
       "accounts": [
-        {
-          "name": "authority",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "beneficiary"
-        },
-        {
-          "name": "mint"
-        },
-        {
-          "name": "stream",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  115,
-                  116,
-                  114,
-                  101,
-                  97,
-                  109
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "authority"
-              },
-              {
-                "kind": "arg",
-                "path": "stream_id"
-              }
-            ]
-          }
-        },
-        {
-          "name": "vault",
-          "docs": [
-            "PDA token account; authority = stream PDA so withdraw can sign via seeds."
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "authority"
-              },
-              {
-                "kind": "arg",
-                "path": "stream_id"
-              }
-            ]
-          }
-        },
-        {
-          "name": "authority_ata",
-          "docs": [
-            "Creator's token account to debit."
-          ],
-          "writable": true
-        },
-        {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "rent",
-          "address": "SysvarRent111111111111111111111111111111111"
-        }
+        { "name": "authority", "signer": true },
+        { "name": "stream", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [115,116,114,101,97,109] }, { "kind": "account", "path": "stream.authority", "account": "StreamAccount" }, { "kind": "account", "path": "stream.stream_id", "account": "StreamAccount" }] } }
       ],
       "args": [
-        {
-          "name": "stream_id",
-          "type": "u64"
-        },
-        {
-          "name": "amount",
-          "type": "u64"
-        },
-        {
-          "name": "start_ts",
-          "type": "i64"
-        },
-        {
-          "name": "cliff_ts",
-          "type": "i64"
-        },
-        {
-          "name": "end_ts",
-          "type": "i64"
-        }
+        { "name": "count", "type": "u8" },
+        { "name": "pct", "type": { "array": ["u8", 4] } }
+      ]
+    },
+    {
+      "name": "create_stream",
+      "docs": ["Lock `amount` tokens from creator into a PDA vault.", "Vesting is linear from `start_ts` to `end_ts`.", "`cliff_ts = 0` means no cliff.", "`required_tier = 0` means no ProofCache gate."],
+      "discriminator": [71,188,111,127,108,40,229,158],
+      "accounts": [
+        { "name": "authority", "writable": true, "signer": true },
+        { "name": "beneficiary" },
+        { "name": "mint" },
+        { "name": "stream", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [115,116,114,101,97,109] }, { "kind": "account", "path": "authority" }, { "kind": "arg", "path": "stream_id" }] } },
+        { "name": "vault", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [118,97,117,108,116] }, { "kind": "account", "path": "authority" }, { "kind": "arg", "path": "stream_id" }] } },
+        { "name": "authority_ata", "writable": true },
+        { "name": "token_program", "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
+        { "name": "system_program", "address": "11111111111111111111111111111111" },
+        { "name": "rent", "address": "SysvarRent111111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "stream_id", "type": "u64" },
+        { "name": "amount", "type": "u64" },
+        { "name": "start_ts", "type": "i64" },
+        { "name": "cliff_ts", "type": "i64" },
+        { "name": "end_ts", "type": "i64" },
+        { "name": "required_tier", "type": "u8" }
+      ]
+    },
+    {
+      "name": "fund_vault",
+      "docs": ["Add tokens to vault with atomic 70/15/10/5 revenue split."],
+      "discriminator": [26,33,207,242,119,108,134,73],
+      "accounts": [
+        { "name": "funder", "writable": true, "signer": true },
+        { "name": "stream", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [115,116,114,101,97,109] }, { "kind": "account", "path": "stream.authority", "account": "StreamAccount" }, { "kind": "account", "path": "stream.stream_id", "account": "StreamAccount" }] } },
+        { "name": "vault", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [118,97,117,108,116] }, { "kind": "account", "path": "stream.authority", "account": "StreamAccount" }, { "kind": "account", "path": "stream.stream_id", "account": "StreamAccount" }] } },
+        { "name": "funder_ata", "writable": true },
+        { "name": "team_ata", "writable": true },
+        { "name": "dev_ata", "writable": true },
+        { "name": "referral_ata", "writable": true },
+        { "name": "token_program", "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" }
+      ],
+      "args": [
+        { "name": "amount", "type": "u64" }
+      ]
+    },
+    {
+      "name": "update_proof",
+      "docs": ["Write or update ProofCache PDA for (stream, player) — game CPI path (source A). VGPV enforced."],
+      "discriminator": [184,35,3,14,161,234,5,158],
+      "accounts": [
+        { "name": "admin", "writable": true, "signer": true },
+        { "name": "stream", "pda": { "seeds": [{ "kind": "const", "value": [115,116,114,101,97,109] }, { "kind": "account", "path": "stream.authority", "account": "StreamAccount" }, { "kind": "account", "path": "stream.stream_id", "account": "StreamAccount" }] } },
+        { "name": "player" },
+        { "name": "proof_cache", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [112,114,111,111,102,95,99,97,99,104,101] }, { "kind": "account", "path": "stream" }, { "kind": "account", "path": "player" }] } },
+        { "name": "system_program", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "cohort_id", "type": "u8" },
+        { "name": "tier_reached", "type": "u8" }
+      ]
+    },
+    {
+      "name": "verify_milestone",
+      "docs": ["Mark milestone[index] as verified — authority manual call (source B of 3). Sets milestones_verified[index]=true, unlocking that pct quota in withdraw()."],
+      "discriminator": [33,124,38,194,150,153,90,227],
+      "accounts": [
+        { "name": "authority", "signer": true },
+        { "name": "stream", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [115,116,114,101,97,109] }, { "kind": "account", "path": "stream.authority", "account": "StreamAccount" }, { "kind": "account", "path": "stream.stream_id", "account": "StreamAccount" }] } }
+      ],
+      "args": [
+        { "name": "index", "type": "u8" }
       ]
     },
     {
       "name": "withdraw",
-      "docs": [
-        "Beneficiary claims however many tokens have vested since last withdrawal.",
-        "VGPV: tracks withdrawal velocity; enforcement logic added in W5."
-      ],
-      "discriminator": [
-        183,
-        18,
-        70,
-        156,
-        148,
-        109,
-        161,
-        34
-      ],
+      "docs": ["Beneficiary claims vested tokens. Gates: cancelled, beneficiary, ProofCache tier, cliff, milestone quota, VGPV."],
+      "discriminator": [183,18,70,156,148,109,161,34],
       "accounts": [
-        {
-          "name": "beneficiary",
-          "signer": true
-        },
-        {
-          "name": "stream",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  115,
-                  116,
-                  114,
-                  101,
-                  97,
-                  109
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "stream.authority",
-                "account": "StreamAccount"
-              },
-              {
-                "kind": "account",
-                "path": "stream.stream_id",
-                "account": "StreamAccount"
-              }
-            ]
-          }
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "stream.authority",
-                "account": "StreamAccount"
-              },
-              {
-                "kind": "account",
-                "path": "stream.stream_id",
-                "account": "StreamAccount"
-              }
-            ]
-          }
-        },
-        {
-          "name": "beneficiary_ata",
-          "writable": true
-        },
-        {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        }
+        { "name": "beneficiary", "signer": true },
+        { "name": "stream", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [115,116,114,101,97,109] }, { "kind": "account", "path": "stream.authority", "account": "StreamAccount" }, { "kind": "account", "path": "stream.stream_id", "account": "StreamAccount" }] } },
+        { "name": "vault", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [118,97,117,108,116] }, { "kind": "account", "path": "stream.authority", "account": "StreamAccount" }, { "kind": "account", "path": "stream.stream_id", "account": "StreamAccount" }] } },
+        { "name": "beneficiary_ata", "writable": true },
+        { "name": "proof_cache" },
+        { "name": "token_program", "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" }
       ],
       "args": []
     }
   ],
   "accounts": [
-    {
-      "name": "StreamAccount",
-      "discriminator": [
-        243,
-        60,
-        164,
-        106,
-        199,
-        192,
-        110,
-        53
-      ]
-    }
+    { "name": "ProofCache", "discriminator": [214,67,52,16,45,191,77,250] },
+    { "name": "StreamAccount", "discriminator": [243,60,164,106,199,192,110,53] }
   ],
   "events": [
-    {
-      "name": "Cancelled",
-      "discriminator": [
-        136,
-        23,
-        42,
-        65,
-        143,
-        233,
-        234,
-        46
-      ]
-    },
-    {
-      "name": "StreamCreated",
-      "discriminator": [
-        93,
-        150,
-        91,
-        15,
-        166,
-        8,
-        251,
-        166
-      ]
-    },
-    {
-      "name": "Withdrawn",
-      "discriminator": [
-        20,
-        89,
-        223,
-        198,
-        194,
-        124,
-        219,
-        13
-      ]
-    }
+    { "name": "Cancelled", "discriminator": [136,23,42,65,143,233,234,46] },
+    { "name": "MilestoneVerified", "discriminator": [91,149,114,93,85,205,131,242] },
+    { "name": "MilestonesConfigured", "discriminator": [154,139,153,113,32,214,19,167] },
+    { "name": "ProofUpdated", "discriminator": [121,181,191,5,170,84,24,178] },
+    { "name": "StreamCreated", "discriminator": [93,150,91,15,166,8,251,166] },
+    { "name": "VaultFunded", "discriminator": [192,119,245,193,55,223,195,50] },
+    { "name": "Withdrawn", "discriminator": [20,89,223,198,194,124,219,13] }
   ],
   "errors": [
-    {
-      "code": 6000,
-      "name": "ZeroAmount",
-      "msg": "Amount must be greater than zero"
-    },
-    {
-      "code": 6001,
-      "name": "InvalidTimeRange",
-      "msg": "end_ts must be strictly after start_ts"
-    },
-    {
-      "code": 6002,
-      "name": "InvalidCliff",
-      "msg": "cliff_ts must be between start_ts and end_ts (or 0 for no cliff)"
-    },
-    {
-      "code": 6003,
-      "name": "NothingToWithdraw",
-      "msg": "Nothing available to withdraw yet"
-    },
-    {
-      "code": 6004,
-      "name": "Unauthorized",
-      "msg": "Caller is not authorized for this action"
-    },
-    {
-      "code": 6005,
-      "name": "StreamCancelled",
-      "msg": "Stream has already been cancelled"
-    },
-    {
-      "code": 6006,
-      "name": "Overflow",
-      "msg": "Arithmetic overflow"
-    },
-    {
-      "code": 6007,
-      "name": "VelocityViolation",
-      "msg": "Velocity exceeds human threshold — VGPV violation (enforced W5)"
-    }
+    { "code": 6000, "name": "ZeroAmount", "msg": "Amount must be greater than zero" },
+    { "code": 6001, "name": "InvalidTimeRange", "msg": "end_ts must be strictly after start_ts" },
+    { "code": 6002, "name": "InvalidCliff", "msg": "cliff_ts must be between start_ts and end_ts (or 0 for no cliff)" },
+    { "code": 6003, "name": "NothingToWithdraw", "msg": "Nothing available to withdraw yet" },
+    { "code": 6004, "name": "Unauthorized", "msg": "Caller is not authorized for this action" },
+    { "code": 6005, "name": "AlreadyCancelled", "msg": "Stream has already been cancelled" },
+    { "code": 6006, "name": "FullyVested", "msg": "Stream is fully vested — nothing left to cancel" },
+    { "code": 6007, "name": "MilestoneNotMet", "msg": "Milestone not met — required ProofCache tier not yet reached" },
+    { "code": 6008, "name": "MilestoneNotVerified", "msg": "Milestone quota not yet unlocked — call verify_milestone first" },
+    { "code": 6009, "name": "InvalidMilestoneIndex", "msg": "Milestone index out of range for this stream" },
+    { "code": 6010, "name": "InvalidMilestonePct", "msg": "Milestone percentages must sum to exactly 100" },
+    { "code": 6011, "name": "MilestoneAlreadyConfigured", "msg": "Milestones already configured for this stream" },
+    { "code": 6012, "name": "Overflow", "msg": "Arithmetic overflow" },
+    { "code": 6013, "name": "VelocityViolation", "msg": "Velocity exceeds human threshold — VGPV violation" },
+    { "code": 6014, "name": "InvalidTier", "msg": "Tier must be 0, 1, or 2" },
+    { "code": 6015, "name": "StreamExpired", "msg": "Stream has expired past end_ts" }
   ],
   "types": [
     {
       "name": "Cancelled",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "stream",
-            "type": "pubkey"
-          },
-          {
-            "name": "authority",
-            "type": "pubkey"
-          },
-          {
-            "name": "refunded",
-            "type": "u64"
-          }
-        ]
-      }
+      "type": { "kind": "struct", "fields": [
+        { "name": "stream", "type": "pubkey" },
+        { "name": "authority", "type": "pubkey" },
+        { "name": "refunded", "type": "u64" }
+      ]}
+    },
+    {
+      "name": "MilestoneVerified",
+      "type": { "kind": "struct", "fields": [
+        { "name": "stream", "type": "pubkey" },
+        { "name": "index", "type": "u8" },
+        { "name": "timestamp", "type": "i64" }
+      ]}
+    },
+    {
+      "name": "MilestonesConfigured",
+      "type": { "kind": "struct", "fields": [
+        { "name": "stream", "type": "pubkey" },
+        { "name": "count", "type": "u8" },
+        { "name": "pct", "type": { "array": ["u8", 4] } }
+      ]}
+    },
+    {
+      "name": "ProofCache",
+      "type": { "kind": "struct", "fields": [
+        { "name": "schedule", "type": "pubkey" },
+        { "name": "player", "type": "pubkey" },
+        { "name": "cohort_id", "type": "u8" },
+        { "name": "tier_reached", "type": "u8" },
+        { "name": "last_proof_ts", "type": "i64" },
+        { "name": "velocity_strikes", "type": "u8" },
+        { "name": "bump", "type": "u8" }
+      ]}
+    },
+    {
+      "name": "ProofUpdated",
+      "type": { "kind": "struct", "fields": [
+        { "name": "stream", "type": "pubkey" },
+        { "name": "player", "type": "pubkey" },
+        { "name": "cohort_id", "type": "u8" },
+        { "name": "tier_reached", "type": "u8" },
+        { "name": "timestamp", "type": "i64" }
+      ]}
     },
     {
       "name": "StreamAccount",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "authority",
-            "type": "pubkey"
-          },
-          {
-            "name": "beneficiary",
-            "type": "pubkey"
-          },
-          {
-            "name": "mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "amount_total",
-            "type": "u64"
-          },
-          {
-            "name": "amount_withdrawn",
-            "type": "u64"
-          },
-          {
-            "name": "start_ts",
-            "type": "i64"
-          },
-          {
-            "name": "cliff_ts",
-            "type": "i64"
-          },
-          {
-            "name": "end_ts",
-            "type": "i64"
-          },
-          {
-            "name": "stream_id",
-            "type": "u64"
-          },
-          {
-            "name": "cancelled",
-            "type": "bool"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          },
-          {
-            "name": "velocity_strikes",
-            "type": "u8"
-          },
-          {
-            "name": "last_action_ts",
-            "type": "i64"
-          }
-        ]
-      }
+      "type": { "kind": "struct", "fields": [
+        { "name": "authority", "type": "pubkey" },
+        { "name": "beneficiary", "type": "pubkey" },
+        { "name": "mint", "type": "pubkey" },
+        { "name": "stream_id", "type": "u64" },
+        { "name": "amount_total", "type": "u64" },
+        { "name": "amount_withdrawn", "type": "u64" },
+        { "name": "start_ts", "type": "i64" },
+        { "name": "cliff_ts", "type": "i64" },
+        { "name": "end_ts", "type": "i64" },
+        { "name": "cancelled", "type": "bool" },
+        { "name": "bump", "type": "u8" },
+        { "name": "velocity_strikes", "type": "u8" },
+        { "name": "last_action_ts", "type": "i64" },
+        { "name": "required_tier", "type": "u8" },
+        { "name": "milestone_count", "type": "u8" },
+        { "name": "milestones_verified", "type": { "array": ["bool", 4] } },
+        { "name": "milestone_pct", "type": { "array": ["u8", 4] } }
+      ]}
     },
     {
       "name": "StreamCreated",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "stream",
-            "type": "pubkey"
-          },
-          {
-            "name": "authority",
-            "type": "pubkey"
-          },
-          {
-            "name": "beneficiary",
-            "type": "pubkey"
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "start_ts",
-            "type": "i64"
-          },
-          {
-            "name": "cliff_ts",
-            "type": "i64"
-          },
-          {
-            "name": "end_ts",
-            "type": "i64"
-          }
-        ]
-      }
+      "type": { "kind": "struct", "fields": [
+        { "name": "stream", "type": "pubkey" },
+        { "name": "authority", "type": "pubkey" },
+        { "name": "beneficiary", "type": "pubkey" },
+        { "name": "amount", "type": "u64" },
+        { "name": "start_ts", "type": "i64" },
+        { "name": "cliff_ts", "type": "i64" },
+        { "name": "end_ts", "type": "i64" }
+      ]}
+    },
+    {
+      "name": "VaultFunded",
+      "type": { "kind": "struct", "fields": [
+        { "name": "stream", "type": "pubkey" },
+        { "name": "funder", "type": "pubkey" },
+        { "name": "amount_total", "type": "u64" },
+        { "name": "vault_portion", "type": "u64" },
+        { "name": "team_portion", "type": "u64" },
+        { "name": "dev_portion", "type": "u64" },
+        { "name": "referral_portion", "type": "u64" }
+      ]}
     },
     {
       "name": "Withdrawn",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "stream",
-            "type": "pubkey"
-          },
-          {
-            "name": "beneficiary",
-            "type": "pubkey"
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
+      "type": { "kind": "struct", "fields": [
+        { "name": "stream", "type": "pubkey" },
+        { "name": "beneficiary", "type": "pubkey" },
+        { "name": "amount", "type": "u64" },
+        { "name": "timestamp", "type": "i64" }
+      ]}
     }
   ]
 }

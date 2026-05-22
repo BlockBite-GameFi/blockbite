@@ -1,37 +1,111 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import GameCanvas from '@/components/game/GameCanvas';
 import PrizePoolCounter from '@/components/PrizePoolCounter';
 import Countdown from '@/components/Countdown';
-import type { Metadata } from 'next';
+import { BIOMES } from '@/lib/game/biomes';
 
-export const metadata: Metadata = {
-  title: 'Tutorial — BlockBite Free Preview',
-  description: 'Try BlockBite for free. No ticket required. Learn the mechanics before you compete for USDC prizes on Solana.',
-};
+const biome = BIOMES[0]; // Act I — Crystal Caverns (tutorial biome)
 
 export default function TutorialPage() {
+  const router = useRouter();
+
   return (
     <>
+      {/* Biome backdrop — same system as /play/[level] */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed', inset: 0, zIndex: -2,
+          background: biome.sky, overflow: 'hidden', pointerEvents: 'none',
+        }}
+      />
+      {/* Fog tint */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed', inset: 0, zIndex: -1,
+          background: biome.fog, pointerEvents: 'none',
+        }}
+      />
+      {/* Vignette */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed', inset: 0, zIndex: -1,
+          background: 'radial-gradient(ellipse at 50% 50%, transparent 0%, transparent 40%, rgba(0,0,0,0.55) 100%)',
+          pointerEvents: 'none',
+        }}
+      />
+
       <Navbar />
       <main style={{ paddingTop: 64, minHeight: '100vh' }}>
+
+        {/* Top breadcrumb bar */}
+        <div style={{
+          maxWidth: 1100, margin: '0 auto', padding: '12px 24px 0',
+          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+        }}>
+          <button
+            type="button"
+            onClick={() => router.push('/map/1')}
+            style={{
+              padding: '7px 16px', borderRadius: 10,
+              border: `1px solid ${biome.accent}44`,
+              background: 'rgba(255,255,255,0.05)', color: biome.glow,
+              fontFamily: "'Orbitron', monospace", fontSize: 11,
+              cursor: 'pointer', letterSpacing: '0.06em',
+            }}
+          >
+            ← BACK TO MAP
+          </button>
+          <span style={{
+            fontFamily: "'Orbitron', monospace", fontSize: 13,
+            color: biome.glow, fontWeight: 700,
+          }}>
+            TUTORIAL
+          </span>
+          <span style={{
+            fontFamily: "'Orbitron', monospace", fontSize: 10,
+            color: '#cbd5e1', opacity: 0.7, letterSpacing: '0.2em',
+            padding: '4px 10px', borderRadius: 999,
+            background: `${biome.accent}22`,
+            border: `1px solid ${biome.accent}55`,
+          }}>
+            FREE PREVIEW · NO TICKET REQUIRED
+          </span>
+          <span style={{
+            fontFamily: "'Orbitron', monospace", fontSize: 10,
+            color: '#cbd5e1', opacity: 0.7, letterSpacing: '0.2em',
+            padding: '4px 10px', borderRadius: 999,
+            background: `${biome.accent}22`,
+            border: `1px solid ${biome.accent}55`,
+          }}>
+            ACT I · {biome.name.toUpperCase()}
+          </span>
+        </div>
+
+        {/* Main 3-column layout */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr auto 1fr',
           gap: 24,
-          padding: '24px 24px',
+          padding: '16px 24px 40px',
           maxWidth: 1100,
           margin: '0 auto',
           alignItems: 'start',
         }}>
 
           {/* Left sidebar */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
 
-            {/* Prize pool mini */}
+            {/* Prize pool */}
             <div style={{
-              background: 'rgba(18,18,42,0.85)',
+              background: `linear-gradient(180deg, ${biome.accent}0d 0%, rgba(8,8,22,0.7) 100%)`,
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255,215,0,0.12)',
+              border: `1px solid ${biome.accent}33`,
               borderRadius: 16,
               padding: '20px',
               textAlign: 'center',
@@ -39,11 +113,11 @@ export default function TutorialPage() {
               <PrizePoolCounter size="sm" />
             </div>
 
-            {/* Countdown mini */}
+            {/* Countdown */}
             <div style={{
-              background: 'rgba(18,18,42,0.85)',
+              background: `linear-gradient(180deg, ${biome.accent}0d 0%, rgba(8,8,22,0.7) 100%)`,
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              border: `1px solid ${biome.accent}33`,
               borderRadius: 16,
               padding: '20px',
               textAlign: 'center',
@@ -53,23 +127,23 @@ export default function TutorialPage() {
 
             {/* Scoring guide */}
             <div style={{
-              background: 'rgba(18,18,42,0.85)',
+              background: `linear-gradient(180deg, ${biome.accent}0d 0%, rgba(8,8,22,0.7) 100%)`,
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              border: `1px solid ${biome.accent}33`,
               borderRadius: 16,
               padding: '20px',
             }}>
               <div style={{
                 fontFamily: "'Orbitron', monospace",
-                fontSize: 11, color: '#55557A',
+                fontSize: 11, color: biome.accent,
                 letterSpacing: '0.08em', marginBottom: 12,
               }}>SCORING GUIDE</div>
               {[
-                { label: '1 line',  mult: '×1.0', color: '#8888BB' },
-                { label: '2 lines', mult: '×1.5', color: '#00F5FF' },
-                { label: '3 lines', mult: '×2.0', color: '#00FF88' },
-                { label: '4 lines', mult: '×3.0', color: '#FFD700' },
-                { label: '5+ lines',mult: '×5.0', color: '#FF00FF' },
+                { label: '1 line',   mult: '×1.0', color: '#8888BB' },
+                { label: '2 lines',  mult: '×1.5', color: '#00F5FF' },
+                { label: '3 lines',  mult: '×2.0', color: '#00FF88' },
+                { label: '4 lines',  mult: '×3.0', color: '#FFD700' },
+                { label: '5+ lines', mult: '×5.0', color: '#FF00FF' },
                 { label: 'Perfect!', mult: '×10 next', color: '#FF6B00' },
               ].map(row => (
                 <div key={row.label} style={{
@@ -85,47 +159,47 @@ export default function TutorialPage() {
               </div>
             </div>
 
-            {/* Go to map */}
-            <a href="/map" style={{
-              display: 'block', textAlign: 'center', padding: '12px 16px',
-              background: 'linear-gradient(135deg, #7c80e8, #b12c84)',
-              borderRadius: 12, color: '#fff', fontWeight: 800, fontSize: 13,
-              textDecoration: 'none', fontFamily: "'Space Grotesk', sans-serif",
-            }}>
-              PLAY WITH SCORE → MAP
-            </a>
+            {/* CTA: Go to Map */}
+            <button
+              type="button"
+              onClick={() => router.push('/map/1')}
+              style={{
+                display: 'block', width: '100%', textAlign: 'center', padding: '13px 16px',
+                background: `linear-gradient(135deg, ${biome.accent}, ${biome.glow})`,
+                border: 'none',
+                borderRadius: 12, color: '#000', fontWeight: 800, fontSize: 13,
+                cursor: 'pointer', fontFamily: "'Space Grotesk', sans-serif",
+                letterSpacing: '0.06em',
+              }}
+            >
+              PLAY ON MAP → ACT I
+            </button>
           </div>
 
-          {/* Game Canvas — Center */}
+          {/* Game Canvas — Center, biome-themed frame */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-              <h1 style={{
-                fontFamily: "'Orbitron', monospace", fontSize: 16,
-                fontWeight: 700, color: '#00F5FF', margin: 0,
-              }}>TUTORIAL</h1>
-              <span style={{
-                background: 'rgba(0,245,255,0.1)', border: '1px solid rgba(0,245,255,0.2)',
-                borderRadius: 99, padding: '3px 10px',
-                fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 11, color: '#8888BB',
-              }}>
-                Phase 0 · No ticket required
-              </span>
+            <div style={{
+              padding: 14,
+              borderRadius: 24,
+              background: `linear-gradient(180deg, ${biome.accent}1a 0%, rgba(8,8,22,0.55) 60%)`,
+              border: `1px solid ${biome.accent}66`,
+            }}>
+              <GameCanvas />
             </div>
-            <GameCanvas />
           </div>
 
           {/* Right sidebar */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
 
             {/* Quick tips */}
             <div style={{
-              background: 'rgba(18,18,42,0.85)',
+              background: `linear-gradient(180deg, ${biome.accent}0d 0%, rgba(8,8,22,0.7) 100%)`,
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              border: `1px solid ${biome.accent}33`,
               borderRadius: 16, padding: '20px',
             }}>
               <div style={{
-                fontFamily: "'Orbitron', monospace", fontSize: 11, color: '#55557A',
+                fontFamily: "'Orbitron', monospace", fontSize: 11, color: biome.accent,
                 letterSpacing: '0.08em', marginBottom: 12,
               }}>QUICK TIPS</div>
               {[
@@ -144,28 +218,33 @@ export default function TutorialPage() {
               ))}
             </div>
 
-            {/* Oracle explanation */}
+            {/* Biome info */}
             <div style={{
-              background: 'linear-gradient(135deg, rgba(124,128,232,0.08), rgba(177,44,132,0.08))',
+              background: `linear-gradient(135deg, ${biome.accent}10, ${biome.glow}10)`,
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(124,128,232,0.2)',
+              border: `1px solid ${biome.accent}33`,
               borderRadius: 16, padding: '20px',
             }}>
-              <div style={{ fontFamily: "'Orbitron', monospace", fontSize: 11, color: '#7c80e8', marginBottom: 8 }}>
-                HOW THIS CONNECTS TO TDP
+              <div style={{ fontFamily: "'Orbitron', monospace", fontSize: 11, color: biome.accent, marginBottom: 8 }}>
+                ACT I — {biome.name.toUpperCase()}
               </div>
               <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 12, color: '#8888BB', lineHeight: 1.6, marginBottom: 12 }}>
-                Leveling up here writes a proof to the on-chain ProofCache PDA.
-                Vesting streams with required_tier &gt; 0 check this proof before releasing tokens.
+                This is a free preview of Act I. Play without a wallet to learn the mechanics.
+                Connect to save your score and climb the map.
               </div>
-              <a href="/distribute" style={{
-                display: 'block', textAlign: 'center', padding: '10px 0',
-                background: 'linear-gradient(135deg, #3d7c91, #e1a438)',
-                borderRadius: 10, color: '#000', fontWeight: 800, fontSize: 12,
-                textDecoration: 'none', fontFamily: "'Space Grotesk', sans-serif",
-              }}>
-                CREATE STREAM → /distribute
-              </a>
+              <button
+                type="button"
+                onClick={() => router.push('/map/1')}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'center', padding: '10px 0',
+                  background: `linear-gradient(135deg, ${biome.accent}, ${biome.glow})`,
+                  border: 'none',
+                  borderRadius: 10, color: '#000', fontWeight: 800, fontSize: 12,
+                  cursor: 'pointer', fontFamily: "'Space Grotesk', sans-serif",
+                }}
+              >
+                ENTER MAP → LEVEL 1
+              </button>
             </div>
 
             {/* Prizes CTA */}
@@ -187,7 +266,7 @@ export default function TutorialPage() {
                 borderRadius: 10, color: '#000', fontWeight: 800, fontSize: 13,
                 textDecoration: 'none', fontFamily: "'Space Grotesk', sans-serif",
               }}>
-                Get Tickets
+                Get Tickets →
               </a>
             </div>
           </div>
@@ -196,9 +275,9 @@ export default function TutorialPage() {
 
       <style>{`
         @media (max-width: 900px) {
-          main > div { grid-template-columns: 1fr !important; }
-          main > div > div:first-child,
-          main > div > div:last-child { display: none !important; }
+          main > div:last-child { grid-template-columns: 1fr !important; }
+          main > div:last-child > div:first-child,
+          main > div:last-child > div:last-child { display: none !important; }
         }
       `}</style>
     </>

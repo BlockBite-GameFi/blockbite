@@ -767,11 +767,11 @@ describe("blockbite-vesting — Week 5: Cliff + Milestone + Cancel", () => {
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .signers([creator]).rpc();
-      assert.fail("Should throw StreamCancelled");
+      assert.fail("Should throw AlreadyCancelled");
     } catch (e: any) {
-      assert(e.message.includes("StreamCancelled") || e.error?.errorCode?.code === "StreamCancelled",
-        `Expected StreamCancelled, got: ${e.message}`);
-      console.log("  ✓ W5.7: StreamCancelled — double cancel rejected");
+      assert(e.message.includes("AlreadyCancelled") || e.error?.errorCode?.code === "AlreadyCancelled",
+        `Expected AlreadyCancelled, got: ${e.message}`);
+      console.log("  ✓ W5.7: AlreadyCancelled — double cancel rejected");
     }
   });
 
@@ -870,11 +870,11 @@ describe("blockbite-vesting — Week 5: Cliff + Milestone + Cancel", () => {
           beneficiaryAta: recipientAta, proofCache: NO_PROOF, tokenProgram: TOKEN_PROGRAM_ID,
         })
         .signers([recipient]).rpc();
-      assert.fail("Should throw StreamCancelled");
+      assert.fail("Should throw AlreadyCancelled");
     } catch (e: any) {
-      assert(e.message.includes("StreamCancelled") || e.error?.errorCode?.code === "StreamCancelled",
-        `Expected StreamCancelled, got: ${e.message}`);
-      console.log("  ✓ W5.10: withdraw rejected after cancel — StreamCancelled");
+      assert(e.message.includes("AlreadyCancelled") || e.error?.errorCode?.code === "AlreadyCancelled",
+        `Expected AlreadyCancelled, got: ${e.message}`);
+      console.log("  ✓ W5.10: withdraw rejected after cancel — AlreadyCancelled");
     }
   });
 });
@@ -1120,5 +1120,240 @@ describe("blockbite-vesting — Phase 5 edge cases", () => {
         `Expected InvalidTier, got: ${e.message}`);
       console.log("  ✓ EC6: required_tier=3 → InvalidTier error");
     }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WEEK 5 — T06, T12, T13: Milestone×Cliff, VGPV, Hybrid
+// ══════════════════════════════════════════════════════════════════════════════
+describe("blockbite-vesting — W5 T06/T12/T13: Milestone authority, VGPV, Hybrid", () => {
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
+  const program = new Program(IDL, provider);
+
+  let mint: PublicKey;
+  let creatorAta: PublicKey;
+  let recipientAta: PublicKey;
+
+  const creator   = Keypair.generate();
+  const recipient = Keypair.generate();
+  const AMOUNT    = new BN(1_000_000);
+  const NO_PROOF  = SystemProgram.programId;
+
+  before(async () => {
+    for (const kp of [creator, recipient]) {
+      const sig = await provider.connection.requestAirdrop(kp.publicKey, 4e9);
+      await provider.connection.confirmTransaction(sig, "confirmed");
+    }
+    mint = await createMint(provider.connection, creator, creator.publicKey, null, 6);
+    creatorAta   = await createAssociatedTokenAccount(provider.connection, creator,   mint, creator.publicKey);
+    recipientAta = await createAssociatedTokenAccount(provider.connection, recipient, mint, recipient.publicKey);
+    await mintTo(provider.connection, creator, mint, creatorAta, creator, 30_000_000);
+  });
+
+  // ── T06: verify_milestone before cliff — flag persists, withdraw still 0 ──
+  it("T06: verify_milestone before cliff — flag set but withdraw blocked by cliff", async () => {
+    const id  = new BN(400);
+    const now = Math.floor(Date.now() / 1000);
+    const [streamPDA] = await deriveStreamPDA(creator.publicKey, id);
+    const [vaultPDA]  = await deriveVaultPDA(creator.publicKey, id);
+
+    // cliff is 1hr away — nothing vested yet
+    await program.methods
+      .createStream(id, AMOUNT, new BN(now), new BN(now + 3600), new BN(now + 7200), 0)
+      .accounts({
+        authority: creator.publicKey, beneficiary: recipient.publicKey, mint,
+        stream: streamPDA, vault: vaultPDA, authorityAta: creatorAta,
+        tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId, rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([creator]).rpc();
+
+    // Configure 1 milestone at 100%
+    await program.methods
+      .configureMilestones(1, [100, 0, 0, 0])
+      .accounts({ authority: creator.publicKey, stream: streamPDA })
+      .signers([creator]).rpc();
+
+    // Authority manually verifies milestone 0 — flag is now true
+    await program.methods
+      .verifyMilestone(0)
+      .accounts({ authority: creator.publicKey, stream: streamPDA })
+      .signers([creator]).rpc();
+
+    // Verify on-chain state: flag set
+    const stream = await program.account.streamAccount.fetch(streamPDA);
+    assert.equal(stream.milestonesVerified[0], true, "milestones_verified[0] must be true");
+    assert.equal(stream.milestoneCount, 1, "milestone_count must be 1");
+
+    // But cliff hasn't passed → withdraw must still return NothingToWithdraw
+    try {
+      await program.methods.withdraw()
+        .accounts({
+          beneficiary: recipient.publicKey, stream: streamPDA, vault: vaultPDA,
+          beneficiaryAta: recipientAta, proofCache: NO_PROOF, tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([recipient]).rpc();
+      assert.fail("Should throw NothingToWithdraw — cliff not yet passed");
+    } catch (e: any) {
+      assert(e.message.includes("NothingToWithdraw") || e.error?.errorCode?.code === "NothingToWithdraw",
+        `Expected NothingToWithdraw, got: ${e.message}`);
+      console.log("  ✓ T06: milestone verified (flag=true) but cliff not passed → NothingToWithdraw");
+    }
+  });
+
+  // ── T12: VGPV — 4 rapid withdrawals trigger VelocityViolation ───────────
+  it("T12: VGPV — 4th rapid withdrawal triggers VelocityViolation (3 strikes)", async () => {
+    const id  = new BN(410);
+    const now = Math.floor(Date.now() / 1000);
+    // Large, long stream — enough tokens vest each second so each withdrawal succeeds
+    const BIG_AMOUNT = new BN(10_000_000);
+    const [streamPDA] = await deriveStreamPDA(creator.publicKey, id);
+    const [vaultPDA]  = await deriveVaultPDA(creator.publicKey, id);
+
+    // started 10000s ago → ~50% vested; each second adds 500 tokens
+    await program.methods
+      .createStream(id, BIG_AMOUNT, new BN(now - 10_000), new BN(0), new BN(now + 10_000), 0)
+      .accounts({
+        authority: creator.publicKey, beneficiary: recipient.publicKey, mint,
+        stream: streamPDA, vault: vaultPDA, authorityAta: creatorAta,
+        tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId, rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([creator]).rpc();
+
+    // W1: first withdrawal — no strike (last_action_ts = start_ts, elapsed >> 7200s)
+    await program.methods.withdraw()
+      .accounts({
+        beneficiary: recipient.publicKey, stream: streamPDA, vault: vaultPDA,
+        beneficiaryAta: recipientAta, proofCache: NO_PROOF, tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([recipient]).rpc();
+
+    // W2: rapid — elapsed < 7200s → strike 1 (allowed, 1 < 3)
+    await sleep(1_200);
+    await program.methods.withdraw()
+      .accounts({
+        beneficiary: recipient.publicKey, stream: streamPDA, vault: vaultPDA,
+        beneficiaryAta: recipientAta, proofCache: NO_PROOF, tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([recipient]).rpc();
+
+    // W3: rapid — strike 2 (allowed, 2 < 3)
+    await sleep(1_200);
+    await program.methods.withdraw()
+      .accounts({
+        beneficiary: recipient.publicKey, stream: streamPDA, vault: vaultPDA,
+        beneficiaryAta: recipientAta, proofCache: NO_PROOF, tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([recipient]).rpc();
+
+    // W4: rapid — strike 3 → VelocityViolation (3 is NOT < 3)
+    await sleep(1_200);
+    try {
+      await program.methods.withdraw()
+        .accounts({
+          beneficiary: recipient.publicKey, stream: streamPDA, vault: vaultPDA,
+          beneficiaryAta: recipientAta, proofCache: NO_PROOF, tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([recipient]).rpc();
+      assert.fail("Should throw VelocityViolation after 3 strikes");
+    } catch (e: any) {
+      assert(e.message.includes("VelocityViolation") || e.error?.errorCode?.code === "VelocityViolation",
+        `Expected VelocityViolation, got: ${e.message}`);
+      const stream = await program.account.streamAccount.fetch(streamPDA);
+      assert.equal(stream.velocityStrikes, 3, "velocity_strikes must be 3");
+      console.log(`  ✓ T12: VelocityViolation after 3 strikes — VGPV anti-bot active`);
+    }
+  });
+
+  // ── T13: Hybrid — cliff past + milestone quota + linear combined ─────────
+  it("T13: Hybrid cliff+milestone+linear — correct quota enforced", async () => {
+    const id  = new BN(420);
+    const now = Math.floor(Date.now() / 1000);
+    const [streamPDA] = await deriveStreamPDA(creator.publicKey, id);
+    const [vaultPDA]  = await deriveVaultPDA(creator.publicKey, id);
+
+    // cliff passed (was 100s ago); stream 60% through its 1000s duration → ~600k unlocked
+    await program.methods
+      .createStream(id, AMOUNT, new BN(now - 600), new BN(now - 100), new BN(now + 400), 0)
+      .accounts({
+        authority: creator.publicKey, beneficiary: recipient.publicKey, mint,
+        stream: streamPDA, vault: vaultPDA, authorityAta: creatorAta,
+        tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId, rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([creator]).rpc();
+
+    // Configure 2 milestones: 50% + 50%
+    await program.methods
+      .configureMilestones(2, [50, 50, 0, 0])
+      .accounts({ authority: creator.publicKey, stream: streamPDA })
+      .signers([creator]).rpc();
+
+    // Before any milestone verified: withdraw blocked (MilestoneNotVerified)
+    try {
+      await program.methods.withdraw()
+        .accounts({
+          beneficiary: recipient.publicKey, stream: streamPDA, vault: vaultPDA,
+          beneficiaryAta: recipientAta, proofCache: NO_PROOF, tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([recipient]).rpc();
+      assert.fail("Should throw MilestoneNotVerified before any milestone");
+    } catch (e: any) {
+      assert(
+        e.message.includes("MilestoneNotVerified") || e.error?.errorCode?.code === "MilestoneNotVerified",
+        `Expected MilestoneNotVerified, got: ${e.message}`
+      );
+      console.log("  ✓ T13a: withdraw blocked before milestone — MilestoneNotVerified");
+    }
+
+    // Verify milestone 0 → 50% quota unlocked
+    await program.methods
+      .verifyMilestone(0)
+      .accounts({ authority: creator.publicKey, stream: streamPDA })
+      .signers([creator]).rpc();
+
+    const before = await getAccount(provider.connection, recipientAta);
+    await program.methods.withdraw()
+      .accounts({
+        beneficiary: recipient.publicKey, stream: streamPDA, vault: vaultPDA,
+        beneficiaryAta: recipientAta, proofCache: NO_PROOF, tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([recipient]).rpc();
+    const after = await getAccount(provider.connection, recipientAta);
+    const received = Number(BigInt(after.amount.toString()) - BigInt(before.amount.toString()));
+
+    // Linear: ~60% vested (600k), but milestone cap = 50% (500k)
+    // claimable = min(600k, 500k) = 500k
+    const expectedCap = Math.floor(AMOUNT.toNumber() * 0.50);
+    const tolerance   = AMOUNT.toNumber() * 0.05;
+    assert(
+      Math.abs(received - expectedCap) <= tolerance,
+      `Expected ~${expectedCap}±${tolerance} (50% milestone cap), got ${received}`
+    );
+
+    // Verify milestone 1 → full 100% quota, claim remaining
+    await program.methods
+      .verifyMilestone(1)
+      .accounts({ authority: creator.publicKey, stream: streamPDA })
+      .signers([creator]).rpc();
+
+    const before2 = await getAccount(provider.connection, recipientAta);
+    await program.methods.withdraw()
+      .accounts({
+        beneficiary: recipient.publicKey, stream: streamPDA, vault: vaultPDA,
+        beneficiaryAta: recipientAta, proofCache: NO_PROOF, tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([recipient]).rpc();
+    const after2 = await getAccount(provider.connection, recipientAta);
+    const received2 = Number(BigInt(after2.amount.toString()) - BigInt(before2.amount.toString()));
+    assert(received2 > 0, "Should receive more tokens after milestone 1 verified");
+
+    const stream = await program.account.streamAccount.fetch(streamPDA);
+    assert.equal(stream.milestonesVerified[0], true, "milestone 0 must be verified");
+    assert.equal(stream.milestonesVerified[1], true, "milestone 1 must be verified");
+
+    console.log(`  ✓ T13: Hybrid cliff+milestone+linear:`);
+    console.log(`    milestone 0 verified → received ${received} (cap 50%)`);
+    console.log(`    milestone 1 verified → received ${received2} more (full 100%)`);
+    console.log(`    total withdrawn = ${received + received2} / ${AMOUNT.toNumber()}`);
   });
 });

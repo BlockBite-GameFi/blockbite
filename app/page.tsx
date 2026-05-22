@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Navbar from '@/components/Navbar';
 
 // ─── Design System V3 ─────────────────────────────────────────────────────────
@@ -90,6 +90,34 @@ const VESTING_MODELS = [
   },
 ];
 
+const ROTATING_HEADLINES = [
+  'Stop Distributing Tokens Blindly.',
+  'Vesting Infrastructure for Solana.',
+  'Cliff. Milestone. Linear. Hybrid.',
+  'Your Token Payroll, On-Chain.',
+];
+
+const HOW_IT_WORKS = [
+  {
+    num: '01',
+    color: '#ff7a3a',
+    title: 'Cliff Gate',
+    desc: 'Tokens locked until cliff_end timestamp. Zero withdrawals. Anti-bot by default.',
+  },
+  {
+    num: '02',
+    color: '#7ad7ff',
+    title: 'Milestone',
+    desc: 'On-chain oracle verifies KPI completion. Quota allocated per milestone hit.',
+  },
+  {
+    num: '03',
+    color: '#5fd07a',
+    title: 'Linear Stream',
+    desc: 'Stream flows second-by-second once conditions are met. Claim anytime.',
+  },
+];
+
 const COMPARISON = [
   { feature: 'Milestone Unlock',     bb: true,  sablier: false, superfluid: false, streamflow: false },
   { feature: 'Game Verification',    bb: true,  sablier: false, superfluid: false, streamflow: false },
@@ -103,6 +131,15 @@ const COMPARISON = [
 
 export default function Home() {
   const cvs = useRef<HTMLCanvasElement>(null);
+  const [headlineIdx, setHeadlineIdx] = useState(0);
+
+  // Rotating headline
+  useEffect(() => {
+    const id = setInterval(() => {
+      setHeadlineIdx(i => (i + 1) % ROTATING_HEADLINES.length);
+    }, 1800);
+    return () => clearInterval(id);
+  }, []);
 
   // Floating particles background
   useEffect(() => {
@@ -152,6 +189,8 @@ export default function Home() {
         padding: '120px 24px 80px', textAlign: 'center', gap: 32,
         background: `radial-gradient(ellipse 70% 60% at 80% 10%, rgba(94,53,212,.18) 0%, transparent 70%),
                      radial-gradient(ellipse 60% 50% at 20% 90%, rgba(167,139,255,.10) 0%, transparent 65%)`,
+        backgroundImage: 'linear-gradient(rgba(167,139,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(167,139,255,.04) 1px,transparent 1px)',
+        backgroundSize: '48px 48px',
       }}>
 
         {/* Badge */}
@@ -185,6 +224,18 @@ export default function Home() {
             backgroundClip: 'text',
           }}>Distribution Protocol</span>
         </h1>
+
+        {/* Rotating tagline */}
+        <div style={{
+          fontFamily: DS.mono,
+          fontSize: 'clamp(13px,1.6vw,16px)',
+          color: DS.accent,
+          letterSpacing: '.04em',
+          minHeight: 24,
+          transition: 'opacity .3s',
+        }}>
+          {ROTATING_HEADLINES[headlineIdx]}
+        </div>
 
         {/* Sub */}
         <p style={{
@@ -247,6 +298,47 @@ export default function Home() {
                 color: DS.accent, marginBottom: 4,
               }}>{s.value}</div>
               <div style={{ fontSize: 11, color: DS.muted, letterSpacing: '1.4px', textTransform: 'uppercase' }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── HOW IT WORKS ──────────────────────────────────────────────────────── */}
+      <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12, fontFamily: DS.sora }}>
+            HOW IT WORKS
+          </div>
+          <h2 style={{
+            fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 700,
+            marginBottom: 14, color: '#f0ecff',
+          }}>
+            Three phases. One protocol.
+          </h2>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 20 }}>
+          {HOW_IT_WORKS.map((h, i) => (
+            <div key={i} style={{
+              padding: '28px 26px', borderRadius: 20,
+              background: DS.card,
+              border: `1px solid ${DS.border}`,
+              position: 'relative', overflow: 'hidden',
+            }}>
+              <div style={{
+                position: 'absolute', top: 16, right: 20,
+                fontFamily: DS.mono, fontSize: 40, fontWeight: 800,
+                color: `${h.color}14`, lineHeight: 1,
+              }}>{h.num}</div>
+              <div style={{
+                fontFamily: DS.mono, fontSize: 13, fontWeight: 700,
+                color: h.color, marginBottom: 12, letterSpacing: '.06em',
+              }}>{h.num}</div>
+              <h3 style={{
+                fontFamily: DS.cinzel, fontSize: 20, fontWeight: 700,
+                margin: '0 0 12px', color: '#f0ecff',
+              }}>{h.title}</h3>
+              <p style={{ fontSize: 13, color: DS.muted, lineHeight: 1.65, margin: 0 }}>{h.desc}</p>
             </div>
           ))}
         </div>

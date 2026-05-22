@@ -33,7 +33,8 @@ const TDP_LINKS = [
   { name: 'Analytics',         href: '/analytics',   desc: 'Protocol-wide on-chain metrics',    icon: '✦' },
   { name: 'Audit Trail',       href: '/audit',       desc: 'Immutable event log on Solana',     icon: '◇' },
   { name: 'Protocol',          href: '/protocol',    desc: 'TDP overview & comparison',         icon: '⬡' },
-] as const;
+  { name: 'Partners',          href: '/partners',    desc: 'Partnership program & tiers',       icon: '◆' },
+];
 
 const NAV_LINKS = [
   { name: 'DASHBOARD', href: '/streams' },
@@ -52,7 +53,8 @@ export default function Navbar() {
   const isTdpActive = pathname.startsWith('/streams') || pathname.startsWith('/claim')
     || pathname === '/milestones' || pathname === '/calculator'
     || pathname === '/analytics'  || pathname === '/audit'
-    || pathname === '/protocol'   || pathname === '/distribute';
+    || pathname === '/protocol'   || pathname === '/distribute'
+    || pathname === '/partners';
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);

@@ -6,23 +6,23 @@ import { useConnection } from '@solana/wallet-adapter-react';
 import { getAllStreams } from '@/lib/anchor/vesting-client';
 import Navbar from '@/components/Navbar';
 
-// ─── Design System V3 ─────────────────────────────────────────────────────────
+// ─── Design System V4 — Vestra/Solana standard ────────────────────────────────
 const DS = {
-  bg0:      '#05040d',
-  bg1:      '#09071a',
-  bg2:      '#0e0c22',
-  accent:   '#a78bff',
-  accentDk: '#5e35d4',
+  bg0:      '#03000A',   // Vestra bg-void
+  bg1:      '#0A0714',   // Vestra bg-surface
+  bg2:      '#110E1F',   // Vestra bg-elevated
+  accent:   '#9945FF',   // Solana purple (official)
+  accentDk: '#7733CC',   // darker purple
   gold:     '#f5c66a',
-  green:    '#5fd07a',
+  green:    '#14F195',   // Solana green (official)
   red:      '#ff3b6b',
-  blue:     '#7ad7ff',
+  blue:     '#00C2FF',   // Solana blue (official)
   ember:    '#ff7a3a',
-  muted:    'rgba(232,225,248,.38)',
-  border:   'rgba(167,139,255,.13)',
-  card:     'rgba(255,255,255,.042)',
-  cinzel:   "'Space Grotesk', system-ui, sans-serif",
-  sora:     "'Sora', system-ui, sans-serif",
+  muted:    'rgba(160,154,191,.80)',  // Vestra text-secondary
+  border:   'rgba(153,69,255,.20)',   // purple-tinted border
+  card:     'rgba(153,69,255,.07)',   // purple glass card
+  cinzel:   "'Syne', system-ui, sans-serif",    // Vestra display
+  sora:     "'DM Sans', system-ui, sans-serif", // Vestra body
   mono:     "'JetBrains Mono', monospace",
 };
 
@@ -30,35 +30,35 @@ const DS = {
 
 const VERIFY_METHODS = [
   {
+    icon: '⬡',
+    color: DS.blue,
+    title: 'Automated',
+    sub: 'Always On',
+    desc: 'Token streams run fully on-chain. No manual intervention needed — conditions execute the moment they are met.',
+    badge: 'Fully Automated',
+  },
+  {
     icon: '◈',
     color: '#c084fc',
     title: 'Game',
     sub: 'Play to Unlock',
-    desc: 'Token recipients play the BlockBite puzzle game. Score thresholds trigger on-chain milestone verification. Gamified, sybil-resistant, fun.',
+    desc: 'Recipients earn milestone unlocks through the BlockBite puzzle game. Gamified, sybil-resistant, and on-chain verifiable.',
     badge: 'Sybil-Resistant',
   },
   {
     icon: '⬡',
-    color: DS.blue,
+    color: DS.accent,
     title: 'Oracle',
-    sub: 'Chainlink Automated',
-    desc: 'Connect any on-chain data feed. KPI thresholds (user count, revenue, TVL) trigger milestone unlock automatically.',
-    badge: 'Fully Automated',
-  },
-  {
-    icon: '◉',
-    color: DS.gold,
-    title: 'MultiSig',
-    sub: 'Multi-Sig Approval',
-    desc: '3-of-5 designated signers approve milestone completion. Ideal for DAO governance and advisory boards.',
-    badge: 'DAO Native',
+    sub: 'On-Chain Data',
+    desc: 'Connect any on-chain data feed. KPI thresholds — user count, revenue, TVL — trigger milestone unlock automatically.',
+    badge: 'Data-Driven',
   },
   {
     icon: '✦',
     color: DS.green,
     title: 'Manual',
     sub: 'Creator Signs',
-    desc: 'Stream creator manually verifies KPI completion with a signed transaction. Simple and transparent.',
+    desc: 'Stream creator verifies milestone completion with a signed transaction. Simple, transparent, and fully permissioned.',
     badge: 'Permissioned',
   },
 ];
@@ -68,22 +68,19 @@ const VESTING_MODELS = [
     title: 'Linear',
     icon: '∿',
     color: DS.blue,
-    desc: 'Tokens unlock at a constant rate from start to end. Ideal for team and advisor allocations.',
-    formula: 'unlocked(t) = amount × (t − start)\n             ÷ duration',
+    desc: 'Tokens unlock at a constant rate from start to end date. Ideal for team, advisor, and contributor allocations.',
   },
   {
     title: 'Cliff',
     icon: '⌐',
     color: DS.accent,
-    desc: 'Zero tokens release until cliff_ts. Hard on-chain time floor — no early withdrawal, no exceptions.',
-    formula: 'unlocked(t) = 0           if t < cliff\n           = amount        if t ≥ cliff',
+    desc: 'Zero tokens release until the cliff date. Hard time-lock enforced on-chain — no early withdrawals, no exceptions.',
   },
   {
     title: 'Milestone',
     icon: '◎',
     color: DS.gold,
-    desc: 'Tokens unlock in tranches as KPI milestones are verified. Any verification method applies.',
-    formula: 'unlocked(t) = amount × Σ pct[i]\n             where verified[i] = true',
+    desc: 'Tokens unlock in tranches as project milestones are verified. Choose any verification method to match your workflow.',
   },
 ];
 
@@ -98,32 +95,31 @@ const HOW_IT_WORKS = [
   {
     num: '01',
     color: '#ff7a3a',
-    title: 'Cliff Gate',
-    desc: 'Tokens locked until cliff_end timestamp. Zero withdrawals. Anti-bot by default.',
+    title: 'Set Conditions',
+    desc: 'Define a cliff date, vesting duration, and optional milestone targets for your token allocation.',
   },
   {
     num: '02',
-    color: '#7ad7ff',
-    title: 'Milestone',
-    desc: 'On-chain oracle verifies KPI completion. Quota allocated per milestone hit.',
+    color: DS.blue,
+    title: 'Verify Progress',
+    desc: 'Milestones unlock via oracle, game activity, DAO vote, or manual sign-off — your choice.',
   },
   {
     num: '03',
-    color: '#5fd07a',
-    title: 'Linear Stream',
-    desc: 'Stream flows second-by-second once conditions are met. Claim anytime.',
+    color: DS.green,
+    title: 'Recipients Claim',
+    desc: 'Once conditions are met, recipients withdraw their vested tokens anytime. Fully non-custodial.',
   },
 ];
 
 const COMPARISON = [
-  { feature: 'Milestone Unlock',     bb: true,  sablier: false, superfluid: false, streamflow: false },
-  { feature: 'Game Verification',    bb: true,  sablier: false, superfluid: false, streamflow: false },
-  { feature: 'Oracle Sync',          bb: true,  sablier: false, superfluid: false, streamflow: true  },
-  { feature: 'MultiSig Gate',        bb: true,  sablier: false, superfluid: false, streamflow: false },
-  { feature: 'On-chain Formula',     bb: true,  sablier: true,  superfluid: true,  streamflow: true  },
-  { feature: 'Cliff + Linear',       bb: true,  sablier: true,  superfluid: false, streamflow: true  },
-  { feature: 'In-game Rewards',      bb: true,  sablier: false, superfluid: false, streamflow: false },
-  { feature: 'Anti-dump by Default', bb: true,  sablier: false, superfluid: false, streamflow: false },
+  { feature: 'Milestone Unlock',      bb: true,  sablier: false, superfluid: false, streamflow: false },
+  { feature: 'Fully Automated',       bb: true,  sablier: false, superfluid: false, streamflow: false },
+  { feature: 'Game Verification',     bb: true,  sablier: false, superfluid: false, streamflow: false },
+  { feature: 'Oracle Data Feed',      bb: true,  sablier: false, superfluid: false, streamflow: true  },
+  { feature: 'Cliff + Linear',        bb: true,  sablier: true,  superfluid: false, streamflow: true  },
+  { feature: 'On-chain Enforcement',  bb: true,  sablier: true,  superfluid: true,  streamflow: true  },
+  { feature: 'Anti-dump by Default',  bb: true,  sablier: false, superfluid: false, streamflow: false },
 ];
 
 interface LiveStats { streams: number; active: number; locked: string; distributed: string; }
@@ -133,6 +129,19 @@ export default function Home() {
   const cvs = useRef<HTMLCanvasElement>(null);
   const [headlineIdx, setHeadlineIdx] = useState(0);
   const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
+  const [wlEmail, setWlEmail] = useState('');
+  const [wlState, setWlState] = useState<'idle' | 'success' | 'dup'>('idle');
+
+  const handleWaitlist = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!wlEmail.trim()) return;
+    try {
+      const saved: string[] = JSON.parse(localStorage.getItem('bb_waitlist') || '[]');
+      if (saved.includes(wlEmail.trim().toLowerCase())) { setWlState('dup'); return; }
+      localStorage.setItem('bb_waitlist', JSON.stringify([...saved, wlEmail.trim().toLowerCase()]));
+    } catch {}
+    setWlState('success');
+  };
 
   // Live on-chain stats
   useEffect(() => {
@@ -173,7 +182,7 @@ export default function Home() {
     let raf: number;
     const resize = () => { c.width = window.innerWidth; c.height = window.innerHeight; };
     resize(); window.addEventListener('resize', resize);
-    const COLORS = [DS.accent, DS.accentDk, DS.blue, DS.gold];
+    const COLORS = [DS.accent, DS.blue, DS.green, DS.accentDk];
     const pts = Array.from({ length: 28 }, () => ({
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
@@ -201,8 +210,9 @@ export default function Home() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', background: DS.bg0, color: '#f0ecff', fontFamily: DS.sora, overflowX: 'hidden' }}>
-      <canvas ref={cvs} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />
+    <div style={{ minHeight: '100vh', background: DS.bg0, color: '#F8F6FF', fontFamily: DS.sora, overflowX: 'hidden' }}>
+      {/* Warp-speed canvas particles */}
+      <canvas ref={cvs} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.55 }} />
 
       <Navbar />
 
@@ -211,39 +221,37 @@ export default function Home() {
         position: 'relative', zIndex: 1,
         minHeight: '100vh',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: '120px 24px 80px', textAlign: 'center', gap: 32,
-        background: `radial-gradient(ellipse 70% 60% at 80% 10%, rgba(94,53,212,.18) 0%, transparent 70%),
-                     radial-gradient(ellipse 60% 50% at 20% 90%, rgba(167,139,255,.10) 0%, transparent 65%)`,
-        backgroundImage: 'linear-gradient(rgba(167,139,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(167,139,255,.04) 1px,transparent 1px)',
-        backgroundSize: '48px 48px',
+        padding: '120px 24px 80px', textAlign: 'center', gap: 28,
+        background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(153,69,255,0.07) 0%, rgba(0,194,255,0.04) 55%, transparent 100%)',
       }}>
 
-        {/* Badge */}
+        {/* Badge — Vestra style: green border + green pulse */}
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '7px 16px', borderRadius: 999,
-          border: `1px solid ${DS.border}`,
-          background: 'rgba(167,139,255,.10)',
-          fontSize: 11, fontWeight: 700, color: DS.accent,
-          letterSpacing: '1.8px', fontFamily: DS.sora,
+          padding: '7px 18px', borderRadius: 999,
+          border: `1px solid rgba(20,241,149,.35)`,
+          background: 'rgba(20,241,149,.08)',
+          fontSize: 11, fontWeight: 700,
+          color: DS.green,
+          letterSpacing: '2px', fontFamily: DS.sora,
         }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: DS.green, display: 'inline-block', animation: 'pulse 2s infinite' }} />
           POWERED BY SOLANA
         </div>
 
-        {/* H1 */}
+        {/* H1 — tricolor gradient: purple → cyan → green */}
         <h1 style={{
           fontFamily: DS.cinzel,
-          fontSize: 'clamp(36px,6vw,56px)',
-          fontWeight: 900,
-          lineHeight: 1.1,
-          letterSpacing: '-1.5px',
+          fontSize: 'clamp(38px,6.5vw,64px)',
+          fontWeight: 800,
+          lineHeight: 1.08,
+          letterSpacing: '-1px',
           margin: 0,
-          maxWidth: 780,
+          maxWidth: 820,
         }}>
           Programmable Token<br />
           <span style={{
-            background: `linear-gradient(135deg, ${DS.accent} 0%, ${DS.blue} 100%)`,
+            background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 55%, #14F195 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -253,10 +261,11 @@ export default function Home() {
         {/* Rotating tagline */}
         <div style={{
           fontFamily: DS.mono,
-          fontSize: 'clamp(13px,1.6vw,16px)',
-          color: DS.accent,
-          letterSpacing: '.04em',
-          minHeight: 24,
+          fontSize: 'clamp(12px,1.5vw,15px)',
+          color: 'rgba(153,69,255,.85)',
+          letterSpacing: '.06em',
+          textTransform: 'uppercase',
+          minHeight: 22,
           transition: 'opacity .3s',
         }}>
           {ROTATING_HEADLINES[headlineIdx]}
@@ -266,8 +275,8 @@ export default function Home() {
         <p style={{
           fontSize: 'clamp(14px,1.8vw,17px)',
           color: DS.muted,
-          maxWidth: 600,
-          lineHeight: 1.72,
+          maxWidth: 560,
+          lineHeight: 1.75,
           margin: 0,
           fontWeight: 400,
         }}>
@@ -275,22 +284,108 @@ export default function Home() {
           Built for Web3 projects that take anti-dump seriously.
         </p>
 
+        {/* ── WAITLIST FORM (Vestra-style, prominent in hero) ── */}
+        {wlState !== 'success' ? (
+          <div style={{
+            width: '100%', maxWidth: 440,
+            padding: '28px 32px 24px',
+            borderRadius: 24,
+            background: 'rgba(17,14,31,0.80)',
+            border: '1px solid rgba(153,69,255,.28)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: '0 0 60px rgba(153,69,255,.10), 0 0 120px rgba(0,194,255,.05)',
+          }}>
+            <div style={{ fontFamily: DS.cinzel, fontWeight: 700, fontSize: 17, marginBottom: 6, color: '#F8F6FF' }}>
+              Join the Early Access List
+            </div>
+            <div style={{ fontSize: 12, color: DS.muted, marginBottom: 20, lineHeight: 1.6 }}>
+              Be first to launch milestone vesting streams on Solana.{' '}
+              {wlState === 'dup' && <span style={{ color: '#FF9D4D' }}>You&apos;re already on the list!</span>}
+            </div>
+            <form onSubmit={handleWaitlist} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input
+                type="email"
+                value={wlEmail}
+                onChange={e => { setWlEmail(e.target.value); if (wlState !== 'idle') setWlState('idle'); }}
+                placeholder="your@email.com"
+                required
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: '13px 18px', borderRadius: 14,
+                  background: 'rgba(255,255,255,.04)',
+                  border: wlState === 'dup' ? '1px solid rgba(255,157,77,.5)' : '1px solid rgba(153,69,255,.30)',
+                  color: '#F8F6FF', fontSize: 14, fontFamily: DS.sora, outline: 'none',
+                }}
+                onFocus={e => { e.currentTarget.style.border = '1px solid rgba(153,69,255,.65)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(153,69,255,.12)'; }}
+                onBlur={e => { e.currentTarget.style.border = '1px solid rgba(153,69,255,.30)'; e.currentTarget.style.boxShadow = 'none'; }}
+              />
+              <button
+                type="submit"
+                style={{
+                  padding: '13px 24px', borderRadius: 14,
+                  background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 100%)',
+                  color: '#fff', fontWeight: 700, fontSize: 14, fontFamily: DS.sora,
+                  border: 'none', cursor: 'pointer',
+                  boxShadow: '0 0 24px rgba(153,69,255,.30)',
+                  letterSpacing: '.02em',
+                }}
+              >
+                Join Waitlist →
+              </button>
+            </form>
+          </div>
+        ) : (
+          /* Success state */
+          <div style={{
+            width: '100%', maxWidth: 440,
+            padding: '32px',
+            borderRadius: 24,
+            background: 'rgba(17,14,31,0.80)',
+            border: '1px solid rgba(20,241,149,.25)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: '0 0 60px rgba(20,241,149,.08)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+          }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: '50%',
+              background: 'rgba(20,241,149,.10)',
+              border: '1px solid rgba(20,241,149,.30)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 24,
+            }}>✓</div>
+            <div style={{ fontFamily: DS.cinzel, fontWeight: 700, fontSize: 17, color: '#F8F6FF' }}>You&apos;re on the list!</div>
+            <div style={{ fontSize: 13, color: DS.muted, lineHeight: 1.6, textAlign: 'center' }}>
+              We&apos;ll notify you when BlockBite early access opens. Get ready to launch your first token stream.
+            </div>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '5px 14px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+              background: 'rgba(20,241,149,.10)', border: '1px solid rgba(20,241,149,.25)',
+              color: DS.green,
+            }}>
+              ✓ Waitlist confirmed
+            </div>
+          </div>
+        )}
+
         {/* CTAs */}
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 4 }}>
           <Link href="/streams/new" style={{
-            padding: '14px 32px', borderRadius: 12,
-            background: `linear-gradient(135deg, ${DS.accent} 0%, ${DS.accentDk} 100%)`,
+            padding: '14px 34px', borderRadius: 9999,
+            background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 100%)',
             color: '#fff', fontWeight: 700, fontSize: 15, textDecoration: 'none',
-            boxShadow: `0 0 32px rgba(167,139,255,.35)`,
+            boxShadow: '0 0 32px rgba(153,69,255,.35)',
             letterSpacing: '.02em',
           }}>
             Launch App →
           </Link>
           <Link href="/streams" style={{
-            padding: '14px 28px', borderRadius: 12,
-            background: 'transparent',
-            border: `1px solid ${DS.border}`,
-            color: '#f0ecff', fontWeight: 600, fontSize: 15, textDecoration: 'none',
+            padding: '14px 28px', borderRadius: 9999,
+            background: 'rgba(153,69,255,.06)',
+            border: `1px solid rgba(153,69,255,.35)`,
+            color: '#F8F6FF', fontWeight: 600, fontSize: 15, textDecoration: 'none',
             backdropFilter: 'blur(8px)',
           }}>
             View Streams
@@ -337,7 +432,7 @@ export default function Home() {
           </div>
           <h2 style={{
             fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 700,
-            marginBottom: 14, color: '#f0ecff',
+            marginBottom: 14, color: '#F8F6FF',
           }}>
             Three phases. One protocol.
           </h2>
@@ -362,7 +457,7 @@ export default function Home() {
               }}>{h.num}</div>
               <h3 style={{
                 fontFamily: DS.cinzel, fontSize: 20, fontWeight: 700,
-                margin: '0 0 12px', color: '#f0ecff',
+                margin: '0 0 12px', color: '#F8F6FF',
               }}>{h.title}</h3>
               <p style={{ fontSize: 13, color: DS.muted, lineHeight: 1.65, margin: 0 }}>{h.desc}</p>
             </div>
@@ -378,7 +473,7 @@ export default function Home() {
           </div>
           <h2 style={{
             fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 700,
-            marginBottom: 14, color: '#f0ecff',
+            marginBottom: 14, color: '#F8F6FF',
           }}>
             One Protocol. Four Ways to Verify.
           </h2>
@@ -417,7 +512,7 @@ export default function Home() {
               <div style={{ fontSize: 11, color: m.color, fontWeight: 700, letterSpacing: '1.5px', marginBottom: 4 }}>
                 {m.title.toUpperCase()}
               </div>
-              <div style={{ fontFamily: DS.cinzel, fontSize: 17, fontWeight: 600, marginBottom: 10, color: '#f0ecff' }}>
+              <div style={{ fontFamily: DS.cinzel, fontSize: 17, fontWeight: 600, marginBottom: 10, color: '#F8F6FF' }}>
                 {m.sub}
               </div>
               <p style={{ fontSize: 13, color: DS.muted, lineHeight: 1.65, margin: 0 }}>{m.desc}</p>
@@ -443,91 +538,31 @@ export default function Home() {
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 48 }}>
             <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
-              VESTING ARCHITECTURE
+              VESTING TYPES
             </div>
-            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 700, color: '#f0ecff' }}>
+            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 700, color: '#F8F6FF' }}>
               Three Vesting Models
             </h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 20 }}>
             {VESTING_MODELS.map((v, i) => (
               <div key={i} style={{
-                padding: '28px 26px', borderRadius: 20,
+                padding: '32px 28px', borderRadius: 20,
                 background: DS.card,
                 border: `1px solid ${DS.border}`,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
                   <div style={{
-                    width: 42, height: 42, borderRadius: 11,
+                    width: 44, height: 44, borderRadius: 12,
                     background: `${v.color}18`, border: `1px solid ${v.color}44`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 22, color: v.color,
                   }}>{v.icon}</div>
-                  <h3 style={{ fontFamily: DS.cinzel, fontSize: 20, fontWeight: 700, margin: 0, color: '#f0ecff' }}>{v.title}</h3>
+                  <h3 style={{ fontFamily: DS.cinzel, fontSize: 20, fontWeight: 700, margin: 0, color: '#F8F6FF' }}>{v.title}</h3>
                 </div>
-                <p style={{ fontSize: 13, color: DS.muted, lineHeight: 1.65, marginBottom: 18 }}>{v.desc}</p>
-                <pre style={{
-                  fontFamily: DS.mono, fontSize: 10.5, color: v.color,
-                  background: `${v.color}0c`, border: `1px solid ${v.color}22`,
-                  borderRadius: 10, padding: '12px 14px', margin: 0,
-                  whiteSpace: 'pre-wrap', lineHeight: 1.8,
-                }}>{v.formula}</pre>
+                <p style={{ fontSize: 14, color: DS.muted, lineHeight: 1.7, margin: 0 }}>{v.desc}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── PROTOCOL FLOW DIAGRAM ─────────────────────────────────────────────── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px', maxWidth: 1000, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
-            ARCHITECTURE
-          </div>
-          <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 700, color: '#f0ecff' }}>
-            How It Flows On-Chain
-          </h2>
-        </div>
-
-        {/* Flow diagram */}
-        <div style={{
-          padding: '32px 24px', borderRadius: 24,
-          background: DS.card, border: `1px solid ${DS.border}`,
-          overflowX: 'auto',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 0, minWidth: 680, justifyContent: 'center', flexWrap: 'nowrap' }}>
-            {/* Step boxes */}
-            {[
-              { label: 'Project', sub: 'Deploys stream', color: DS.accent },
-              null,
-              { label: 'Stream', sub: 'PDA Vault', color: DS.blue },
-              null,
-              { label: 'Vesting Type', sub: 'Linear / Cliff\nMilestone', color: DS.gold, multi: true },
-              null,
-              { label: 'Verification', sub: 'Game / Oracle\nMultiSig / Manual', color: '#c084fc', multi: true },
-              null,
-              { label: 'Recipient', sub: 'Claims tokens', color: DS.green },
-            ].map((node, i) => {
-              if (node === null) {
-                return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '0 4px' }}>
-                    <svg width="32" height="16" viewBox="0 0 32 16">
-                      <path d="M0 8 L24 8 M18 2 L32 8 L18 14" stroke="rgba(167,139,255,.4)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                );
-              }
-              return (
-                <div key={i} style={{
-                  padding: '14px 18px', borderRadius: 14, textAlign: 'center', minWidth: 100,
-                  background: `${node.color}12`, border: `1px solid ${node.color}44`,
-                  flexShrink: 0,
-                }}>
-                  <div style={{ fontFamily: DS.mono, fontSize: 11, fontWeight: 700, color: node.color, marginBottom: 4 }}>{node.label}</div>
-                  <div style={{ fontSize: 9.5, color: DS.muted, whiteSpace: 'pre-line', lineHeight: 1.4 }}>{node.sub}</div>
-                </div>
-              );
-            })}
           </div>
         </div>
       </section>
@@ -544,7 +579,7 @@ export default function Home() {
             <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
               COMPETITIVE ANALYSIS
             </div>
-            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 700, color: '#f0ecff' }}>
+            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 700, color: '#F8F6FF' }}>
               BlockBite TDP vs The Field
             </h2>
           </div>
@@ -575,7 +610,7 @@ export default function Home() {
                 borderBottom: i < COMPARISON.length - 1 ? `1px solid ${DS.border}` : 'none',
                 alignItems: 'center',
               }}>
-                <div style={{ fontSize: 13, color: '#e8e1f8', fontWeight: 500 }}>{row.feature}</div>
+                <div style={{ fontSize: 13, color: '#F8F6FF', fontWeight: 500 }}>{row.feature}</div>
                 {[row.bb, row.sablier, row.superfluid, row.streamflow].map((val, j) => (
                   <div key={j} style={{ textAlign: 'center' }}>
                     {val
@@ -594,12 +629,12 @@ export default function Home() {
       <section style={{
         position: 'relative', zIndex: 1,
         padding: '100px 24px 120px', textAlign: 'center',
-        background: `radial-gradient(ellipse 60% 70% at 50% 50%, rgba(94,53,212,.14) 0%, transparent 70%)`,
+        background: 'radial-gradient(ellipse 60% 70% at 50% 50%, rgba(153,69,255,.12) 0%, transparent 70%)',
       }}>
         <h2 style={{
           fontFamily: DS.cinzel,
           fontSize: 'clamp(26px,4vw,44px)', fontWeight: 800,
-          marginBottom: 16, color: '#f0ecff',
+          marginBottom: 16, color: '#F8F6FF',
         }}>
           Ready to distribute tokens responsibly?
         </h2>
@@ -608,20 +643,21 @@ export default function Home() {
         </p>
         <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link href="/streams/new" style={{
-            padding: '15px 36px', borderRadius: 13,
-            background: `linear-gradient(135deg, ${DS.accent} 0%, ${DS.accentDk} 100%)`,
+            padding: '15px 40px', borderRadius: 9999,
+            background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 100%)',
             color: '#fff', fontWeight: 700, fontSize: 16, textDecoration: 'none',
-            boxShadow: `0 0 40px rgba(167,139,255,.4)`,
+            boxShadow: '0 0 40px rgba(153,69,255,.40)',
           }}>
             Launch App →
           </Link>
-          <a href="/protocol" style={{
-            padding: '15px 32px', borderRadius: 13,
-            background: 'transparent', border: `1px solid ${DS.border}`,
-            color: '#f0ecff', fontWeight: 600, fontSize: 16, textDecoration: 'none',
+          <Link href="/streams" style={{
+            padding: '15px 36px', borderRadius: 9999,
+            background: 'rgba(153,69,255,.06)',
+            border: '1px solid rgba(153,69,255,.35)',
+            color: '#F8F6FF', fontWeight: 600, fontSize: 16, textDecoration: 'none',
           }}>
-            Read Docs ↗
-          </a>
+            View Streams
+          </Link>
         </div>
       </section>
 

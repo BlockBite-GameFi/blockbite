@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token::{self, CloseAccount, Mint, Token, TokenAccount, Transfer};
 
 declare_id!("DvhxiL5PF8Cq3icqcjdbQvtMhJcj6LWheUgovRpaXTFf");
 
@@ -91,10 +91,6 @@ pub mod blockbite_vesting {
         count: u8,
         pct:   [u8; 4],
     ) -> Result<()> {
-        require!(
-            ctx.accounts.authority.key() == ctx.accounts.stream.authority,
-            VestingError::Unauthorized,
-        );
         require!(!ctx.accounts.stream.cancelled, VestingError::AlreadyCancelled);
         require!(count >= 1 && count <= 4, VestingError::InvalidMilestoneIndex);
         // milestone_count == 0 means not yet configured
@@ -130,10 +126,6 @@ pub mod blockbite_vesting {
         ctx: Context<VerifyMilestone>,
         index: u8,
     ) -> Result<()> {
-        require!(
-            ctx.accounts.authority.key() == ctx.accounts.stream.authority,
-            VestingError::Unauthorized,
-        );
         require!(!ctx.accounts.stream.cancelled, VestingError::AlreadyCancelled);
         require!(
             index < ctx.accounts.stream.milestone_count,
@@ -163,15 +155,22 @@ pub mod blockbite_vesting {
     ///   6. VGPV velocity check
     pub fn withdraw(ctx: Context<Withdraw>) -> Result<()> {
         require!(!ctx.accounts.stream.cancelled, VestingError::AlreadyCancelled);
-        require!(
-            ctx.accounts.beneficiary.key() == ctx.accounts.stream.beneficiary,
-            VestingError::Unauthorized
-        );
 
         // Gate 3: ProofCache tier milestone (game CPI path — source A)
         if ctx.accounts.stream.required_tier > 0 {
             let cache_data = ctx.accounts.proof_cache.try_borrow_data()?;
             let cache = ProofCache::try_deserialize(&mut &cache_data[..])?;
+            // PDA origin validation — prevents cross-stream substitution attack:
+            // attacker cannot pass a ProofCache from their own stream to bypass
+            // the tier gate on a different stream.
+            require!(
+                cache.schedule == ctx.accounts.stream.key(),
+                VestingError::Unauthorized,
+            );
+            require!(
+                cache.player == ctx.accounts.beneficiary.key(),
+                VestingError::Unauthorized,
+            );
             require!(
                 cache.tier_reached >= ctx.accounts.stream.required_tier,
                 VestingError::MilestoneNotMet,
@@ -217,6 +216,10 @@ pub mod blockbite_vesting {
                 new_strikes < VGPV_MAX_VELOCITY_STRIKES,
                 VestingError::VelocityViolation
             );
+        } else if last_ts > 0 && elapsed >= VGPV_MIN_SECONDS_PER_ACT.saturating_mul(2) {
+            // Reset strikes after cooling off for 2× the minimum interval —
+            // prevents permanent lockout from 3 accidental rapid withdrawals.
+            ctx.accounts.stream.velocity_strikes = 0;
         }
         ctx.accounts.stream.last_action_ts   = now;
         ctx.accounts.stream.amount_withdrawn = ctx.accounts.stream
@@ -258,6 +261,8 @@ pub mod blockbite_vesting {
     pub fn fund_vault(ctx: Context<FundVault>, amount: u64) -> Result<()> {
         require!(amount > 0, VestingError::ZeroAmount);
         require!(!ctx.accounts.stream.cancelled, VestingError::AlreadyCancelled);
+        let now = Clock::get()?.unix_timestamp;
+        require!(now < ctx.accounts.stream.end_ts, VestingError::StreamExpired);
 
         let vault_portion    = amount.checked_mul(70).ok_or(VestingError::Overflow)? / 100;
         let team_portion     = amount.checked_mul(15).ok_or(VestingError::Overflow)? / 100;
@@ -374,20 +379,16 @@ pub mod blockbite_vesting {
     /// Vested-but-unclaimed → beneficiary. Truly unvested → creator.
     pub fn cancel(ctx: Context<Cancel>) -> Result<()> {
         require!(!ctx.accounts.stream.cancelled, VestingError::AlreadyCancelled);
-        require!(
-            ctx.accounts.authority.key() == ctx.accounts.stream.authority,
-            VestingError::Unauthorized
-        );
 
         let now    = Clock::get()?.unix_timestamp;
         let stream = &ctx.accounts.stream;
 
+        // Compute once — eliminates double-call and latent TOCTOU pattern
+        let vested_at_cancel = stream.unlocked_amount(now);
         require!(
-            stream.unlocked_amount(now) < stream.amount_total,
+            vested_at_cancel < stream.amount_total,
             VestingError::FullyVested
         );
-
-        let vested_at_cancel          = stream.unlocked_amount(now);
         let claimable_for_beneficiary = vested_at_cancel.saturating_sub(stream.amount_withdrawn);
         let return_to_creator         = stream.amount_total.saturating_sub(vested_at_cancel);
 
@@ -428,6 +429,17 @@ pub mod blockbite_vesting {
                 return_to_creator,
             )?;
         }
+
+        // Close vault token account — reclaim ~0.00204 SOL rent to authority
+        token::close_account(CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            CloseAccount {
+                account:     ctx.accounts.vault.to_account_info(),
+                destination: ctx.accounts.authority.to_account_info(),
+                authority:   ctx.accounts.stream.to_account_info(),
+            },
+            &[seeds],
+        ))?;
 
         emit!(Cancelled {
             stream:    ctx.accounts.stream.key(),
@@ -482,6 +494,7 @@ pub struct ConfigureMilestones<'info> {
 
     #[account(
         mut,
+        has_one = authority @ VestingError::Unauthorized,
         seeds = [b"stream", stream.authority.as_ref(), &stream.stream_id.to_le_bytes()],
         bump = stream.bump,
     )]
@@ -494,6 +507,7 @@ pub struct VerifyMilestone<'info> {
 
     #[account(
         mut,
+        has_one = authority @ VestingError::Unauthorized,
         seeds = [b"stream", stream.authority.as_ref(), &stream.stream_id.to_le_bytes()],
         bump = stream.bump,
     )]
@@ -506,6 +520,7 @@ pub struct Withdraw<'info> {
 
     #[account(
         mut,
+        has_one = beneficiary @ VestingError::Unauthorized,
         seeds = [b"stream", stream.authority.as_ref(), &stream.stream_id.to_le_bytes()],
         bump = stream.bump,
     )]
@@ -588,6 +603,7 @@ pub struct UpdateProof<'info> {
 
 #[derive(Accounts)]
 pub struct Cancel<'info> {
+    #[account(mut)]
     pub authority: Signer<'info>,
 
     #[account(address = stream.beneficiary)]
@@ -596,6 +612,8 @@ pub struct Cancel<'info> {
 
     #[account(
         mut,
+        has_one = authority @ VestingError::Unauthorized,
+        close = authority,
         seeds = [b"stream", stream.authority.as_ref(), &stream.stream_id.to_le_bytes()],
         bump = stream.bump,
     )]
@@ -614,7 +632,8 @@ pub struct Cancel<'info> {
     #[account(mut, token::mint = stream.mint, token::authority = beneficiary)]
     pub beneficiary_ata: Account<'info, TokenAccount>,
 
-    pub token_program: Program<'info, Token>,
+    pub token_program:  Program<'info, Token>,
+    pub system_program: Program<'info, System>,
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────

@@ -424,110 +424,56 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── HOW IT WORKS ──────────────────────────────────────────────────────── */}
+      {/* ─── FEATURES ──────────────────────────────────────────────────────────── */}
       <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12, fontFamily: DS.sora }}>
-            HOW IT WORKS
+        <div style={{ textAlign: 'center', marginBottom: 52 }}>
+          <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
+            WHAT WE DO
           </div>
-          <h2 style={{
-            fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 700,
-            marginBottom: 14, color: '#F8F6FF',
-          }}>
-            Three phases. One protocol.
+          <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: '#F8F6FF', margin: 0 }}>
+            Token distribution, done right.
           </h2>
         </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 20 }}>
-          {HOW_IT_WORKS.map((h, i) => (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 20 }}>
+          {[
+            {
+              icon: '◎', color: DS.accent,
+              title: 'Flexible Schedules',
+              desc: 'Send tokens to your team, investors, or community with cliff locks, linear streams, and milestone-gated tranches — all in one stream.',
+            },
+            {
+              icon: '◈', color: '#c084fc',
+              title: 'Game-Powered Proof',
+              desc: 'Recipients earn milestone unlocks by playing the BlockBite puzzle game. Gamified, sybil-resistant, and fully verifiable on-chain.',
+            },
+            {
+              icon: '✦', color: DS.green,
+              title: 'Anti-Dump by Default',
+              desc: 'Hard time locks and milestone gates prevent immediate sell pressure. Align your community around long-term growth.',
+            },
+          ].map((f, i) => (
             <div key={i} style={{
-              padding: '28px 26px', borderRadius: 20,
-              background: DS.card,
-              border: `1px solid ${DS.border}`,
-              position: 'relative', overflow: 'hidden',
-            }}>
-              <div style={{
-                position: 'absolute', top: 16, right: 20,
-                fontFamily: DS.mono, fontSize: 40, fontWeight: 800,
-                color: `${h.color}14`, lineHeight: 1,
-              }}>{h.num}</div>
-              <div style={{
-                fontFamily: DS.mono, fontSize: 13, fontWeight: 700,
-                color: h.color, marginBottom: 12, letterSpacing: '.06em',
-              }}>{h.num}</div>
-              <h3 style={{
-                fontFamily: DS.cinzel, fontSize: 20, fontWeight: 700,
-                margin: '0 0 12px', color: '#F8F6FF',
-              }}>{h.title}</h3>
-              <p style={{ fontSize: 13, color: DS.muted, lineHeight: 1.65, margin: 0 }}>{h.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ─── VERIFICATION LAYER ────────────────────────────────────────────────── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12, fontFamily: DS.sora }}>
-            KEY DIFFERENTIATOR
-          </div>
-          <h2 style={{
-            fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 700,
-            marginBottom: 14, color: '#F8F6FF',
-          }}>
-            One Protocol. Four Ways to Verify.
-          </h2>
-          <p style={{ fontSize: 15, color: DS.muted, maxWidth: 560, margin: '0 auto', lineHeight: 1.7 }}>
-            Milestone streams can use any verification method. Projects choose what fits their product.
-          </p>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 18 }}>
-          {VERIFY_METHODS.map((m, i) => (
-            <div key={i} style={{
-              padding: '28px 24px', borderRadius: 20,
-              background: DS.card,
-              border: `1px solid ${DS.border}`,
+              padding: '36px 32px', borderRadius: 24,
+              background: DS.card, border: `1px solid ${DS.border}`,
               transition: 'border-color .2s, transform .2s',
-              cursor: 'default',
             }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLElement;
-                el.style.borderColor = m.color + '55';
-                el.style.transform = 'translateY(-3px)';
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLElement;
-                el.style.borderColor = DS.border;
-                el.style.transform = 'none';
-              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = f.color + '55'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = DS.border; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
             >
               <div style={{
-                width: 44, height: 44, borderRadius: 12,
-                background: `${m.color}18`,
-                border: `1px solid ${m.color}44`,
+                width: 48, height: 48, borderRadius: 14,
+                background: `${f.color}18`, border: `1px solid ${f.color}44`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 20, color: m.color, marginBottom: 16,
-              }}>{m.icon}</div>
-              <div style={{ fontSize: 11, color: m.color, fontWeight: 700, letterSpacing: '1.5px', marginBottom: 4 }}>
-                {m.title.toUpperCase()}
-              </div>
-              <div style={{ fontFamily: DS.cinzel, fontSize: 17, fontWeight: 600, marginBottom: 10, color: '#F8F6FF' }}>
-                {m.sub}
-              </div>
-              <p style={{ fontSize: 13, color: DS.muted, lineHeight: 1.65, margin: 0 }}>{m.desc}</p>
-              <div style={{
-                marginTop: 16, display: 'inline-block',
-                padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 700,
-                background: `${m.color}15`, color: m.color, border: `1px solid ${m.color}30`,
-                letterSpacing: '1px',
-              }}>{m.badge}</div>
+                fontSize: 22, color: f.color, marginBottom: 20,
+              }}>{f.icon}</div>
+              <h3 style={{ fontFamily: DS.cinzel, fontSize: 21, fontWeight: 700, margin: '0 0 14px', color: '#F8F6FF' }}>{f.title}</h3>
+              <p style={{ fontSize: 14, color: DS.muted, lineHeight: 1.72, margin: 0 }}>{f.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ─── VESTING MODELS ────────────────────────────────────────────────────── */}
+      {/* ─── HOW IT WORKS ──────────────────────────────────────────────────────── */}
       <section style={{
         position: 'relative', zIndex: 1,
         padding: '80px 24px',
@@ -536,31 +482,62 @@ export default function Home() {
         borderBottom: `1px solid ${DS.border}`,
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <div style={{ textAlign: 'center', marginBottom: 52 }}>
             <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
-              VESTING TYPES
+              HOW IT WORKS
             </div>
-            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 700, color: '#F8F6FF' }}>
-              Three Vesting Models
+            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: '#F8F6FF', margin: '0 0 16px' }}>
+              Three steps to launch.
             </h2>
+            <p style={{ fontSize: 15, color: DS.muted, maxWidth: 520, margin: '0 auto', lineHeight: 1.7 }}>
+              From stream creation to recipient claim — every step enforced on-chain, no admin required.
+            </p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 20 }}>
-            {VESTING_MODELS.map((v, i) => (
+
+          {/* 3 steps */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 20, marginBottom: 56 }}>
+            {HOW_IT_WORKS.map((h, i) => (
               <div key={i} style={{
                 padding: '32px 28px', borderRadius: 20,
-                background: DS.card,
-                border: `1px solid ${DS.border}`,
+                background: DS.card, border: `1px solid ${DS.border}`,
+                position: 'relative', overflow: 'hidden',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-                  <div style={{
-                    width: 44, height: 44, borderRadius: 12,
-                    background: `${v.color}18`, border: `1px solid ${v.color}44`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 22, color: v.color,
-                  }}>{v.icon}</div>
-                  <h3 style={{ fontFamily: DS.cinzel, fontSize: 20, fontWeight: 700, margin: 0, color: '#F8F6FF' }}>{v.title}</h3>
-                </div>
-                <p style={{ fontSize: 14, color: DS.muted, lineHeight: 1.7, margin: 0 }}>{v.desc}</p>
+                <div style={{
+                  position: 'absolute', top: 14, right: 18,
+                  fontFamily: DS.mono, fontSize: 44, fontWeight: 800,
+                  color: `${h.color}12`, lineHeight: 1, userSelect: 'none',
+                }}>{h.num}</div>
+                <div style={{ fontFamily: DS.mono, fontSize: 12, fontWeight: 700, color: h.color, marginBottom: 14, letterSpacing: '.08em' }}>{h.num}</div>
+                <h3 style={{ fontFamily: DS.cinzel, fontSize: 20, fontWeight: 700, margin: '0 0 12px', color: '#F8F6FF' }}>{h.title}</h3>
+                <p style={{ fontSize: 13, color: DS.muted, lineHeight: 1.65, margin: 0 }}>{h.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Verification methods — inside how it works */}
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.muted, fontWeight: 600, marginBottom: 8 }}>
+              STEP 2 — CHOOSE HOW TO VERIFY
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 14 }}>
+            {VERIFY_METHODS.map((m, i) => (
+              <div key={i} style={{
+                padding: '22px 20px', borderRadius: 16,
+                background: `${m.color}07`, border: `1px solid ${m.color}25`,
+                transition: 'border-color .2s',
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = m.color + '55'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = m.color + '25'; }}
+              >
+                <div style={{ fontSize: 11, color: m.color, fontWeight: 700, letterSpacing: '1.5px', marginBottom: 6 }}>{m.title.toUpperCase()}</div>
+                <div style={{ fontFamily: DS.cinzel, fontSize: 15, fontWeight: 600, marginBottom: 8, color: '#F8F6FF' }}>{m.sub}</div>
+                <p style={{ fontSize: 12, color: DS.muted, lineHeight: 1.6, margin: 0 }}>{m.desc}</p>
+                <div style={{
+                  marginTop: 12, display: 'inline-block',
+                  padding: '2px 8px', borderRadius: 99, fontSize: 9, fontWeight: 700,
+                  background: `${m.color}15`, color: m.color, letterSpacing: '1px',
+                }}>{m.badge}</div>
               </div>
             ))}
           </div>
@@ -577,10 +554,10 @@ export default function Home() {
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 48 }}>
             <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
-              COMPETITIVE ANALYSIS
+              WHY BLOCKBITE
             </div>
             <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 700, color: '#F8F6FF' }}>
-              BlockBite TDP vs The Field
+              Built different from day one.
             </h2>
           </div>
 
@@ -672,7 +649,7 @@ export default function Home() {
         background: DS.bg1,
         fontFamily: DS.sora,
       }}>
-        <div>© 2026 BlockBite TDP · Solana Devnet · DvhxiL5P…XTFf</div>
+        <div>© 2026 BlockBite · Token Distribution Protocol on Solana</div>
         <div style={{ display: 'flex', gap: 20 }}>
           <a href="https://x.com/blockbite_gg" target="_blank" rel="noopener noreferrer" style={{ color: DS.muted, textDecoration: 'none' }}>Twitter / X</a>
           <a href="https://discord.gg/blockbite" target="_blank" rel="noopener noreferrer" style={{ color: DS.muted, textDecoration: 'none' }}>Discord</a>

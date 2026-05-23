@@ -40,6 +40,7 @@ const NAV_LINKS = [
   { name: 'DASHBOARD', href: '/streams' },
   { name: 'STREAMS',   href: '/streams/new' },
   { name: 'PROTOCOL',  href: '/protocol' },
+  { name: 'WAITLIST',  href: '/waitlist' },
 ] as const;
 
 export default function Navbar() {

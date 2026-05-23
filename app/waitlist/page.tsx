@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 
 /* ── BlockBite Brand ── */
 const MAGENTA  = '#b12c84';
@@ -264,32 +264,8 @@ export default function WaitlistPage() {
 
       <div style={{ position: 'relative', zIndex: 1 }}>
 
-        {/* Nav */}
-        <nav style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 32px', borderBottom: `1px solid ${border}`,
-          background: 'rgba(8,8,15,0.75)', backdropFilter: 'blur(20px)',
-          position: 'sticky', top: 0, zIndex: 100,
-        }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: '#fff' }}>
-            <img src="/logo.png" alt="BlockBite" width={40} height={40} style={{ objectFit: 'contain', flexShrink: 0 }}/>
-            <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.5px', fontFamily: 'Montserrat,sans-serif' }}>BlockBite</span>
-          </Link>
-
-          {/* Lang switcher */}
-          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', border: `1px solid ${border}`, borderRadius: 999, padding: 3, gap: 3 }}>
-            {(['en','id'] as Lang[]).map(l => (
-              <button key={l} onClick={() => setLang(l)} style={{
-                border: 'none', background: lang === l ? MAGENTA : 'transparent',
-                color: lang === l ? '#fff' : dim,
-                padding: '6px 14px', borderRadius: 999, fontWeight: 700, fontSize: 11,
-                cursor: 'pointer', fontFamily: 'Montserrat,sans-serif', transition: '0.15s', letterSpacing: '0.5px',
-              }}>
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </nav>
+        {/* Main Navbar — full navigation */}
+        <Navbar />
 
         {/* ── Hero ── */}
         <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '72px 24px 48px', gap: 28, animation: 'bbSlide 0.6s ease both' }}>

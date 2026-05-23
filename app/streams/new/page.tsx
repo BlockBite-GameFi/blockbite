@@ -22,9 +22,9 @@ const C = {
 function FormField({ label, hint, children, required }: { label: string; hint?: string; children: React.ReactNode; required?: boolean }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-      <label style={{ fontSize: 12.5, fontWeight: 600, color: 'rgba(255,255,255,.75)' }}>
+      <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ds-text)' }}>
         {label}{required && <span style={{ color: C.red }}> *</span>}
-        {hint && <span style={{ fontWeight: 400, color: C.muted, fontSize: 11 }}> — {hint}</span>}
+        {hint && <span style={{ fontWeight: 400, color: 'var(--ds-text-dim)', fontSize: 11 }}> — {hint}</span>}
       </label>
       {children}
     </div>
@@ -44,8 +44,8 @@ function TextInput({ value, onChange, placeholder, type = 'text', prefix }: {
         onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
         style={{
           width: '100%', padding: prefix ? '11px 14px 11px 36px' : '11px 14px',
-          background: 'rgba(255,255,255,.055)', border: `1px solid ${focused ? C.accent : 'var(--ds-border)'}`,
-          borderRadius: 11, color: '#fff', fontSize: 13, outline: 'none', fontFamily: C.mono,
+          background: 'var(--ds-surface)', border: `1px solid ${focused ? C.accent : 'var(--ds-border)'}`,
+          borderRadius: 11, color: 'var(--ds-text)', fontSize: 13, outline: 'none', fontFamily: C.mono,
           transition: 'border-color .15s',
         }}
       />
@@ -79,8 +79,8 @@ function SelectInput({ value, onChange, options }: {
   return (
     <select value={value} onChange={e => onChange(e.target.value)} style={{
       width: '100%', padding: '11px 14px',
-      background: 'rgba(255,255,255,.055)', border: '1px solid var(--ds-border)',
-      borderRadius: 11, color: '#fff', fontSize: 13, outline: 'none', fontFamily: C.mono,
+      background: 'var(--ds-surface)', border: '1px solid var(--ds-border)',
+      borderRadius: 11, color: 'var(--ds-text)', fontSize: 13, outline: 'none', fontFamily: C.mono,
       appearance: 'none', cursor: 'pointer',
     }}>
       {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
@@ -137,7 +137,7 @@ export default function CreateStreamPage() {
             <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>
               Tokens locked into PDA vault. Stream is active on Solana devnet.
             </p>
-            <div style={{ padding: '12px 16px', background: 'rgba(255,255,255,.04)', border: '1px solid var(--ds-border)', borderRadius: 12, marginBottom: 20 }}>
+            <div style={{ padding: '12px 16px', background: 'var(--ds-surface)', border: '1px solid var(--ds-border)', borderRadius: 12, marginBottom: 20 }}>
               <div style={{ fontSize: 9.5, color: C.muted, marginBottom: 4 }}>Stream ID</div>
               <div style={{ fontFamily: C.mono, fontSize: 18, fontWeight: 700, color: C.accent }}>
                 stm-{Math.random().toString(36).slice(2, 8).toUpperCase()}
@@ -149,8 +149,8 @@ export default function CreateStreamPage() {
                 color: '#fff', borderRadius: 11, textDecoration: 'none', fontWeight: 700, fontSize: 13,
               }}>View Streams →</Link>
               <button onClick={() => { setSubmitted(false); setStep(0); }} style={{
-                padding: '10px 20px', background: 'rgba(255,255,255,.06)',
-                color: C.muted, borderRadius: 11, border: '1px solid var(--ds-border)',
+                padding: '10px 20px', background: 'var(--ds-surface)',
+                color: 'var(--ds-text-dim)', borderRadius: 11, border: '1px solid var(--ds-border)',
                 fontWeight: 600, fontSize: 13, cursor: 'pointer',
               }}>Create Another</button>
             </div>
@@ -165,7 +165,7 @@ export default function CreateStreamPage() {
       <Navbar />
 
       {/* Header */}
-      <div style={{ padding: '80px 24px 32px', background: 'linear-gradient(180deg,#0d0820 0%,var(--ds-bg) 100%)', borderBottom: '1px solid #1f1f3a' }}>
+      <div style={{ padding: '80px 24px 32px', background: 'var(--ds-header)', borderBottom: '1px solid var(--ds-border)' }}>
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
           <Link href="/streams" style={{ fontSize: 12, color: C.muted, textDecoration: 'none', marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
             ← Back to Streams
@@ -190,14 +190,14 @@ export default function CreateStreamPage() {
                 <div style={{
                   width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 13, flexShrink: 0, transition: 'all .25s',
-                  background: step === i ? C.accent : i < step ? C.green : 'rgba(255,255,255,.08)',
-                  border: `1.5px solid ${step === i ? C.accent : i < step ? C.green : 'rgba(255,255,255,.12)'}`,
+                  background: step === i ? C.accent : i < step ? C.green : 'var(--ds-surface)',
+                  border: `1.5px solid ${step === i ? C.accent : i < step ? C.green : 'var(--ds-border)'}`,
                   boxShadow: step === i ? `0 0 14px ${C.accent}66` : 'none',
-                  color: (step === i || i < step) ? '#fff' : C.muted,
+                  color: (step === i || i < step) ? '#fff' : 'var(--ds-text-dim)',
                 }}>
                   {i < step ? '✓' : s.icon}
                 </div>
-                <span style={{ fontSize: 12, color: step === i ? '#fff' : i < step ? C.green : C.muted, fontWeight: step === i ? 600 : 400, whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 12, color: step === i ? 'var(--ds-text)' : i < step ? C.green : 'var(--ds-text-dim)', fontWeight: step === i ? 600 : 400, whiteSpace: 'nowrap' }}>
                   {s.label}
                 </span>
               </div>
@@ -216,7 +216,7 @@ export default function CreateStreamPage() {
 
           {/* Step 0: Recipient */}
           {step === 0 && <>
-            <div style={{ fontFamily: C.serif, fontSize: 15, fontWeight: 700, color: '#fff' }}>Recipient & Token</div>
+            <div style={{ fontFamily: C.serif, fontSize: 15, fontWeight: 700, color: 'var(--ds-text)' }}>Recipient & Token</div>
             <FormField label="Beneficiary Address" required hint="Solana wallet — receives streamed tokens">
               <TextInput value={form.beneficiary} onChange={v => upd('beneficiary', v)} placeholder="e.g. 3f7aX59…NxFzr" />
             </FormField>
@@ -239,7 +239,7 @@ export default function CreateStreamPage() {
 
           {/* Step 1: Schedule */}
           {step === 1 && <>
-            <div style={{ fontFamily: C.serif, fontSize: 15, fontWeight: 700, color: '#fff' }}>Vesting Schedule</div>
+            <div style={{ fontFamily: C.serif, fontSize: 15, fontWeight: 700, color: 'var(--ds-text)' }}>Vesting Schedule</div>
             <FormField label="Stream Type" required>
               <SelectInput value={form.streamType} onChange={v => upd('streamType', v)}
                 options={[
@@ -262,9 +262,9 @@ export default function CreateStreamPage() {
                   { l: 'Daily unlock',      v: `${dailyRate} ${form.token}` },
                   { l: 'Rate / second',     v: `${ratePerSec} T/s` },
                 ].map(r => (
-                  <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid rgba(255,255,255,.05)', padding: '4px 0' }}>
-                    <span style={{ color: C.muted }}>{r.l}</span>
-                    <span style={{ fontFamily: C.mono, color: '#fff' }}>{r.v}</span>
+                  <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid var(--ds-border)', padding: '4px 0' }}>
+                    <span style={{ color: 'var(--ds-text-dim)' }}>{r.l}</span>
+                    <span style={{ fontFamily: C.mono, color: 'var(--ds-text)' }}>{r.v}</span>
                   </div>
                 ))}
               </div>
@@ -273,7 +273,7 @@ export default function CreateStreamPage() {
 
           {/* Step 2: Milestones */}
           {step === 2 && <>
-            <div style={{ fontFamily: C.serif, fontSize: 15, fontWeight: 700, color: '#fff' }}>Milestone Gates</div>
+            <div style={{ fontFamily: C.serif, fontSize: 15, fontWeight: 700, color: 'var(--ds-text)' }}>Milestone Gates</div>
             <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
               Optional. Define up to 4 milestone checkpoints — each unlocks a % of the total allocation when verified on-chain via <code style={{ color: C.blue, fontFamily: C.mono }}>verify_milestone()</code>.
             </p>
@@ -287,7 +287,7 @@ export default function CreateStreamPage() {
                   const pctLookup: Record<string, number> = { m0pct: form.m0pct, m1pct: form.m1pct, m2pct: form.m2pct, m3pct: form.m3pct };
                   const val = pctLookup[key];
                   return (
-                    <div key={i} style={{ padding: '12px 14px', background: 'rgba(255,255,255,.03)', border: `1px solid ${C.blue}33`, borderRadius: 10 }}>
+                    <div key={i} style={{ padding: '12px 14px', background: 'var(--ds-surface)', border: `1px solid ${C.blue}33`, borderRadius: 10 }}>
                       <RangeSlider
                         label={`Milestone ${i + 1} allocation`}
                         value={val}
@@ -309,7 +309,7 @@ export default function CreateStreamPage() {
               </div>
             )}
             {form.milestoneCount === 0 && (
-              <div style={{ padding: '14px 16px', background: 'rgba(255,255,255,.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,.06)', color: C.muted, fontSize: 12.5 }}>
+              <div style={{ padding: '14px 16px', background: 'var(--ds-surface)', borderRadius: 12, border: '1px solid var(--ds-border)', color: 'var(--ds-text-dim)', fontSize: 12.5 }}>
                 No milestones — stream vests purely linearly after cliff.
               </div>
             )}
@@ -317,7 +317,7 @@ export default function CreateStreamPage() {
 
           {/* Step 3: Review */}
           {step === 3 && <>
-            <div style={{ fontFamily: C.serif, fontSize: 15, fontWeight: 700, color: '#fff' }}>Review & Create</div>
+            <div style={{ fontFamily: C.serif, fontSize: 15, fontWeight: 700, color: 'var(--ds-text)' }}>Review & Create</div>
             <div style={{ padding: '16px 18px', background: `${C.accent}08`, border: `1px solid ${C.accent}33`, borderRadius: 13 }}>
               {[
                 { l: 'Beneficiary',  v: form.beneficiary || '—' },
@@ -330,9 +330,9 @@ export default function CreateStreamPage() {
                 { l: 'Rate/sec',     v: `${ratePerSec} T/s` },
                 ...(form.milestoneCount > 0 ? [{ l: 'Milestones', v: `${form.milestoneCount} gates (${milestoneSum}% gated)` }] : []),
               ].map((r, i, a) => (
-                <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: i < a.length - 1 ? '1px solid rgba(255,255,255,.05)' : 'none' }}>
-                  <span style={{ fontSize: 12, color: C.muted }}>{r.l}</span>
-                  <span style={{ fontFamily: C.mono, fontSize: 12, color: '#fff', maxWidth: '60%', textAlign: 'right', wordBreak: 'break-all' }}>{r.v}</span>
+                <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: i < a.length - 1 ? '1px solid var(--ds-border)' : 'none' }}>
+                  <span style={{ fontSize: 12, color: 'var(--ds-text-dim)' }}>{r.l}</span>
+                  <span style={{ fontFamily: C.mono, fontSize: 12, color: 'var(--ds-text)', maxWidth: '60%', textAlign: 'right', wordBreak: 'break-all' }}>{r.v}</span>
                 </div>
               ))}
             </div>
@@ -349,7 +349,7 @@ export default function CreateStreamPage() {
             disabled={step === 0}
             style={{
               padding: '11px 22px', borderRadius: 11, border: '1px solid var(--ds-border)',
-              background: 'rgba(255,255,255,.06)', color: step === 0 ? 'rgba(255,255,255,.2)' : C.muted,
+              background: 'var(--ds-surface)', color: step === 0 ? 'var(--ds-border)' : 'var(--ds-text-dim)',
               fontWeight: 600, fontSize: 13, cursor: step === 0 ? 'not-allowed' : 'pointer',
             }}
           >← Back</button>

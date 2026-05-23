@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
@@ -24,7 +24,7 @@ const DS = {
   muted:    'rgba(232,225,248,.38)',
   border:   'rgba(167,139,255,.13)',
   card:     'rgba(255,255,255,.042)',
-  cinzel:   "'Cinzel', serif",
+  cinzel:   "'Space Grotesk', system-ui, sans-serif",
   sora:     "'Sora', system-ui, sans-serif",
   mono:     "'JetBrains Mono', monospace",
 };
@@ -574,7 +574,7 @@ function StepCard({ title, subtitle, children }: { title: string; subtitle: stri
       background: 'rgba(255,255,255,.025)', border: `1px solid rgba(167,139,255,.13)`,
       borderRadius: 20, padding: '28px 28px 24px',
     }}>
-      <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: 20, fontWeight: 700, margin: '0 0 4px', color: '#f0ecff' }}>{title}</h2>
+      <h2 style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", fontSize: 20, fontWeight: 700, margin: '0 0 4px', color: '#f0ecff' }}>{title}</h2>
       <p style={{ fontSize: 12, color: 'rgba(232,225,248,.38)', margin: '0 0 24px' }}>{subtitle}</p>
       {children}
     </div>

@@ -19,7 +19,7 @@ const DS = {
   muted:    'rgba(232,225,248,.38)',
   border:   'rgba(167,139,255,.13)',
   card:     'rgba(255,255,255,.042)',
-  cinzel:   "'Cinzel', serif",
+  cinzel:   "'Space Grotesk', system-ui, sans-serif",
   sora:     "'Sora', system-ui, sans-serif",
   mono:     "'JetBrains Mono', monospace",
 };
@@ -210,9 +210,9 @@ export default function Home() {
         <h1 style={{
           fontFamily: DS.cinzel,
           fontSize: 'clamp(36px,6vw,56px)',
-          fontWeight: 800,
-          lineHeight: 1.12,
-          letterSpacing: '-1px',
+          fontWeight: 900,
+          lineHeight: 1.1,
+          letterSpacing: '-1.5px',
           margin: 0,
           maxWidth: 780,
         }}>

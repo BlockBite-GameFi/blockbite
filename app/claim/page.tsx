@@ -1,317 +1,363 @@
-'use client';
+﻿'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
+import {
+  getStreamsByBeneficiary,
+  computeUnlocked,
+  withdraw,
+  deriveStreamPDA,
+  deriveVaultPDA,
+  StreamInfo,
+} from '@/lib/anchor/vesting-client';
+import { BN } from '@coral-xyz/anchor';
+import type { SendTx } from '@/lib/anchor/vesting-client';
 
-// ─── Design System V3 ─────────────────────────────────────────────────────────
 const DS = {
-  bg0:      '#05040d',
-  bg1:      '#09071a',
-  accent:   '#a78bff',
-  accentDk: '#5e35d4',
-  gold:     '#f5c66a',
-  green:    '#5fd07a',
-  red:      '#ff3b6b',
-  blue:     '#7ad7ff',
-  ember:    '#ff7a3a',
-  muted:    'rgba(232,225,248,.38)',
-  border:   'rgba(167,139,255,.13)',
-  card:     'rgba(255,255,255,.042)',
-  cinzel:   "'Cinzel', serif",
-  sora:     "'Sora', system-ui, sans-serif",
-  mono:     "'JetBrains Mono', monospace",
+  bg0: '#05040d', bg1: '#09071a', accent: '#a78bff', accentDk: '#5e35d4',
+  gold: '#f5c66a', green: '#5fd07a', red: '#ff3b6b', blue: '#7ad7ff',
+  muted: 'rgba(232,225,248,.38)', border: 'rgba(167,139,255,.13)',
+  card: 'rgba(255,255,255,.042)', cinzel: "'Space Grotesk', system-ui, sans-serif",
+  sora: "'Sora', system-ui, sans-serif", mono: "'JetBrains Mono', monospace",
 };
 
-// ─── Mock streams available to claim ─────────────────────────────────────────
-const CLAIMABLE_STREAMS = [
-  {
-    id: 'stm-001', name: 'Team Allocation',    token: 'BBT',
-    total: 500_000, claimed: 80_000, rate: 0.463,
-    cliff: '2025-06-01', end: '2027-01-01', type: 'linear',
-    milestones: [],
-  },
-  {
-    id: 'stm-002', name: 'Advisor Round',       token: 'BBT',
-    total: 120_000, claimed: 12_000, rate: 0.0463,
-    cliff: '2025-03-15', end: '2026-03-15', type: 'milestone',
-    milestones: [
-      { label: 'Token Launch',   pct: 25, done: true  },
-      { label: 'Mainnet Deploy', pct: 25, done: false },
-      { label: '10K Players',    pct: 25, done: false },
-      { label: 'Protocol V2',    pct: 25, done: false },
-    ],
-  },
-  {
-    id: 'stm-006', name: 'Game Rewards Pool',  token: 'BBT',
-    total: 300_000, claimed: 45_000, rate: 0.115,
-    cliff: '2025-05-01', end: '2026-05-01', type: 'milestone',
-    milestones: [
-      { label: 'Level 10 Clear', pct: 20, done: true  },
-      { label: 'Level 30 Clear', pct: 30, done: true  },
-      { label: 'Level 50 Clear', pct: 50, done: false },
-    ],
-  },
-];
+function streamType(s: StreamInfo): string {
+  const cliff  = Number(s.cliffTs.toString());
+  const start  = Number(s.startTs.toString());
+  const hasMilestone = (s.milestoneCount ?? 0) > 0;
+  const hasCliff     = cliff > start;
+  if (hasMilestone && hasCliff) return 'hybrid';
+  if (hasMilestone) return 'milestone';
+  if (hasCliff) return 'cliff';
+  return 'linear';
+}
+
+function streamStatus(s: StreamInfo, nowSec: number): string {
+  if (s.cancelled) return 'cancelled';
+  if (nowSec < Number(s.cliffTs.toString())) return 'pending';
+  if (nowSec >= Number(s.endTs.toString())) return 'completed';
+  return 'active';
+}
+
+function fmtU(bn: BN): string {
+  return (Number(bn.toString()) / 1e6).toFixed(2);
+}
 
 export default function ClaimPage() {
-  const [selectedIdx,  setSelectedIdx]  = useState(0);
-  const [ticker,       setTicker]       = useState(0);
-  const [justClaimed,  setJustClaimed]  = useState(false);
-  const [claimedExtra, setClaimedExtra] = useState(0);
+  const { publicKey, connected, sendTransaction } = useWallet();
+  const { connection } = useConnection();
+  const { setVisible } = useWalletModal();
+
+  const [streams,   setStreams]   = useState<StreamInfo[]>([]);
+  const [selected,  setSelected]  = useState<number>(0);
+  const [loading,   setLoading]   = useState(false);
+  const [claiming,  setClaiming]  = useState(false);
+  const [txSig,     setTxSig]     = useState<string | null>(null);
+  const [claimErr,  setClaimErr]  = useState<string | null>(null);
+  const [error,     setError]     = useState<string | null>(null);
+  const [nowSec,    setNowSec]    = useState(Math.floor(Date.now() / 1000));
 
   useEffect(() => {
-    const t = setInterval(() => setTicker(n => n + 1), 1000);
+    const t = setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 10_000);
     return () => clearInterval(t);
   }, []);
 
-  useEffect(() => {
-    setJustClaimed(false);
-    setClaimedExtra(0);
-  }, [selectedIdx]);
-
-  const stream        = CLAIMABLE_STREAMS[selectedIdx];
-  const unlocked      = stream.claimed + claimedExtra + ticker * stream.rate;
-  const claimable     = Math.max(0, Math.floor(unlocked - stream.claimed - claimedExtra));
-  const pctUnlocked   = Math.min(100, (unlocked / stream.total) * 100);
-  const pctClaimed    = Math.min(100, ((stream.claimed + claimedExtra) / stream.total) * 100);
-
-  const milestoneQuota = stream.milestones.length > 0
-    ? stream.milestones.filter(m => m.done).reduce((a, m) => a + m.pct, 0)
-    : 100;
-  const quotaCap = Math.floor(stream.total * milestoneQuota / 100);
-  const effectiveClaimable = stream.milestones.length > 0
-    ? Math.max(0, Math.min(claimable, quotaCap - stream.claimed - claimedExtra))
-    : claimable;
-
-  const handleClaim = () => {
-    if (effectiveClaimable > 0) {
-      setClaimedExtra(c => c + effectiveClaimable);
-      setJustClaimed(true);
-      setTimeout(() => setJustClaimed(false), 2000);
+  const load = useCallback(async () => {
+    if (!publicKey) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const all = await getStreamsByBeneficiary(connection, publicKey);
+      // Only show non-cancelled streams that have something locked
+      const relevant = all.filter(s => !s.cancelled || Number(s.amountWithdrawn.toString()) < Number(s.amountTotal.toString()));
+      relevant.sort((a, b) => Number(computeUnlocked(b, nowSec)) - Number(computeUnlocked(a, nowSec)));
+      setStreams(relevant);
+      setSelected(0);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load streams');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [publicKey, connection, nowSec]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const stream   = streams[selected] ?? null;
+  const claimable = stream ? Number(computeUnlocked(stream, nowSec)) : 0;
+  const total     = stream ? Number(stream.amountTotal.toString()) : 0;
+  const withdrawn = stream ? Number(stream.amountWithdrawn.toString()) : 0;
+  const pctUnlocked = total > 0 ? Math.min(100, ((withdrawn + claimable) / total) * 100) : 0;
+  const pctClaimed  = total > 0 ? Math.min(100, (withdrawn / total) * 100) : 0;
+  const status = stream ? streamStatus(stream, nowSec) : null;
+
+  const handleClaim = useCallback(async () => {
+    if (!stream || !publicKey || claimable === 0) return;
+    setClaiming(true);
+    setClaimErr(null);
+    setTxSig(null);
+    try {
+      const streamIdBn = stream.streamId;
+      const [streamPda] = deriveStreamPDA(stream.authority, streamIdBn);
+      const [vaultPda]  = deriveVaultPDA(stream.authority, streamIdBn);
+      const beneficiaryAta = await getAssociatedTokenAddress(stream.mint, publicKey);
+
+      const sig = await withdraw({
+        connection,
+        beneficiary:    publicKey,
+        stream:         streamPda,
+        vault:          vaultPda,
+        beneficiaryAta,
+        mint:           stream.mint,
+        sendTransaction: sendTransaction as unknown as SendTx,
+      });
+      setTxSig(sig);
+      await load(); // Refresh balances
+    } catch (e) {
+      setClaimErr(e instanceof Error ? e.message : 'Transaction failed');
+    } finally {
+      setClaiming(false);
+    }
+  }, [stream, publicKey, claimable, connection, sendTransaction, load]);
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: `radial-gradient(ellipse at 30% 40%,${DS.accent}08,transparent 60%),${DS.bg0}`,
-      color: '#f0ecff', fontFamily: DS.sora, overflowX: 'hidden',
-    }}>
+    <main style={{ minHeight: '100vh', background: DS.bg0, color: '#e8e1f8' }}>
       <Navbar />
 
-      <main style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        padding: '120px 24px 80px', gap: 16,
-      }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '100px 24px 80px' }}>
 
-        {/* Page label */}
-        <div style={{ fontSize: 10, letterSpacing: '2.5px', color: DS.blue, fontWeight: 700, textTransform: 'uppercase' }}>
-          TDP · Claim Portal
-        </div>
-        <h1 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(22px,4vw,34px)', fontWeight: 800, margin: '0 0 4px', textAlign: 'center' }}>
-          Claim Streamed Tokens
-        </h1>
-        <p style={{ fontSize: 13, color: DS.muted, textAlign: 'center', maxWidth: 400, marginBottom: 12 }}>
-          Tokens stream second-by-second. Withdraw any vested amount at any time — milestone gates apply.
-        </p>
-
-        {/* Stream selector tabs */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 8, overflowX: 'auto', maxWidth: 440, width: '100%' }}>
-          {CLAIMABLE_STREAMS.map((s, i) => (
-            <button key={s.id} onClick={() => setSelectedIdx(i)} style={{
-              padding: '7px 14px', borderRadius: 10, cursor: 'pointer', whiteSpace: 'nowrap',
-              border: `1.5px solid ${selectedIdx === i ? DS.accent : DS.border}`,
-              background: selectedIdx === i ? `${DS.accent}18` : DS.card,
-              color: selectedIdx === i ? DS.accent : DS.muted,
-              fontSize: 12, fontWeight: 600, transition: 'all .15s',
-            }}>{s.name}</button>
-          ))}
-        </div>
-
-        {/* ─── Centered claim card (max 440px) ─────────────────────────────── */}
-        <div style={{
-          width: '100%', maxWidth: 440,
-          background: 'rgba(10,8,26,.92)',
-          border: `1.5px solid ${DS.accent}33`,
-          borderRadius: 24, padding: '32px 28px',
-          boxShadow: `0 0 60px ${DS.accent}12, 0 24px 60px rgba(0,0,0,.6)`,
-        }}>
-
-          {/* Stream header */}
-          <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <div style={{ fontFamily: DS.mono, fontSize: 10, color: DS.accent, letterSpacing: '.12em', marginBottom: 6 }}>
-              BLOCKBITE TDP · TOKEN STREAM
-            </div>
-            <div style={{ fontFamily: DS.cinzel, fontSize: 22, fontWeight: 800, color: '#fff' }}>{stream.name}</div>
-            <div style={{ fontSize: 11, color: DS.muted, marginTop: 3 }}>{stream.id} · {stream.type.toUpperCase()}</div>
+        {/* ── Header ── */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, color: DS.accent, fontWeight: 800, marginBottom: 8, textTransform: 'uppercase' }}>
+            TDP · Claim Portal
           </div>
+          <h1 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(28px,5vw,40px)', fontWeight: 800, letterSpacing: '0.03em', marginBottom: 10, color: '#fff' }}>
+            Claim Vested Tokens
+          </h1>
+          <p style={{ fontSize: 13, color: DS.muted, maxWidth: 500 }}>
+            Withdraw your vested tokens from on-chain PDA vaults. Amounts are calculated from the live blockchain state.
+          </p>
+          <div style={{ marginTop: 10 }}>
+            <Link href="/demo#claim" style={{ fontSize: 12, color: DS.accent, textDecoration: 'none' }}>
+              Explore demo mode →
+            </Link>
+          </div>
+        </div>
 
-          {/* "Available to Claim" large number */}
-          <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <div style={{ fontSize: 10, color: DS.muted, letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-              {stream.milestones.length > 0 ? 'Available to Claim (milestone-gated)' : 'Available to Claim'}
+        {/* ── Wallet gate ── */}
+        {!connected && (
+          <div style={{ background: DS.bg1, border: `1px solid ${DS.border}`, borderRadius: 20, padding: '48px 32px', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>◎</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 10 }}>Connect wallet to claim</div>
+            <div style={{ fontSize: 13, color: DS.muted, marginBottom: 24 }}>
+              Connect the wallet that is the beneficiary of a stream to see your claimable tokens.
             </div>
-            <div style={{
-              fontFamily: DS.mono, fontSize: 'clamp(42px,12vw,64px)', fontWeight: 800, lineHeight: 1,
-              color: justClaimed ? DS.green : DS.gold,
-              textShadow: `0 0 40px ${justClaimed ? DS.green : DS.gold}66`,
-              transition: 'color .3s, text-shadow .3s',
+            <button onClick={() => setVisible(true)} style={{
+              padding: '12px 32px', borderRadius: 12, border: 'none', cursor: 'pointer',
+              background: `linear-gradient(135deg,${DS.accent},${DS.accentDk})`, color: '#fff',
+              fontWeight: 700, fontSize: 14,
             }}>
-              {effectiveClaimable.toLocaleString()}
+              Connect Wallet
+            </button>
+          </div>
+        )}
+
+        {/* ── Error ── */}
+        {error && (
+          <div style={{ background: '#ff3b6b1a', border: '1px solid #ff3b6b44', borderRadius: 12, padding: '14px 18px', marginBottom: 20, fontSize: 13, color: DS.red }}>
+            ✗ {error}
+          </div>
+        )}
+
+        {/* ── Loading ── */}
+        {connected && loading && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: DS.muted, fontSize: 13 }}>
+            Loading your streams from Solana devnet…
+          </div>
+        )}
+
+        {/* ── No streams ── */}
+        {connected && !loading && streams.length === 0 && (
+          <div style={{ background: DS.bg1, border: `1px solid ${DS.border}`, borderRadius: 20, padding: '48px 32px', textAlign: 'center' }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>◎</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 8 }}>No streams found</div>
+            <div style={{ fontSize: 13, color: DS.muted, marginBottom: 20 }}>
+              No vesting streams where this wallet is the beneficiary were found on devnet.
             </div>
-            <div style={{ fontSize: 16, color: DS.gold, marginTop: 6, fontWeight: 600, fontFamily: DS.mono }}>
-              {stream.token}
-            </div>
-            {/* Live stream indicator */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14 }}>
-              <div style={{
-                width: 8, height: 8, borderRadius: '50%', background: DS.green,
-                boxShadow: `0 0 8px ${DS.green}`,
-                animation: 'pulse 1.4s ease-in-out infinite',
-                flexShrink: 0,
-              }} />
-              <span style={{ fontSize: 11.5, color: DS.green, fontWeight: 600, fontFamily: DS.mono }}>
-                +{stream.rate.toFixed(3)} {stream.token}/sec
-              </span>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link href="/streams/new" style={{ padding: '10px 22px', borderRadius: 10, background: `linear-gradient(135deg,${DS.accent},${DS.accentDk})`, color: '#fff', fontWeight: 700, fontSize: 12, textDecoration: 'none' }}>
+                Create a stream
+              </Link>
+              <Link href="/demo#claim" style={{ padding: '10px 22px', borderRadius: 10, background: DS.card, border: `1px solid ${DS.border}`, color: DS.muted, fontWeight: 600, fontSize: 12, textDecoration: 'none' }}>
+                View demo
+              </Link>
             </div>
           </div>
+        )}
 
-          {/* Progress bar */}
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ height: 12, borderRadius: 99, background: 'rgba(255,255,255,.07)', position: 'relative', overflow: 'hidden', marginBottom: 12 }}>
-              <div style={{
-                position: 'absolute', left: 0, top: 0, height: '100%',
-                width: `${pctUnlocked}%`, background: `${DS.accent}3a`,
-                transition: 'width .5s ease',
-              }} />
-              <div style={{
-                position: 'absolute', left: 0, top: 0, height: '100%',
-                width: `${pctClaimed}%`,
-                background: `linear-gradient(90deg,${DS.gold}88,${DS.gold})`,
-                boxShadow: `0 0 10px ${DS.gold}66`,
-                transition: 'width .5s ease',
-              }} />
+        {/* ── Stream selector + claim panel ── */}
+        {connected && !loading && streams.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20, alignItems: 'start' }}>
+
+            {/* Stream list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {streams.map((s, i) => {
+                const c = Number(computeUnlocked(s, nowSec));
+                const type = streamType(s);
+                const typeCol = ({ linear: DS.accent, milestone: DS.blue, cliff: DS.gold, hybrid: '#c084fc' } as Record<string, string>)[type] ?? DS.accent;
+                return (
+                  <button
+                    key={s.pubkey.toBase58()}
+                    onClick={() => { setSelected(i); setTxSig(null); setClaimErr(null); }}
+                    style={{
+                      background: selected === i ? `${DS.accent}18` : DS.card,
+                      border: `1px solid ${selected === i ? DS.accent + '55' : DS.border}`,
+                      borderRadius: 14, padding: '14px 16px', cursor: 'pointer', textAlign: 'left',
+                    }}
+                  >
+                    <div style={{ fontSize: 11, fontFamily: DS.mono, color: typeCol, marginBottom: 4 }}>
+                      {type.toUpperCase()}
+                    </div>
+                    <div style={{ fontFamily: DS.mono, fontSize: 11, color: '#fff', marginBottom: 2 }}>
+                      {s.pubkey.toBase58().slice(0, 8)}…
+                    </div>
+                    <div style={{ fontSize: 11, color: c > 0 ? DS.green : DS.muted, fontWeight: 700 }}>
+                      {(c / 1e6).toFixed(4)} claimable
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Stats row: Unlocked / Claimed / Total */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-              {[
-                { l: 'Unlocked', v: Math.floor(unlocked).toLocaleString(), c: DS.accent },
-                { l: 'Claimed',  v: (stream.claimed + claimedExtra).toLocaleString(), c: DS.gold   },
-                { l: 'Total',    v: stream.total.toLocaleString(),                    c: DS.muted   },
-              ].map(x => (
-                <div key={x.l} style={{
-                  textAlign: 'center', padding: '10px 6px',
-                  background: 'rgba(255,255,255,.03)', borderRadius: 11,
-                  border: '1px solid rgba(255,255,255,.06)',
-                }}>
-                  <div style={{ fontFamily: DS.mono, fontSize: 13, fontWeight: 700, color: x.c }}>{x.v}</div>
-                  <div style={{ fontSize: 9, color: DS.muted, marginTop: 2 }}>{x.l} {stream.token}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+            {/* Claim detail */}
+            {stream && (
+              <div style={{ background: DS.bg1, border: `1px solid ${DS.border}`, borderRadius: 20, padding: '28px' }}>
 
-          {/* Milestone gates */}
-          {stream.milestones.length > 0 && (
-            <div style={{ marginBottom: 22, padding: '12px 14px', background: `${DS.blue}08`, border: `1px solid ${DS.blue}22`, borderRadius: 12 }}>
-              <div style={{ fontSize: 10, color: DS.blue, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 10 }}>
-                Milestone Gates — {milestoneQuota}% unlocked
-              </div>
-              {stream.milestones.map((m, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: i < stream.milestones.length - 1 ? 8 : 0 }}>
-                  <div style={{
-                    width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-                    background: m.done ? `${DS.green}20` : 'rgba(255,255,255,.06)',
-                    border: `1.5px solid ${m.done ? DS.green : 'rgba(255,255,255,.1)'}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 10, color: m.done ? DS.green : DS.muted,
-                  }}>
-                    {m.done ? '✓' : i + 1}
+                {/* Stream header */}
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 10, color: DS.muted, fontFamily: DS.mono, marginBottom: 6 }}>
+                    {stream.pubkey.toBase58()}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: 12, color: m.done ? '#fff' : DS.muted }}>{m.label}</span>
-                    <span style={{ fontFamily: DS.mono, fontSize: 10, color: m.done ? DS.green : DS.muted, marginLeft: 8 }}>{m.pct}%</span>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 10.5, fontWeight: 700, background: `${DS.accent}1a`, color: DS.accent, border: `1px solid ${DS.accent}44` }}>
+                      {streamType(stream).toUpperCase()}
+                    </span>
+                    <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 10.5, fontWeight: 700,
+                      background: status === 'active' ? '#5fd07a1a' : '#f5c66a1a',
+                      color: status === 'active' ? DS.green : DS.gold,
+                      border: `1px solid ${status === 'active' ? '#5fd07a' : '#f5c66a'}44` }}>
+                      {status?.toUpperCase()}
+                    </span>
                   </div>
-                  {!m.done && (
-                    <Link href="/milestones" style={{ fontSize: 10, color: DS.blue, textDecoration: 'none', fontWeight: 600 }}>Verify →</Link>
-                  )}
                 </div>
-              ))}
-              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.06)', fontSize: 11, color: DS.muted }}>
-                Quota cap: <span style={{ fontFamily: DS.mono, color: DS.blue }}>{quotaCap.toLocaleString()} {stream.token}</span>
-                {' '}· remaining: <span style={{ fontFamily: DS.mono, color: '#fff' }}>{Math.max(0, quotaCap - stream.claimed - claimedExtra).toLocaleString()}</span>
-              </div>
-            </div>
-          )}
 
-          {/* Large gold Claim button */}
-          <button
-            onClick={handleClaim}
-            disabled={effectiveClaimable <= 0}
-            style={{
-              width: '100%', padding: '16px 24px', borderRadius: 14, border: 'none',
-              background: effectiveClaimable > 0
-                ? `linear-gradient(135deg,${DS.gold}cc,#a36a17cc)`
-                : 'rgba(255,255,255,.06)',
-              color: effectiveClaimable > 0 ? '#0b0a14' : DS.muted,
-              fontFamily: DS.cinzel, fontSize: 16, fontWeight: 800,
-              cursor: effectiveClaimable > 0 ? 'pointer' : 'not-allowed',
-              boxShadow: effectiveClaimable > 0 ? `0 0 24px ${DS.gold}44` : 'none',
-              letterSpacing: '.04em', transition: 'all .2s',
-            }}
-          >
-            {justClaimed
-              ? '✓ Claimed!'
-              : effectiveClaimable > 0
-                ? `Claim ${effectiveClaimable.toLocaleString()} ${stream.token}`
-                : stream.milestones.length > 0 && milestoneQuota === 0
-                  ? 'No milestones verified yet'
-                  : 'Nothing to claim yet'}
-          </button>
-          <div style={{ marginTop: 10, fontSize: 11, color: DS.muted, textAlign: 'center' }}>
-            Calls <span style={{ fontFamily: DS.mono, color: DS.accent }}>withdraw()</span> on-chain · sent to your wallet
+                {/* Amount bars */}
+                <div style={{ marginBottom: 28 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, color: DS.muted }}>Progress</span>
+                    <span style={{ fontFamily: DS.mono, fontSize: 11, color: DS.accent }}>{pctUnlocked.toFixed(1)}% unlocked</span>
+                  </div>
+                  <div style={{ height: 10, borderRadius: 99, background: 'rgba(255,255,255,.07)', overflow: 'hidden', marginBottom: 4 }}>
+                    <div style={{ height: '100%', width: `${pctUnlocked}%`, background: `linear-gradient(90deg,${DS.accent},${DS.accentDk})`, borderRadius: 99 }} />
+                  </div>
+                  <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,.07)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pctClaimed}%`, background: DS.green, borderRadius: 99 }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <div style={{ width: 10, height: 3, borderRadius: 99, background: DS.accent }} />
+                      <span style={{ fontSize: 10, color: DS.muted }}>Unlocked</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <div style={{ width: 10, height: 3, borderRadius: 99, background: DS.green }} />
+                      <span style={{ fontSize: 10, color: DS.muted }}>Claimed</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 24 }}>
+                  {[
+                    { label: 'Total Locked', val: fmtU(stream.amountTotal), col: DS.accent },
+                    { label: 'Withdrawn',    val: fmtU(stream.amountWithdrawn), col: DS.muted },
+                    { label: 'Claimable Now',val: (claimable / 1e6).toFixed(4), col: claimable > 0 ? DS.green : DS.muted },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: DS.card, borderRadius: 12, padding: '12px 14px' }}>
+                      <div style={{ fontSize: 9.5, color: DS.muted, letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 4 }}>{s.label}</div>
+                      <div style={{ fontFamily: DS.mono, fontSize: 16, fontWeight: 700, color: s.col }}>{s.val}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Timestamps */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
+                  {[
+                    { label: 'Cliff', val: new Date(Number(stream.cliffTs.toString()) * 1000).toLocaleDateString() },
+                    { label: 'End',   val: new Date(Number(stream.endTs.toString()) * 1000).toLocaleDateString() },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: DS.card, borderRadius: 10, padding: '10px 14px' }}>
+                      <div style={{ fontSize: 9.5, color: DS.muted, marginBottom: 3 }}>{s.label}</div>
+                      <div style={{ fontFamily: DS.mono, fontSize: 12, color: '#fff' }}>{s.val}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pending cliff warning */}
+                {status === 'pending' && (
+                  <div style={{ background: '#f5c66a1a', border: '1px solid #f5c66a44', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontSize: 12, color: DS.gold }}>
+                    ⏱ Cliff has not passed yet. Tokens will begin unlocking on {new Date(Number(stream.cliffTs.toString()) * 1000).toLocaleDateString()}.
+                  </div>
+                )}
+
+                {/* Success */}
+                {txSig && (
+                  <div style={{ background: '#5fd07a1a', border: '1px solid #5fd07a44', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontSize: 12, color: DS.green }}>
+                    ✓ Claimed successfully!{' '}
+                    <a href={`https://explorer.solana.com/tx/${txSig}?cluster=devnet`} target="_blank" rel="noopener noreferrer" style={{ color: DS.accent }}>
+                      View on Explorer ↗
+                    </a>
+                  </div>
+                )}
+
+                {/* Error */}
+                {claimErr && (
+                  <div style={{ background: '#ff3b6b1a', border: '1px solid #ff3b6b44', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontSize: 12, color: DS.red }}>
+                    ✗ {claimErr}
+                  </div>
+                )}
+
+                {/* Claim button */}
+                <button
+                  onClick={handleClaim}
+                  disabled={claimable === 0 || claiming || status === 'pending' || status === 'cancelled'}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: claimable > 0 && !claiming ? 'pointer' : 'default',
+                    background: claimable > 0 && !claiming && status !== 'pending'
+                      ? `linear-gradient(135deg,${DS.green},#2d8f4e)`
+                      : 'rgba(255,255,255,.06)',
+                    color: claimable > 0 && !claiming && status !== 'pending' ? '#fff' : DS.muted,
+                    fontWeight: 700, fontSize: 14, fontFamily: DS.sora,
+                    opacity: claiming ? 0.7 : 1,
+                  }}
+                >
+                  {claiming
+                    ? 'Waiting for wallet…'
+                    : claimable === 0
+                      ? status === 'pending' ? 'Cliff not reached' : 'Nothing to claim'
+                      : `Claim ${(claimable / 1e6).toFixed(4)} TOKEN`}
+                </button>
+
+                <div style={{ fontSize: 10.5, color: DS.muted, textAlign: 'center', marginTop: 10 }}>
+                  Solana devnet · Tokens released directly to your wallet
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-
-        {/* ─── Details row ─────────────────────────────────────────────────── */}
-        <div style={{
-          width: '100%', maxWidth: 440,
-          padding: '16px 20px', background: DS.card,
-          border: `1px solid ${DS.border}`, borderRadius: 16,
-        }}>
-          {[
-            { l: 'Stream ends', v: stream.end,                                      icon: '⏱' },
-            { l: 'Cliff date',  v: stream.cliff,                                    icon: '🔒' },
-            { l: 'Rate',        v: `${(stream.rate * 86400).toFixed(0)} ${stream.token} / day`, icon: '📈' },
-            { l: 'Contract',    v: 'DvhxiL5P…XTFf',                                icon: '⛓' },
-            { l: 'Network',     v: 'Solana Devnet',                                 icon: '🌐' },
-          ].map((r, i, a) => (
-            <div key={r.l} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '8px 0',
-              borderBottom: i < a.length - 1 ? `1px solid ${DS.border}` : 'none',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: DS.muted, fontSize: 12 }}>
-                <span>{r.icon}</span>{r.l}
-              </div>
-              <span style={{ fontFamily: DS.mono, fontSize: 12, color: '#fff' }}>{r.v}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Navigation links */}
-        <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginTop: 4 }}>
-          <Link href="/streams" style={{ fontSize: 12, color: DS.accent, textDecoration: 'none' }}>← All Streams</Link>
-          <span style={{ color: DS.muted }}>·</span>
-          <Link href="/milestones" style={{ fontSize: 12, color: DS.blue, textDecoration: 'none' }}>Verify Milestones →</Link>
-        </div>
-      </main>
-
-      <style>{`
-        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.75)} }
-      `}</style>
-    </div>
+        )}
+      </div>
+    </main>
   );
 }

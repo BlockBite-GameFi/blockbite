@@ -20,7 +20,7 @@ const DS = {
   border:   'rgba(167,139,255,.13)',
   bg1:      '#09071a',
   muted:    'rgba(232,225,248,.5)',
-  cinzel:   "'Cinzel', serif",
+  cinzel:   "'Space Grotesk', system-ui, sans-serif",
   sora:     "'Sora', system-ui, sans-serif",
 };
 

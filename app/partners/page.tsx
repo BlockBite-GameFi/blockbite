@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
@@ -18,7 +18,7 @@ const DS = {
   muted:    'rgba(232,225,248,.38)',
   border:   'rgba(167,139,255,.13)',
   card:     'rgba(255,255,255,.042)',
-  cinzel:   "'Cinzel', serif",
+  cinzel:   "'Space Grotesk', system-ui, sans-serif",
   sora:     "'Sora', system-ui, sans-serif",
   mono:     "'JetBrains Mono', monospace",
 };

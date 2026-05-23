@@ -281,6 +281,120 @@ export async function fetchVaultBalance(
   }
 }
 
+// ─── StreamAccount layout offsets (after 8-byte discriminator) ───────────────
+// authority:        Pubkey  @  8   (32 bytes)
+// beneficiary:      Pubkey  @ 40   (32 bytes)
+// These offsets are used for getProgramAccounts memcmp filters.
+const OFFSET_AUTHORITY    = 8;
+const OFFSET_BENEFICIARY  = 40;
+
+export interface StreamInfo {
+  pubkey:          PublicKey;
+  authority:       PublicKey;
+  beneficiary:     PublicKey;
+  mint:            PublicKey;
+  streamId:        BN;
+  amountTotal:     BN;
+  amountWithdrawn: BN;
+  startTs:         BN;
+  cliffTs:         BN;
+  endTs:           BN;
+  cancelled:       boolean;
+  requiredTier:    number;
+  milestoneCount:  number;
+  milestonesVerified: boolean[];
+  milestonePct:    number[];
+  velocityStrikes: number;
+  lastActionTs:    BN;
+  bump:            number;
+}
+
+/** Decode raw account data returned by getProgramAccounts. */
+function decodeStream(pubkey: PublicKey, accountData: Buffer): StreamInfo | null {
+  try {
+    const program = readonlyProgram({ rpcEndpoint: 'x' } as unknown as Connection);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d = (program.account as any).streamAccount.coder.accounts.decode(
+      'StreamAccount',
+      accountData,
+    );
+    return { pubkey, ...d };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch ALL StreamAccount PDAs owned by the vesting program.
+ * No filter — returns everything on devnet.
+ * Useful for protocol-wide analytics.
+ */
+export async function getAllStreams(connection: Connection): Promise<StreamInfo[]> {
+  const program = readonlyProgram(connection);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const raw = await (program.account as any).streamAccount.all();
+  return raw.map((r: { publicKey: PublicKey; account: Omit<StreamInfo, 'pubkey'> }) => ({
+    pubkey: r.publicKey,
+    ...r.account,
+  }));
+}
+
+/**
+ * Fetch all streams where the wallet is the AUTHORITY (creator).
+ */
+export async function getStreamsByAuthority(
+  connection: Connection,
+  authority:  PublicKey,
+): Promise<StreamInfo[]> {
+  const program = readonlyProgram(connection);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const raw = await (program.account as any).streamAccount.all([
+    { memcmp: { offset: OFFSET_AUTHORITY, bytes: authority.toBase58() } },
+  ]);
+  return raw.map((r: { publicKey: PublicKey; account: Omit<StreamInfo, 'pubkey'> }) => ({
+    pubkey: r.publicKey,
+    ...r.account,
+  }));
+}
+
+/**
+ * Fetch all streams where the wallet is the BENEFICIARY (recipient).
+ */
+export async function getStreamsByBeneficiary(
+  connection: Connection,
+  beneficiary: PublicKey,
+): Promise<StreamInfo[]> {
+  const program = readonlyProgram(connection);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const raw = await (program.account as any).streamAccount.all([
+    { memcmp: { offset: OFFSET_BENEFICIARY, bytes: beneficiary.toBase58() } },
+  ]);
+  return raw.map((r: { publicKey: PublicKey; account: Omit<StreamInfo, 'pubkey'> }) => ({
+    pubkey: r.publicKey,
+    ...r.account,
+  }));
+}
+
+/**
+ * Compute claimable (unlocked minus withdrawn) at a given unix timestamp.
+ * Mirrors the Rust `unlocked_amount()` function.
+ */
+export function computeUnlocked(stream: StreamInfo, nowSec: number): bigint {
+  const now    = BigInt(nowSec);
+  const cliff  = BigInt(stream.cliffTs.toString());
+  const end    = BigInt(stream.endTs.toString());
+  const total  = BigInt(stream.amountTotal.toString());
+  const drawn  = BigInt(stream.amountWithdrawn.toString());
+
+  if (now < cliff) return 0n;
+
+  const duration = end > cliff ? end - cliff : 1n;
+  const elapsed  = now >= end ? duration : now - cliff;
+  const unlocked = total * elapsed / duration;
+  const available = unlocked > drawn ? unlocked - drawn : 0n;
+  return available;
+}
+
 /**
  * Helper: prepend a createATA instruction if the recipient doesn't have one.
  * Caller adds the rest of the transaction on top.

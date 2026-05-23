@@ -1,518 +1,312 @@
-﻿'use client';
+'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import Navbar from '@/components/Navbar';
+import { getStreamsByAuthority, StreamInfo } from '@/lib/anchor/vesting-client';
+import { BN } from '@coral-xyz/anchor';
 
-// ─── Design System V3 ─────────────────────────────────────────────────────────
 const DS = {
-  bg0:    '#05040d',
-  bg1:    '#09071a',
-  bg2:    '#0e0c22',
-  accent: '#a78bff',
-  gold:   '#f5c66a',
-  green:  '#5fd07a',
-  red:    '#ff3b6b',
-  blue:   '#7ad7ff',
-  purple: '#c084fc',
-  ember:  '#ff7a3a',
-  muted:  'rgba(232,225,248,.38)',
-  border: 'rgba(167,139,255,.13)',
-  card:   'rgba(255,255,255,.042)',
+  bg0: '#05040d', bg1: '#09071a',
+  accent: '#a78bff', gold: '#f5c66a', green: '#5fd07a',
+  red: '#ff3b6b', blue: '#7ad7ff', purple: '#c084fc',
+  muted: 'rgba(232,225,248,.38)', border: 'rgba(167,139,255,.13)',
+  card: 'rgba(255,255,255,.042)',
   cinzel: "'Space Grotesk', system-ui, sans-serif",
-  sora:   "'Sora', system-ui, sans-serif",
-  mono:   "'JetBrains Mono', monospace",
+  sora: "'Sora', system-ui, sans-serif",
+  mono: "'JetBrains Mono', monospace",
 };
 
 type VerifyMethod = 'game' | 'oracle' | 'multisig' | 'manual';
 
-interface Milestone {
-  index: number;
-  label: string;
-  pct: number;
-  done: boolean;
-  source: string;
-  date?: string;
-}
-
-interface MilestoneStream {
-  id: string;
-  name: string;
-  token: string;
-  total: number;
-  claimed: number;
-  milestones: Milestone[];
-  authority: string;
-  beneficiary: string;
-}
-
 const VERIFY_METHODS: {
-  id: VerifyMethod;
-  label: string;
-  icon: string;
-  color: string;
-  title: string;
-  desc: string;
-  badge: string;
-  detail: string;
-  action: string;
+  id: VerifyMethod; label: string; icon: string; color: string;
+  title: string; desc: string; badge: string; detail: string; action: string;
 }[] = [
-  {
-    id: 'game', label: 'Game', icon: '◈', color: DS.purple,
-    title: 'Play to Unlock',
-    desc: 'Token recipients play the BlockBite puzzle game. Score thresholds trigger on-chain milestone verification.',
-    badge: 'Sybil-Resistant',
-    detail: 'Score ≥ 1,000 points to verify this milestone. Each verified session submits a signed proof to the TDP program.',
-    action: 'Play & Verify',
-  },
-  {
-    id: 'oracle', label: 'Oracle', icon: '⬡', color: DS.blue,
-    title: 'Chainlink Automated',
-    desc: 'Connect any on-chain data feed. KPI thresholds (user count, revenue, TVL) trigger milestone unlock automatically.',
-    badge: 'Fully Automated',
-    detail: 'Configure an oracle endpoint and threshold value. The TDP program polls on a schedule and auto-verifies.',
-    action: 'Connect Feed',
-  },
-  {
-    id: 'multisig', label: 'MultiSig', icon: '◉', color: DS.gold,
-    title: 'Multi-Sig Approval',
-    desc: '3-of-5 designated signers approve milestone completion. Ideal for DAO governance and advisory boards.',
-    badge: 'DAO Native',
-    detail: '3 of 5 configured signers must co-sign a verify_milestone instruction. Signer list is locked at stream creation.',
-    action: 'Collect Signatures',
-  },
-  {
-    id: 'manual', label: 'Manual', icon: '✦', color: DS.green,
-    title: 'Creator Signs',
-    desc: 'Stream creator manually verifies KPI completion with a signed transaction. Simple and transparent.',
-    badge: 'Permissioned',
-    detail: 'Enter the KPI description and the stream creator wallet submits a signed verify_milestone transaction.',
-    action: 'Creator Verify',
-  },
+  { id: 'game',     label: 'Game',     icon: '◈', color: DS.purple,
+    title: 'Play to Unlock',       badge: 'Sybil-Resistant', action: 'Play & Verify',
+    desc:   'Score thresholds trigger on-chain milestone verification. Gamified, sybil-resistant.',
+    detail: 'Score ≥ 1,000 pts → signed proof submitted to TDP ProofCache PDA.' },
+  { id: 'oracle',   label: 'Oracle',   icon: '⬡', color: DS.blue,
+    title: 'Chainlink Automated',  badge: 'Fully Automated', action: 'Connect Feed',
+    desc:   'KPI thresholds (user count, revenue, TVL) trigger milestone unlock automatically.',
+    detail: 'Configure an oracle endpoint and threshold. TDP polls on a schedule and auto-verifies.' },
+  { id: 'multisig', label: 'MultiSig', icon: '◉', color: DS.gold,
+    title: 'Multi-Sig Approval',   badge: 'DAO Native',      action: 'Collect Signatures',
+    desc:   '3-of-5 designated signers approve milestone completion. Ideal for DAO governance.',
+    detail: '3 of 5 configured signers co-sign a verify_milestone instruction. Signer list locked at creation.' },
+  { id: 'manual',   label: 'Manual',   icon: '✦', color: DS.green,
+    title: 'Creator Signs',        badge: 'Permissioned',    action: 'Creator Verify',
+    desc:   'Stream creator manually verifies KPI completion with a signed transaction.',
+    detail: 'Stream creator submits a signed verify_milestone transaction. Simple and auditable.' },
 ];
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const INIT_STREAMS: MilestoneStream[] = [
-  {
-    id: 'stm-002', name: 'Advisor Round', token: 'BBT',
-    total: 120_000, claimed: 12_000,
-    authority: '35z7X5…NxFzr', beneficiary: 'B55a…1D3e',
-    milestones: [
-      { index: 0, label: 'Token Launch',       pct: 25, done: true,  source: 'manual',   date: '2025-03-01' },
-      { index: 1, label: 'Mainnet Deploy',      pct: 25, done: false, source: 'manual'   },
-      { index: 2, label: '10K Active Players',  pct: 25, done: false, source: 'game'     },
-      { index: 3, label: 'Protocol V2 Release', pct: 25, done: false, source: 'multisig' },
-    ],
-  },
-  {
-    id: 'stm-006', name: 'Game Rewards Pool', token: 'BBT',
-    total: 300_000, claimed: 45_000,
-    authority: '35z7X5…NxFzr', beneficiary: 'F13b…8Qa1',
-    milestones: [
-      { index: 0, label: 'Level 10 Clear',  pct: 20, done: true,  source: 'game', date: '2025-05-10' },
-      { index: 1, label: 'Level 30 Clear',  pct: 30, done: true,  source: 'game', date: '2025-05-18' },
-      { index: 2, label: 'Level 50 Clear',  pct: 50, done: false, source: 'game' },
-    ],
-  },
-  {
-    id: 'stm-005', name: 'VC Seed Round', token: 'BBT',
-    total: 750_000, claimed: 0,
-    authority: '35z7X5…NxFzr', beneficiary: 'E72f…9C4b',
-    milestones: [
-      { index: 0, label: 'Product Launch',    pct: 33, done: false, source: 'manual'  },
-      { index: 1, label: '1M Revenue',        pct: 33, done: false, source: 'oracle'  },
-      { index: 2, label: 'Series A Close',    pct: 34, done: false, source: 'multisig'},
-    ],
-  },
-];
-
-function SourceBadge({ source }: { source: string }) {
-  const m = VERIFY_METHODS.find(v => v.id === source);
-  const color = m?.color ?? DS.muted;
-  const label = m?.label ?? source;
-  return (
-    <span style={{
-      padding: '2px 8px', borderRadius: 99, fontSize: 9.5, fontWeight: 700,
-      letterSpacing: '.04em', background: `${color}18`, color, border: `1px solid ${color}33`,
-      fontFamily: DS.sora,
-    }}>{label}</span>
-  );
+function fmtTs(ts: BN | undefined): string {
+  if (!ts) return '—';
+  const sec = Number(ts.toString());
+  if (sec === 0) return 'No cliff';
+  return new Date(sec * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+function fmtAmt(n: BN | undefined): string {
+  if (!n) return '—';
+  const raw = BigInt(n.toString());
+  return (raw / 1_000_000n).toLocaleString();
 }
 
 export default function MilestonesPage() {
-  const [streams, setStreams]           = useState<MilestoneStream[]>(INIT_STREAMS);
-  const [selectedStream, setSelectedStream] = useState(0);
-  const [selectedMethod, setSelectedMethod] = useState<VerifyMethod>('game');
-  const [verifying, setVerifying]       = useState<number | null>(null);
-  const [justVerified, setJustVerified] = useState<number | null>(null);
-  const [confirmIdx, setConfirmIdx]     = useState<number | null>(null);
+  const { connection } = useConnection();
+  const { publicKey, connected } = useWallet();
+  const { setVisible } = useWalletModal();
 
-  const stream = streams[selectedStream];
+  const [streams, setStreams]   = useState<StreamInfo[]>([]);
+  const [loading, setLoading]   = useState(false);
+  const [error,   setError]     = useState<string | null>(null);
+  const [selIdx,  setSelIdx]    = useState(0);
+  const [selMethod, setMethod]  = useState<VerifyMethod>('game');
 
-  const verifiedPct = stream.milestones
-    .filter(m => m.done)
-    .reduce((a, m) => a + m.pct, 0);
+  const load = useCallback(async () => {
+    if (!publicKey) return;
+    setLoading(true); setError(null);
+    try {
+      setStreams(await getStreamsByAuthority(connection, publicKey));
+      setSelIdx(0);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'RPC error');
+    } finally { setLoading(false); }
+  }, [connection, publicKey]);
 
-  const quotaCap = Math.floor(stream.total * verifiedPct / 100);
+  useEffect(() => { if (connected) load(); else setStreams([]); }, [connected, load]);
 
-  const handleVerify = async (idx: number) => {
-    setConfirmIdx(null);
-    setVerifying(idx);
-    await new Promise(r => setTimeout(r, 1500));
-    setStreams(prev => prev.map((s, si) =>
-      si !== selectedStream ? s : {
-        ...s,
-        milestones: s.milestones.map(m =>
-          m.index === idx
-            ? { ...m, done: true, date: new Date().toISOString().slice(0, 10) }
-            : m
-        ),
-      }
-    ));
-    setVerifying(null);
-    setJustVerified(idx);
-    setTimeout(() => setJustVerified(null), 2500);
-  };
-
-  const activeMethod = VERIFY_METHODS.find(v => v.id === selectedMethod)!;
+  const method = VERIFY_METHODS.find(v => v.id === selMethod)!;
+  const stream = streams[selIdx];
+  const nowSec = Math.floor(Date.now() / 1000);
+  const mCount = (stream as any)?.milestoneCount ?? 0;
+  const isActive = stream && !stream.cancelled && Number(stream.endTs.toString()) > nowSec;
 
   return (
     <main style={{ minHeight: '100vh', background: DS.bg0, color: '#f0ecff', fontFamily: DS.sora }}>
       <Navbar />
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div style={{
-        padding: '80px 24px 40px',
-        background: `linear-gradient(180deg, ${DS.bg1} 0%, ${DS.bg0} 100%)`,
-        borderBottom: `1px solid ${DS.border}`,
-      }}>
+      {/* Header */}
+      <div style={{ padding: '80px 24px 40px', background: `linear-gradient(180deg,${DS.bg1} 0%,${DS.bg0} 100%)`, borderBottom: `1px solid ${DS.border}` }}>
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-          <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.blue, fontWeight: 700, marginBottom: 10, textTransform: 'uppercase', fontFamily: DS.sora }}>
-            TDP · Verification Layer
-          </div>
+          <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.blue, fontWeight: 700, marginBottom: 10, textTransform: 'uppercase' }}>TDP · Verification Layer</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 14 }}>
             <div>
-              <h1 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(26px,5vw,42px)', fontWeight: 700, marginBottom: 10 }}>
-                Milestone Verification Layer
-              </h1>
+              <h1 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(26px,5vw,42px)', fontWeight: 900, marginBottom: 10 }}>Milestone Verification Layer</h1>
               <p style={{ fontSize: 14, color: DS.muted, maxWidth: 580, lineHeight: 1.65 }}>
-                Projects choose their verification method. All methods are enforceable on-chain via the TDP smart contract.
+                Projects choose their verification method. All methods enforceable on-chain via the TDP smart contract.
               </p>
             </div>
-            <Link href="/streams" style={{ fontSize: 12, color: DS.muted, textDecoration: 'none' }}>← All Streams</Link>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Link href="/streams" style={{ fontSize: 12, color: DS.muted, textDecoration: 'none' }}>← Streams</Link>
+              <Link href="/demo#milestones" style={{ fontSize: 12, color: DS.accent, textDecoration: 'none' }}>Demo ↗</Link>
+            </div>
           </div>
         </div>
       </div>
 
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '40px 24px 100px' }}>
 
-        {/* ── Verification Method Selector ───────────────────────────────────── */}
+        {/* Verification method selector — product documentation, not live data */}
         <div style={{ marginBottom: 40 }}>
-          <div style={{ fontSize: 11, letterSpacing: '1.8px', color: DS.accent, fontWeight: 700, marginBottom: 18, textTransform: 'uppercase' }}>
-            Select Verification Method
-          </div>
+          <div style={{ fontSize: 11, letterSpacing: '1.8px', color: DS.accent, fontWeight: 700, marginBottom: 18, textTransform: 'uppercase' }}>Select Verification Method</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14 }}>
-            {VERIFY_METHODS.map(method => {
-              const isActive = selectedMethod === method.id;
+            {VERIFY_METHODS.map(m => {
+              const on = selMethod === m.id;
               return (
-                <button
-                  key={method.id}
-                  onClick={() => setSelectedMethod(method.id)}
-                  style={{
-                    padding: '20px 18px', borderRadius: 18, textAlign: 'left', cursor: 'pointer',
-                    background: isActive ? `${method.color}14` : DS.card,
-                    border: `1.5px solid ${isActive ? method.color + '55' : DS.border}`,
-                    color: '#f0ecff', fontFamily: DS.sora, transition: 'all .18s',
-                    boxShadow: isActive ? `0 0 24px ${method.color}22` : 'none',
-                  }}
-                >
-                  <div style={{
-                    width: 38, height: 38, borderRadius: 10,
-                    background: `${method.color}18`, border: `1px solid ${method.color}40`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 18, color: method.color, marginBottom: 12,
-                  }}>{method.icon}</div>
-                  <div style={{ fontSize: 10, color: method.color, fontWeight: 700, letterSpacing: '1.4px', marginBottom: 4 }}>
-                    {method.label.toUpperCase()}
-                  </div>
-                  <div style={{ fontFamily: DS.cinzel, fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{method.title}</div>
-                  <div style={{ fontSize: 11.5, color: DS.muted, lineHeight: 1.5 }}>{method.desc}</div>
-                  <div style={{
-                    marginTop: 12, display: 'inline-block', padding: '2px 8px',
-                    borderRadius: 99, fontSize: 9, fontWeight: 700, letterSpacing: '1px',
-                    background: `${method.color}15`, color: method.color, border: `1px solid ${method.color}30`,
-                  }}>{method.badge}</div>
+                <button key={m.id} onClick={() => setMethod(m.id)} style={{
+                  padding: '20px 18px', borderRadius: 18, textAlign: 'left', cursor: 'pointer',
+                  background: on ? `${m.color}14` : DS.card,
+                  border: `1.5px solid ${on ? m.color + '55' : DS.border}`,
+                  color: '#f0ecff', fontFamily: DS.sora, transition: 'all .18s',
+                  boxShadow: on ? `0 0 24px ${m.color}22` : 'none',
+                }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: `${m.color}18`, border: `1px solid ${m.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: m.color, marginBottom: 12 }}>{m.icon}</div>
+                  <div style={{ fontSize: 10, color: m.color, fontWeight: 700, letterSpacing: '1.4px', marginBottom: 4 }}>{m.label.toUpperCase()}</div>
+                  <div style={{ fontFamily: DS.cinzel, fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{m.title}</div>
+                  <div style={{ fontSize: 11.5, color: DS.muted, lineHeight: 1.5 }}>{m.desc}</div>
+                  <div style={{ marginTop: 12, display: 'inline-block', padding: '2px 8px', borderRadius: 99, fontSize: 9, fontWeight: 700, background: `${m.color}15`, color: m.color, border: `1px solid ${m.color}30` }}>{m.badge}</div>
                 </button>
               );
             })}
           </div>
-
-          {/* Method detail panel */}
-          <div style={{
-            marginTop: 16, padding: '18px 22px', borderRadius: 14,
-            background: `${activeMethod.color}0a`, border: `1px solid ${activeMethod.color}33`,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            flexWrap: 'wrap', gap: 16,
-          }}>
+          <div style={{ marginTop: 16, padding: '18px 22px', borderRadius: 14, background: `${method.color}0a`, border: `1px solid ${method.color}33`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div>
-              <div style={{ fontSize: 11, color: activeMethod.color, fontWeight: 700, marginBottom: 4 }}>
-                {activeMethod.icon} {activeMethod.label} — {activeMethod.title}
-              </div>
-              <div style={{ fontSize: 13, color: DS.muted }}>{activeMethod.detail}</div>
+              <div style={{ fontSize: 11, color: method.color, fontWeight: 700, marginBottom: 4 }}>{method.icon} {method.label} — {method.title}</div>
+              <div style={{ fontSize: 13, color: DS.muted }}>{method.detail}</div>
             </div>
-            {activeMethod.id === 'game' ? (
-              <Link href="/game" style={{
-                padding: '9px 20px', borderRadius: 10,
-                background: `linear-gradient(135deg, ${DS.purple}cc, #6b21a8cc)`,
-                color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none',
-                whiteSpace: 'nowrap',
-              }}>{activeMethod.action} →</Link>
-            ) : (
-              <button style={{
-                padding: '9px 20px', borderRadius: 10, cursor: 'pointer',
-                background: `${activeMethod.color}22`, border: `1px solid ${activeMethod.color}44`,
-                color: activeMethod.color, fontWeight: 700, fontSize: 13, fontFamily: DS.sora,
-              }}>{activeMethod.action} →</button>
-            )}
+            {method.id === 'game'
+              ? <Link href="/game" style={{ padding: '9px 20px', borderRadius: 10, background: `linear-gradient(135deg,${DS.purple}cc,#6b21a8cc)`, color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>{method.action} →</Link>
+              : <button style={{ padding: '9px 20px', borderRadius: 10, cursor: 'pointer', background: `${method.color}22`, border: `1px solid ${method.color}44`, color: method.color, fontWeight: 700, fontSize: 13, fontFamily: DS.sora }}>{method.action} →</button>
+            }
           </div>
         </div>
 
-        {/* ── Stream tabs + milestones ────────────────────────────────────────── */}
-        <div style={{ marginBottom: 16, display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-          {streams.map((s, i) => {
-            const dPct = s.milestones.filter(m => m.done).reduce((a, m) => a + m.pct, 0);
-            return (
-              <button key={s.id} onClick={() => setSelectedStream(i)} style={{
-                padding: '9px 16px', borderRadius: 11, cursor: 'pointer',
-                border: `1.5px solid ${selectedStream === i ? DS.blue : 'rgba(255,255,255,.08)'}`,
-                background: selectedStream === i ? `${DS.blue}14` : DS.card,
-                color: selectedStream === i ? DS.blue : DS.muted,
-                fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
-                transition: 'all .15s', fontFamily: DS.sora,
-              }}>
-                {s.name}
-                <span style={{
-                  marginLeft: 8, fontFamily: DS.mono, fontSize: 10,
-                  color: dPct === 100 ? DS.green : selectedStream === i ? DS.blue : DS.muted,
-                }}>{dPct}%</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Wallet gate */}
+        {!connected && (
+          <div style={{ padding: '52px 24px', textAlign: 'center', background: DS.card, border: `1px solid ${DS.border}`, borderRadius: 18 }}>
+            <div style={{ fontSize: 36, marginBottom: 16, color: DS.gold }}>◉</div>
+            <div style={{ fontFamily: DS.cinzel, fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Connect Wallet to View Your Streams</div>
+            <p style={{ color: DS.muted, fontSize: 13, marginBottom: 24, maxWidth: 400, margin: '0 auto 24px' }}>
+              Milestone verification is available to stream creators. Connect to see the streams you manage.
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button onClick={() => setVisible(true)} style={{ padding: '12px 28px', borderRadius: 12, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg,${DS.accent}cc,#7c3aedcc)`, color: '#fff', fontWeight: 700, fontSize: 14, fontFamily: DS.sora }}>Connect Wallet</button>
+              <Link href="/demo#milestones" style={{ padding: '12px 24px', borderRadius: 12, border: `1px solid ${DS.border}`, color: DS.muted, fontSize: 13, textDecoration: 'none', display: 'inline-block' }}>View Demo →</Link>
+            </div>
+          </div>
+        )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20, alignItems: 'start' }}>
+        {connected && loading && <div style={{ padding: '48px', textAlign: 'center', color: DS.muted, fontSize: 13 }}>Fetching your streams from Solana devnet…</div>}
 
-          {/* ── Milestones list ─────────────────────────────────────────────── */}
-          <div>
-            {/* Stream info bar */}
-            <div style={{
-              padding: '14px 18px', background: DS.card, border: `1px solid ${DS.border}`,
-              borderRadius: 14, marginBottom: 18, display: 'flex', gap: 20, flexWrap: 'wrap',
-            }}>
-              {[
-                { l: 'Stream',         v: stream.id,                                    c: DS.accent },
-                { l: 'Total',          v: `${stream.total.toLocaleString()} ${stream.token}`, c: '#fff' },
-                { l: 'Quota Unlocked', v: `${quotaCap.toLocaleString()}`,                c: DS.blue  },
-                { l: 'Authority',      v: stream.authority,                              c: DS.muted },
-              ].map(s => (
-                <div key={s.l}>
-                  <div style={{ fontSize: 9.5, color: DS.muted, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 2 }}>{s.l}</div>
-                  <div style={{ fontFamily: DS.mono, fontSize: 11.5, color: s.c }}>{s.v}</div>
+        {error && (
+          <div style={{ padding: '12px 16px', borderRadius: 10, background: '#f871711a', border: '1px solid #f8717144', fontSize: 12, color: DS.red, marginBottom: 16 }}>
+            RPC error: {error} · <button onClick={load} style={{ background: 'none', border: 'none', color: DS.accent, cursor: 'pointer', fontSize: 12 }}>Retry</button>
+          </div>
+        )}
+
+        {connected && !loading && streams.length === 0 && !error && (
+          <div style={{ padding: '52px 24px', textAlign: 'center', background: DS.card, border: `1px solid ${DS.border}`, borderRadius: 18 }}>
+            <div style={{ fontFamily: DS.cinzel, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>No Streams Found</div>
+            <p style={{ color: DS.muted, fontSize: 13, marginBottom: 20 }}>You haven't created any streams yet.</p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link href="/streams/new" style={{ padding: '10px 22px', borderRadius: 10, background: `linear-gradient(135deg,${DS.accent}cc,#7c3aedcc)`, color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>Create Stream</Link>
+              <Link href="/demo#milestones" style={{ padding: '10px 18px', borderRadius: 10, border: `1px solid ${DS.border}`, color: DS.muted, fontSize: 12, textDecoration: 'none' }}>View Demo</Link>
+            </div>
+          </div>
+        )}
+
+        {connected && !loading && streams.length > 0 && (
+          <>
+            {/* Program upgrade notice */}
+            <div style={{ padding: '14px 18px', borderRadius: 12, marginBottom: 24, background: `${DS.gold}0d`, border: `1px solid ${DS.gold}33`, display: 'flex', gap: 12 }}>
+              <span style={{ fontSize: 20, color: DS.gold, flexShrink: 0 }}>◉</span>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: DS.gold, marginBottom: 3 }}>Milestone Gates — Awaiting Program Upgrade (devnet v0.1.0)</div>
+                <div style={{ fontSize: 11.5, color: DS.muted, lineHeight: 1.6 }}>
+                  The deployed devnet program uses linear vesting only.{' '}
+                  <code style={{ fontFamily: DS.mono, fontSize: 10.5, color: DS.blue }}>configure_milestones</code> /{' '}
+                  <code style={{ fontFamily: DS.mono, fontSize: 10.5, color: DS.blue }}>verify_milestone</code>{' '}
+                  deploy in the next release. Your streams below are live on-chain now.
                 </div>
+              </div>
+            </div>
+
+            {/* Stream tabs */}
+            <div style={{ marginBottom: 16, display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+              {streams.map((s, i) => (
+                <button key={s.pubkey.toBase58()} onClick={() => setSelIdx(i)} style={{
+                  padding: '9px 16px', borderRadius: 11, cursor: 'pointer',
+                  border: `1.5px solid ${selIdx === i ? DS.blue : 'rgba(255,255,255,.08)'}`,
+                  background: selIdx === i ? `${DS.blue}14` : DS.card,
+                  color: selIdx === i ? DS.blue : DS.muted,
+                  fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', transition: 'all .15s', fontFamily: DS.sora,
+                }}>
+                  {s.pubkey.toBase58().slice(0, 8)}…
+                  <span style={{ marginLeft: 8, fontFamily: DS.mono, fontSize: 10, color: s.cancelled ? DS.red : Number(s.endTs.toString()) < nowSec ? DS.muted : DS.green }}>
+                    {s.cancelled ? 'cancelled' : Number(s.endTs.toString()) < nowSec ? 'ended' : 'active'}
+                  </span>
+                </button>
               ))}
             </div>
 
-            {/* Milestone cards */}
-            {stream.milestones.map((m) => {
-              const isVerifying   = verifying === m.index;
-              const isJustVerified = justVerified === m.index;
-              const isConfirming  = confirmIdx === m.index;
-
-              return (
-                <div key={m.index} style={{
-                  background: m.done ? `${DS.green}06` : DS.card,
-                  border: `1px solid ${m.done ? DS.green + '33' : isConfirming ? DS.gold + '44' : DS.border}`,
-                  borderRadius: 14, padding: '18px 20px', marginBottom: 12,
-                  transition: 'all .2s',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                    {/* Index circle */}
-                    <div style={{
-                      width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontFamily: DS.mono, fontSize: 14, fontWeight: 700,
-                      background: m.done ? `${DS.green}20` : 'rgba(255,255,255,.06)',
-                      border: `2px solid ${m.done ? DS.green : 'rgba(255,255,255,.1)'}`,
-                      color: m.done ? DS.green : DS.muted,
-                      boxShadow: m.done ? `0 0 12px ${DS.green}33` : 'none',
-                    }}>
-                      {m.done ? '✓' : m.index}
-                    </div>
-
-                    {/* Content */}
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, fontSize: 14, color: m.done ? '#fff' : 'rgba(255,255,255,.8)' }}>
-                          {m.label}
-                        </span>
-                        <SourceBadge source={m.source} />
-                        {m.done && m.date && (
-                          <span style={{ fontFamily: DS.mono, fontSize: 10, color: DS.muted }}>Verified {m.date}</span>
-                        )}
+            {stream && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20, alignItems: 'start' }}>
+                <div>
+                  {/* Stream info bar */}
+                  <div style={{ padding: '14px 18px', background: DS.card, border: `1px solid ${DS.border}`, borderRadius: 14, marginBottom: 18, display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                    {[
+                      { l: 'PDA',         v: stream.pubkey.toBase58().slice(0,12)+'…',     c: DS.accent },
+                      { l: 'Total',       v: fmtAmt(stream.amountTotal)+' tokens',          c: '#fff'    },
+                      { l: 'Withdrawn',   v: fmtAmt(stream.amountWithdrawn)+' tokens',      c: DS.blue   },
+                      { l: 'Beneficiary', v: stream.beneficiary.toBase58().slice(0,10)+'…', c: DS.muted  },
+                    ].map(r => (
+                      <div key={r.l}>
+                        <div style={{ fontSize: 9.5, color: DS.muted, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 2 }}>{r.l}</div>
+                        <div style={{ fontFamily: DS.mono, fontSize: 11.5, color: r.c }}>{r.v}</div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                        <div style={{ fontFamily: DS.mono, fontSize: 12, color: m.done ? DS.green : DS.muted }}>
-                          {m.pct}% allocation
-                          <span style={{ color: m.done ? DS.green : DS.muted, marginLeft: 6, fontSize: 10 }}>
-                            ({Math.floor(stream.total * m.pct / 100).toLocaleString()} {stream.token})
-                          </span>
-                        </div>
-                        {m.done && <span style={{ fontSize: 11, color: DS.green, fontWeight: 600 }}>✓ Unlocked on-chain</span>}
-                      </div>
-                    </div>
-
-                    {/* Action */}
-                    {!m.done && (
-                      <div style={{ flexShrink: 0 }}>
-                        {isConfirming ? (
-                          <div style={{ display: 'flex', gap: 8 }}>
-                            <button onClick={() => handleVerify(m.index)} style={{
-                              padding: '8px 16px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                              background: `linear-gradient(135deg, ${DS.green}, #0d6e2e)`,
-                              color: '#fff', fontWeight: 700, fontSize: 12, fontFamily: DS.sora,
-                            }}>Confirm</button>
-                            <button onClick={() => setConfirmIdx(null)} style={{
-                              padding: '8px 12px', borderRadius: 9, cursor: 'pointer',
-                              background: 'rgba(255,255,255,.06)', border: `1px solid ${DS.border}`,
-                              color: DS.muted, fontWeight: 600, fontSize: 12, fontFamily: DS.sora,
-                            }}>Cancel</button>
-                          </div>
-                        ) : isVerifying ? (
-                          <div style={{
-                            padding: '8px 16px', borderRadius: 9,
-                            background: `${DS.blue}18`, border: `1px solid ${DS.blue}33`,
-                            color: DS.blue, fontSize: 12, fontWeight: 600,
-                          }}>
-                            Verifying…
-                          </div>
-                        ) : isJustVerified ? (
-                          <div style={{
-                            padding: '8px 16px', borderRadius: 9,
-                            background: `${DS.green}18`, border: `1px solid ${DS.green}33`,
-                            color: DS.green, fontSize: 12, fontWeight: 700,
-                          }}>✓ Verified!</div>
-                        ) : (
-                          <button onClick={() => setConfirmIdx(m.index)} style={{
-                            padding: '8px 18px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                            background: `linear-gradient(135deg, ${DS.blue}cc, #0a3a5acc)`,
-                            color: '#fff', fontWeight: 700, fontSize: 12, fontFamily: DS.sora,
-                            boxShadow: `0 0 14px ${DS.blue}33`,
-                          }}>Verify →</button>
-                        )}
-                      </div>
-                    )}
+                    ))}
                   </div>
 
-                  {m.done && (
-                    <div style={{ marginTop: 12, height: 3, borderRadius: 99, background: DS.green, opacity: .35 }} />
-                  )}
+                  {/* Milestone state */}
+                  {mCount === 0 ? (
+                    <div style={{ padding: '36px 24px', borderRadius: 14, textAlign: 'center', background: DS.card, border: `1px solid ${DS.border}` }}>
+                      <div style={{ fontSize: 32, marginBottom: 14, color: DS.gold }}>◉</div>
+                      <div style={{ fontFamily: DS.cinzel, fontSize: 16, fontWeight: 700, marginBottom: 10 }}>No Milestone Gates Configured</div>
+                      <p style={{ color: DS.muted, fontSize: 12.5, lineHeight: 1.7, maxWidth: 440, margin: '0 auto 22px' }}>
+                        This stream uses linear vesting only. Milestone gates are added via{' '}
+                        <code style={{ fontFamily: DS.mono, color: DS.blue, fontSize: 11 }}>configure_milestones</code>{' '}
+                        after the program upgrade deploys. Pick a method above to learn how each works.
+                      </p>
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <Link href="/audit" style={{ padding: '8px 18px', borderRadius: 10, background: `${DS.blue}18`, border: `1px solid ${DS.blue}33`, color: DS.blue, fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>View Audit Trail ↗</Link>
+                        <Link href="/demo#milestones" style={{ padding: '8px 14px', borderRadius: 10, border: `1px solid ${DS.border}`, color: DS.muted, fontSize: 12, textDecoration: 'none' }}>See Demo →</Link>
+                      </div>
+                    </div>
+                  ) : Array.from({ length: mCount }).map((_, idx) => {
+                    const done = ((stream as any).milestonesVerified?.[idx]) ?? false;
+                    const pct  = ((stream as any).milestonePct?.[idx]) ?? 0;
+                    return (
+                      <div key={idx} style={{ background: done ? `${DS.green}06` : DS.card, border: `1px solid ${done ? DS.green+'33' : DS.border}`, borderRadius: 14, padding: '18px 20px', marginBottom: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                          <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: DS.mono, fontSize: 14, fontWeight: 700, background: done ? `${DS.green}20` : 'rgba(255,255,255,.06)', border: `2px solid ${done ? DS.green : 'rgba(255,255,255,.1)'}`, color: done ? DS.green : DS.muted }}>
+                            {done ? '✓' : idx}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Milestone {idx + 1}</div>
+                            <div style={{ fontFamily: DS.mono, fontSize: 11.5, color: done ? DS.green : DS.muted }}>{pct}% allocation · {done ? '✓ Verified on-chain' : 'Pending verification'}</div>
+                          </div>
+                          {!done && <span style={{ padding: '6px 14px', borderRadius: 9, fontSize: 11, background: `${DS.gold}12`, border: `1px solid ${DS.gold}33`, color: DS.gold, fontWeight: 600 }}>Awaiting upgrade</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
 
-          {/* ── Side panel ──────────────────────────────────────────────────── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-            {/* Quota summary */}
-            <div style={{
-              background: DS.card, border: `1px solid ${DS.border}`,
-              borderRadius: 16, padding: '18px 20px',
-            }}>
-              <div style={{ fontFamily: DS.cinzel, fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 14 }}>
-                Milestone Quota
+                {/* Side panel */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ background: DS.card, border: `1px solid ${DS.border}`, borderRadius: 16, padding: '18px 20px' }}>
+                    <div style={{ fontFamily: DS.cinzel, fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 14 }}>Stream Details</div>
+                    {[
+                      { l: 'Status',    v: stream.cancelled ? 'Cancelled' : isActive ? 'Active' : 'Ended', c: stream.cancelled ? DS.red : isActive ? DS.green : DS.muted },
+                      { l: 'Start',     v: fmtTs(stream.startTs),  c: '#fff'   },
+                      { l: 'Cliff',     v: fmtTs(stream.cliffTs),  c: DS.gold  },
+                      { l: 'End',       v: fmtTs(stream.endTs),    c: '#fff'   },
+                      { l: 'Stream ID', v: stream.streamId.toString(), c: DS.muted },
+                    ].map((r, i, a) => (
+                      <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < a.length-1 ? '1px solid rgba(255,255,255,.05)' : 'none' }}>
+                        <span style={{ fontSize: 11, color: DS.muted }}>{r.l}</span>
+                        <span style={{ fontFamily: DS.mono, fontSize: 11, color: r.c, fontWeight: 600 }}>{r.v}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ background: `${DS.blue}08`, border: `1px solid ${DS.blue}22`, borderRadius: 14, padding: '16px 18px' }}>
+                    <div style={{ fontSize: 10, color: DS.blue, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 10 }}>Claimable Formula</div>
+                    <pre style={{ fontFamily: DS.mono, fontSize: 10, color: 'rgba(255,255,255,.75)', lineHeight: 1.8, margin: 0, whiteSpace: 'pre-wrap' }}>{`claimable(t) = min(\n  unlocked(t),\n  total × Σ pct[i]\n  where verified[i]=true\n)`}</pre>
+                  </div>
+                  <div style={{ background: DS.card, border: `1px solid ${DS.border}`, borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ fontSize: 10, color: DS.muted, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 4 }}>Related</div>
+                    {[
+                      { href: '/claim',     label: 'Claim Portal',        col: DS.gold   },
+                      { href: '/streams',   label: 'All Streams',         col: DS.accent },
+                      { href: '/analytics', label: 'Protocol Analytics',  col: DS.green  },
+                      { href: '/audit',     label: 'Audit Trail',         col: DS.blue   },
+                      { href: '/game',      label: 'Play & Verify',       col: DS.purple },
+                    ].map(l => (
+                      <Link key={l.href} href={l.href} style={{ fontSize: 12.5, color: l.col, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: l.col, flexShrink: 0 }} />
+                        {l.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 11 }}>
-                  <span style={{ color: DS.muted }}>Verified quota</span>
-                  <span style={{ fontFamily: DS.mono, color: DS.blue, fontWeight: 700 }}>{verifiedPct}%</span>
-                </div>
-                <div style={{ height: 10, borderRadius: 99, background: 'rgba(255,255,255,.07)', overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', width: `${verifiedPct}%`, borderRadius: 99,
-                    background: `linear-gradient(90deg, ${DS.blue}88, ${DS.blue})`,
-                    boxShadow: `0 0 8px ${DS.blue}55`,
-                    transition: 'width .5s ease',
-                  }} />
-                </div>
-              </div>
-              {[
-                { l: 'Total supply',   v: `${stream.total.toLocaleString()} ${stream.token}`,             c: '#fff'    },
-                { l: 'Quota unlocked', v: `${quotaCap.toLocaleString()} ${stream.token}`,                 c: DS.blue   },
-                { l: 'Claimed so far', v: `${stream.claimed.toLocaleString()} ${stream.token}`,            c: DS.gold   },
-                { l: 'Claimable now',  v: `${Math.max(0, quotaCap - stream.claimed).toLocaleString()}`,   c: DS.green  },
-              ].map((r, i, a) => (
-                <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < a.length - 1 ? '1px solid rgba(255,255,255,.05)' : 'none' }}>
-                  <span style={{ fontSize: 11, color: DS.muted }}>{r.l}</span>
-                  <span style={{ fontFamily: DS.mono, fontSize: 11.5, color: r.c, fontWeight: 600 }}>{r.v}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Formula */}
-            <div style={{
-              background: `${DS.blue}08`, border: `1px solid ${DS.blue}22`,
-              borderRadius: 14, padding: '16px 18px',
-            }}>
-              <div style={{ fontSize: 10, color: DS.blue, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 10 }}>
-                Claimable Formula
-              </div>
-              <pre style={{ fontFamily: DS.mono, fontSize: 10, color: 'rgba(255,255,255,.75)', lineHeight: 1.8, margin: 0, whiteSpace: 'pre-wrap' }}>{`claimable(t) = min(
-  unlocked(t),        // linear
-  total × Σ pct[i]    // quota cap
-  where verified[i]=true
-)`}</pre>
-            </div>
-
-            {/* Verification log placeholder */}
-            <div style={{
-              background: DS.card, border: `1px solid ${DS.border}`,
-              borderRadius: 14, padding: '14px 16px',
-            }}>
-              <div style={{ fontSize: 10, color: DS.muted, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 12 }}>
-                Verification Log
-              </div>
-              {stream.milestones.filter(m => m.done).map(m => (
-                <div key={m.index} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: `1px solid rgba(255,255,255,.04)` }}>
-                  <span style={{ fontSize: 11, color: DS.green }}>✓ {m.label}</span>
-                  <span style={{ fontFamily: DS.mono, fontSize: 10, color: DS.muted }}>{m.date}</span>
-                </div>
-              ))}
-              {stream.milestones.filter(m => m.done).length === 0 && (
-                <div style={{ fontSize: 12, color: DS.muted, textAlign: 'center', padding: '8px 0' }}>No verifications yet</div>
-              )}
-            </div>
-
-            {/* Quick links */}
-            <div style={{
-              background: DS.card, border: `1px solid ${DS.border}`,
-              borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8,
-            }}>
-              <div style={{ fontSize: 10, color: DS.muted, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 4 }}>Related</div>
-              {[
-                { href: '/claim',     label: 'Claim Portal',      col: DS.gold   },
-                { href: '/streams',   label: 'All Streams',       col: DS.accent },
-                { href: '/analytics', label: 'Protocol Analytics', col: DS.green  },
-                { href: '/game',      label: 'Play & Verify',      col: DS.purple },
-              ].map(l => (
-                <Link key={l.href} href={l.href} style={{ fontSize: 12.5, color: l.col, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: l.col, flexShrink: 0 }} />
-                  {l.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
+            )}
+          </>
+        )}
       </div>
     </main>
   );

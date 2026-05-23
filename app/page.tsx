@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { useConnection } from '@solana/wallet-adapter-react';
+import { getAllStreams } from '@/lib/anchor/vesting-client';
 import Navbar from '@/components/Navbar';
 
 // ─── Design System V3 ─────────────────────────────────────────────────────────
@@ -24,12 +26,7 @@ const DS = {
   mono:     "'JetBrains Mono', monospace",
 };
 
-const STATS = [
-  { value: '$2.4M',  label: 'TVL Locked'       },
-  { value: '1,840',  label: 'Active Streams'    },
-  { value: '48M+',   label: 'BBT Distributed'   },
-  { value: '99.98%', label: 'Uptime'            },
-];
+// STATS are fetched live from on-chain (getAllStreams) in the component below.
 
 const VERIFY_METHODS = [
   {
@@ -129,9 +126,37 @@ const COMPARISON = [
   { feature: 'Anti-dump by Default', bb: true,  sablier: false, superfluid: false, streamflow: false },
 ];
 
+interface LiveStats { streams: number; active: number; locked: string; distributed: string; }
+
 export default function Home() {
+  const { connection } = useConnection();
   const cvs = useRef<HTMLCanvasElement>(null);
   const [headlineIdx, setHeadlineIdx] = useState(0);
+  const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
+
+  // Live on-chain stats
+  useEffect(() => {
+    let cancelled = false;
+    getAllStreams(connection).then(all => {
+      if (cancelled) return;
+      const nowSec = Math.floor(Date.now() / 1000);
+      const active = all.filter(s => !s.cancelled && Number(s.endTs.toString()) > nowSec).length;
+      const locked = all.reduce((sum, s) => {
+        const total    = BigInt(s.amountTotal.toString());
+        const drawn    = BigInt(s.amountWithdrawn.toString());
+        return sum + (total > drawn ? total - drawn : 0n);
+      }, 0n);
+      const distributed = all.reduce((sum, s) => sum + BigInt(s.amountWithdrawn.toString()), 0n);
+      const fmt = (n: bigint) => {
+        const m = n / 1_000_000n;
+        return m >= 1_000_000n ? (Number(m / 1_000_000n)).toFixed(1) + 'M'
+             : m >= 1_000n     ? (Number(m / 1_000n)).toFixed(1) + 'K'
+             : m.toString();
+      };
+      setLiveStats({ streams: all.length, active, locked: fmt(locked), distributed: fmt(distributed) });
+    }).catch(() => {}); // fail silently — landing page still renders
+    return () => { cancelled = true; };
+  }, [connection]);
 
   // Rotating headline
   useEffect(() => {
@@ -286,17 +311,18 @@ export default function Home() {
           display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))',
           gap: 24,
         }}>
-          {STATS.map((s, i) => (
+          {([
+            { label: 'Total Streams',     val: liveStats?.streams.toString()   ?? '…', col: DS.accent },
+            { label: 'Active Streams',    val: liveStats?.active.toString()    ?? '…', col: '#5fd07a' },
+            { label: 'Tokens Locked',     val: liveStats?.locked               ?? '…', col: '#7ad7ff' },
+            { label: 'Tokens Distributed',val: liveStats?.distributed          ?? '…', col: '#f5c66a' },
+          ] as const).map((s, i) => (
             <div key={i} style={{
               padding: '20px 24px', borderRadius: 16,
-              background: DS.card,
-              border: `1px solid ${DS.border}`,
+              background: DS.card, border: `1px solid ${DS.border}`,
               textAlign: 'center',
             }}>
-              <div style={{
-                fontFamily: DS.mono, fontSize: 28, fontWeight: 700,
-                color: DS.accent, marginBottom: 4,
-              }}>{s.value}</div>
+              <div style={{ fontFamily: DS.mono, fontSize: 28, fontWeight: 700, color: s.col, marginBottom: 4 }}>{s.val}</div>
               <div style={{ fontSize: 11, color: DS.muted, letterSpacing: '1.4px', textTransform: 'uppercase' }}>{s.label}</div>
             </div>
           ))}

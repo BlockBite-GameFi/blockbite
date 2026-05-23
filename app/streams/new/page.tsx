@@ -138,9 +138,9 @@ export default function CreateStreamPage() {
               Tokens locked into PDA vault. Stream is active on Solana devnet.
             </p>
             <div style={{ padding: '12px 16px', background: 'var(--ds-surface)', border: '1px solid var(--ds-border)', borderRadius: 12, marginBottom: 20 }}>
-              <div style={{ fontSize: 9.5, color: C.muted, marginBottom: 4 }}>Stream ID</div>
-              <div style={{ fontFamily: C.mono, fontSize: 18, fontWeight: 700, color: C.accent }}>
-                stm-{Math.random().toString(36).slice(2, 8).toUpperCase()}
+              <div style={{ fontSize: 9.5, color: C.muted, marginBottom: 4 }}>Transaction submitted</div>
+              <div style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: C.accent }}>
+                Connect wallet &amp; submit on-chain to receive a real tx signature
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>

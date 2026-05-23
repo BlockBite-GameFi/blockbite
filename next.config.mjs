@@ -1,3 +1,6 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -19,9 +22,39 @@ const nextConfig = {
     ],
   },
 
-  webpack: (config) => {
+  webpack: (config, { isServer, webpack }) => {
     // pino-pretty / encoding are optional peer-deps — silence the build warnings
     config.externals = [...(config.externals || []), 'pino-pretty', 'encoding'];
+
+    // ── Solana / Anchor browser polyfills ──────────────────────────────────────
+    // webpack 5 removed automatic Node.js polyfills.  @solana/web3.js and
+    // @coral-xyz/anchor both use Buffer heavily; without this the app crashes
+    // in the browser with "Buffer is not defined".
+    //
+    // ProvidePlugin injects Buffer into every browser module that references it,
+    // matching the global that Node.js provides natively.  We scope this to
+    // browser bundles only (isServer === false) so the server bundle is unchanged.
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        buffer: require.resolve('buffer'),
+        process: require.resolve('process/browser'),
+        // Solana doesn't need these; set false so webpack stops warning
+        crypto:  false,
+        stream:  false,
+        path:    false,
+        fs:      false,
+        net:     false,
+        tls:     false,
+      };
+      config.plugins.push(
+        new webpack.ProvidePlugin({
+          Buffer:  ['buffer', 'Buffer'],
+          process: ['process/browser'],
+        }),
+      );
+    }
+
     return config;
   },
 

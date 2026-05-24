@@ -21,8 +21,8 @@ const DS = {
   muted:    'rgba(160,154,191,.80)',  // Vestra text-secondary
   border:   'rgba(153,69,255,.20)',   // purple-tinted border
   card:     'rgba(153,69,255,.07)',   // purple glass card
-  cinzel:   "'Syne', system-ui, sans-serif",    // Vestra display
-  sora:     "'DM Sans', system-ui, sans-serif", // Vestra body
+  cinzel:   "'Montserrat', 'Syne', system-ui, sans-serif", // Montserrat display
+  sora:     "'Montserrat', 'DM Sans', system-ui, sans-serif", // Montserrat body
   mono:     "'JetBrains Mono', monospace",
 };
 
@@ -89,20 +89,26 @@ const HOW_IT_WORKS = [
   {
     num: '01',
     color: '#ff7a3a',
-    title: 'Set Conditions',
-    desc: 'Define a cliff date, vesting duration, and optional milestone targets for your token allocation.',
+    title: 'Connect & Import Data',
+    desc: 'Connect your wallet and upload your recipient list via CSV or manual entry in seconds.',
   },
   {
     num: '02',
     color: DS.blue,
-    title: 'Verify Progress',
-    desc: 'Milestones unlock via oracle, game activity, DAO vote, or manual sign-off — your choice.',
+    title: 'Define Tokenomics',
+    desc: 'Customize your release strategy using linear vesting, cliff periods, or milestone-based distribution.',
   },
   {
     num: '03',
+    color: '#c084fc',
+    title: 'Set Verification Layer',
+    desc: 'Choose Direct Claim for simplicity or add Verification Layers like oracles or gamified challenges.',
+  },
+  {
+    num: '04',
     color: DS.green,
-    title: 'Recipients Claim',
-    desc: 'Once conditions are met, recipients withdraw their vested tokens anytime. Fully non-custodial.',
+    title: 'Lock, Launch & Manage',
+    desc: 'Lock assets to automate user claims. Monitor distribution in real-time with absolute Clawback control.',
   },
 ];
 
@@ -232,52 +238,50 @@ export default function Home() {
           style={{ width: 80, height: 80, objectFit: 'contain', filter: 'drop-shadow(0 0 28px rgba(153,69,255,0.55))' }}
         />
 
-        {/* Brand name — massive like Veztra's huge VEZTRA text */}
-        <h1 style={{
-          fontFamily: DS.cinzel,
-          fontSize: 'clamp(56px,11vw,120px)',
-          fontWeight: 800,
-          lineHeight: 1,
-          letterSpacing: '-2px',
-          margin: 0,
-          background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 55%, #14F195 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-        }}>
-          BLOCKBITE
-        </h1>
-
-        {/* Tagline — Veztra style: spaced caps */}
+        {/* Kicker — small spaced caps */}
         <p style={{
-          fontFamily: DS.sora,
-          fontSize: 'clamp(12px,1.4vw,15px)',
-          fontWeight: 500,
+          fontFamily: DS.cinzel,
+          fontSize: 'clamp(10px,1.2vw,13px)',
+          fontWeight: 700,
           color: DS.muted,
-          letterSpacing: '.22em',
+          letterSpacing: '.25em',
           textTransform: 'uppercase',
           margin: 0,
         }}>
-          Token Distribution.{' '}
+          THE UNIFIED TOKEN DISTRIBUTION PROTOCOL
+        </p>
+
+        {/* Headline — "Stop Distributing Tokens Blindly." */}
+        <h1 style={{
+          fontFamily: DS.cinzel,
+          fontSize: 'clamp(36px,6vw,72px)',
+          fontWeight: 900,
+          lineHeight: 1.05,
+          letterSpacing: '-1px',
+          margin: 0,
+          maxWidth: 820,
+          color: '#F8F6FF',
+        }}>
+          Stop Distributing{' '}
           <span style={{
-            background: 'linear-gradient(90deg, #9945FF, #00C2FF)',
+            background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 55%, #14F195 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-          }}>Anti-Dump by Default.</span>
-        </p>
+          }}>Tokens Blindly.</span>
+        </h1>
 
-        {/* Sub */}
+        {/* Sub-headline */}
         <p style={{
           fontSize: 'clamp(14px,1.6vw,17px)',
           color: DS.muted,
-          maxWidth: 540,
+          maxWidth: 580,
           lineHeight: 1.75,
           margin: 0,
           fontWeight: 400,
         }}>
-          Manage token allocation, milestone unlocks, and vesting streams
-          with full on-chain transparency. Built for teams, DAOs, and investors on Solana.
+          The unified engine for automated token logistics. Effortlessly manage your entire
+          lifecycle from secure vesting to real-time streaming with built-in validation layers.
         </p>
 
         {/* ── WAITLIST FORM (Vestra-style, prominent in hero) ── */}
@@ -319,15 +323,15 @@ export default function Home() {
               <button
                 type="submit"
                 style={{
-                  padding: '13px 24px', borderRadius: 14,
+                  padding: '14px 24px', borderRadius: 9999,
                   background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 100%)',
-                  color: '#fff', fontWeight: 700, fontSize: 14, fontFamily: DS.sora,
+                  color: '#fff', fontWeight: 800, fontSize: 15, fontFamily: DS.cinzel,
                   border: 'none', cursor: 'pointer',
-                  boxShadow: '0 0 24px rgba(153,69,255,.30)',
-                  letterSpacing: '.02em',
+                  boxShadow: '0 0 28px rgba(153,69,255,.35)',
+                  letterSpacing: '.03em',
                 }}
               >
-                Join Waitlist →
+                Secure Your Spot Now!
               </button>
             </form>
           </div>

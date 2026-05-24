@@ -303,26 +303,11 @@ export default function Home() {
               Be first to launch milestone vesting streams on Solana.{' '}
               {wlState === 'dup' && <span style={{ color: '#FF9D4D' }}>You&apos;re already on the list!</span>}
             </div>
-            <form onSubmit={handleWaitlist} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input
-                type="email"
-                value={wlEmail}
-                onChange={e => { setWlEmail(e.target.value); if (wlState !== 'idle') setWlState('idle'); }}
-                placeholder="your@email.com"
-                required
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Link
+                href="/waitlist"
                 style={{
-                  width: '100%', boxSizing: 'border-box',
-                  padding: '13px 18px', borderRadius: 14,
-                  background: 'rgba(255,255,255,.04)',
-                  border: wlState === 'dup' ? '1px solid rgba(255,157,77,.5)' : '1px solid rgba(153,69,255,.30)',
-                  color: '#F8F6FF', fontSize: 14, fontFamily: DS.sora, outline: 'none',
-                }}
-                onFocus={e => { e.currentTarget.style.border = '1px solid rgba(153,69,255,.65)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(153,69,255,.12)'; }}
-                onBlur={e => { e.currentTarget.style.border = '1px solid rgba(153,69,255,.30)'; e.currentTarget.style.boxShadow = 'none'; }}
-              />
-              <button
-                type="submit"
-                style={{
+                  textAlign: 'center', textDecoration: 'none',
                   padding: '14px 24px', borderRadius: 9999,
                   background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 100%)',
                   color: '#fff', fontWeight: 800, fontSize: 15, fontFamily: DS.cinzel,
@@ -331,9 +316,9 @@ export default function Home() {
                   letterSpacing: '.03em',
                 }}
               >
-                Secure Your Spot Now!
-              </button>
-            </form>
+                Join Waitlist
+              </Link>
+            </div>
           </div>
         ) : (
           /* Success state */

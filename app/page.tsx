@@ -102,7 +102,7 @@ const HOW_IT_WORKS = [
     num: '03',
     color: '#c084fc',
     title: 'Set Verification Layer',
-    desc: 'Choose Direct Claim for simplicity or add Verification Layers like oracles or gamified challenges.',
+    desc: 'Choose Direct Claim for simplicity or add Verification Layers like multisig, oracles, or gamified challenges.',
   },
   {
     num: '04',
@@ -487,7 +487,7 @@ export default function Home() {
               HOW IT WORKS
             </div>
             <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: '#F8F6FF', margin: '0 0 16px' }}>
-              Three steps to launch.
+              Four steps to launch.
             </h2>
             <p style={{ fontSize: 15, color: DS.muted, maxWidth: 520, margin: '0 auto', lineHeight: 1.7 }}>
               From stream creation to recipient claim — every step enforced on-chain, no admin required.

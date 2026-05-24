@@ -392,10 +392,9 @@ export default function Home() {
           gap: 24,
         }}>
           {([
-            { label: 'Total Streams',     val: liveStats?.streams.toString()   ?? '24,105', col: DS.accent },
-            { label: 'Active Streams',    val: liveStats?.active.toString()    ?? '14,000+', col: '#5fd07a' },
-            { label: 'Tokens Locked',     val: liveStats?.locked               ?? '$842M', col: '#7ad7ff' },
-            { label: 'Tokens Distributed',val: liveStats?.distributed          ?? '$2.4B+', col: '#f5c66a' },
+            { label: 'Total Distributed', val: '$2.4B+', col: DS.accent },
+            { label: 'Active Streams',    val: '14,000+', col: '#5fd07a' },
+            { label: 'Uptime',            val: '99.97%', col: '#7ad7ff' },
           ] as const).map((s, i) => (
             <div key={i} style={{
               padding: '20px 24px', borderRadius: 16,

@@ -37,10 +37,10 @@ const TDP_LINKS = [
 ];
 
 const NAV_LINKS = [
-  { name: 'DASHBOARD', href: '/streams' },
-  { name: 'STREAMS',   href: '/streams/new' },
-  { name: 'PROTOCOL',  href: '/protocol' },
-  { name: 'WAITLIST',  href: '/waitlist' },
+  { name: 'PRODUCT',      href: '/protocol' },
+  { name: 'HOW IT WORKS', href: '/protocol' },
+  { name: 'GAME',         href: '/game' },
+  { name: 'WAITLIST',     href: '/waitlist' },
 ] as const;
 
 export default function Navbar() {
@@ -92,168 +92,41 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* ── Desktop links ──────────────────────────────────────────────── */}
+        {/* ── Desktop links — Veztra clean style ────────────────────────── */}
         <ul className={styles.links}>
-
           {NAV_LINKS.map((link) => (
             <li key={link.name}>
               <Link
                 href={link.href}
-                className={`${styles.link} ${pathname === link.href || pathname?.startsWith(link.href + '/') ? styles.active : ''}`}
+                className={`${styles.link} ${
+                  (link.href === '/game' && (pathname === '/game' || pathname?.startsWith('/tutorial')))
+                  || (link.href !== '/game' && (pathname === link.href || pathname?.startsWith(link.href + '/')))
+                    ? styles.active : ''
+                }`}
                 style={{ fontFamily: DS.sora }}
               >
                 {link.name}
               </Link>
             </li>
           ))}
-
-          {/* GAME link with tooltip */}
-          <li style={{ position: 'relative' }}>
-            <Link
-              href="/game"
-              className={`${styles.link} ${pathname === '/game' || pathname?.startsWith('/tutorial') ? styles.active : ''}`}
-              style={{ fontFamily: DS.sora, position: 'relative' }}
-              onMouseEnter={() => setGameTooltip(true)}
-              onMouseLeave={() => setGameTooltip(false)}
-            >
-              GAME
-              <span style={{
-                marginLeft: 5, fontSize: 8, padding: '2px 5px', borderRadius: 4,
-                background: 'rgba(192,132,252,.18)', color: '#c084fc',
-                border: '1px solid rgba(192,132,252,.3)',
-                fontFamily: DS.sora, fontWeight: 600, letterSpacing: '.5px',
-                verticalAlign: 'middle',
-              }}>VERIFY</span>
-            </Link>
-            {gameTooltip && (
-              <div style={{
-                position: 'absolute', top: '100%', left: '50%',
-                transform: 'translateX(-50%)',
-                marginTop: 10, zIndex: 9999,
-                background: DS.bg1,
-                border: `1px solid ${DS.border}`,
-                borderRadius: 10, padding: '10px 14px',
-                minWidth: 200, maxWidth: 240,
-                boxShadow: '0 12px 40px rgba(0,0,0,.7)',
-                pointerEvents: 'none',
-              }}>
-                <div style={{ fontSize: 11, color: '#c084fc', fontWeight: 700, marginBottom: 5, fontFamily: DS.sora }}>
-                  Verify via Game
-                </div>
-                <div style={{ fontSize: 11, color: DS.muted, lineHeight: 1.5 }}>
-                  Play BlockBite to earn milestone verification points on-chain for your vesting stream.
-                </div>
-                <div style={{
-                  position: 'absolute', top: -5, left: '50%',
-                  width: 8, height: 8, background: DS.bg1,
-                  border: `1px solid ${DS.border}`, borderBottom: 'none', borderRight: 'none',
-                  transform: 'translateX(-50%) rotate(45deg)',
-                }} />
-              </div>
-            )}
-          </li>
-
-          {/* ⬡ PROTOCOL dropdown */}
-          <li style={{ position: 'relative' }}>
-            <button
-              onClick={() => setTdpOpen(o => !o)}
-              onBlur={() => setTimeout(() => setTdpOpen(false), 150)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                padding: '6px 12px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                background: isTdpActive ? 'rgba(167,139,255,.18)' : 'rgba(167,139,255,.09)',
-                color: isTdpActive ? DS.accent : 'rgba(167,139,255,.8)',
-                fontSize: 12, fontWeight: 700, letterSpacing: '.06em',
-                transition: 'all .15s', fontFamily: DS.sora,
-              }}
-            >
-              ⬡ PROTOCOL
-              <span style={{
-                fontSize: 9, opacity: .7,
-                transition: 'transform .2s',
-                transform: tdpOpen ? 'rotate(180deg)' : 'none',
-                display: 'inline-block',
-              }}>▾</span>
-            </button>
-
-            {tdpOpen && (
-              <div style={{
-                position: 'absolute', top: '100%', left: 0, marginTop: 8, zIndex: 9999,
-                background: DS.bg1,
-                border: `1px solid rgba(167,139,255,.2)`,
-                borderRadius: 14, padding: '8px',
-                boxShadow: '0 16px 48px rgba(0,0,0,.7), 0 0 0 1px rgba(167,139,255,.08)',
-                minWidth: 240,
-              }}>
-                {TDP_LINKS.map(l => (
-                  <Link key={l.href} href={l.href}
-                    onClick={() => setTdpOpen(false)}
-                    style={{
-                      display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 12px',
-                      borderRadius: 9, textDecoration: 'none',
-                      background: pathname === l.href || (l.href !== '/streams' && pathname.startsWith(l.href))
-                        ? 'rgba(167,139,255,.12)' : 'transparent',
-                      transition: 'background .12s',
-                      fontFamily: DS.sora,
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(167,139,255,.1)')}
-                    onMouseLeave={e => (e.currentTarget.style.background =
-                      pathname === l.href ? 'rgba(167,139,255,.12)' : 'transparent')}
-                  >
-                    <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{l.icon}</span>
-                    <div>
-                      <div style={{ fontSize: 12.5, fontWeight: 700, color: '#fff', letterSpacing: '.02em' }}>{l.name}</div>
-                      <div style={{ fontSize: 10.5, color: 'rgba(148,163,184,.7)', marginTop: 1 }}>{l.desc}</div>
-                    </div>
-                  </Link>
-                ))}
-                <div style={{
-                  margin: '6px 12px 2px', paddingTop: 8,
-                  borderTop: '1px solid rgba(255,255,255,.06)',
-                  fontSize: 9.5, color: 'rgba(148,163,184,.45)', letterSpacing: '.06em',
-                  fontFamily: DS.sora,
-                }}>
-                  TDP · Solana Devnet · DvhxiL5P…XTFf
-                </div>
-              </div>
-            )}
-          </li>
         </ul>
 
-        {/* ── Right controls ─────────────────────────────────────────────── */}
+        {/* ── Right controls — Veztra clean: Launch App + Wallet only ── */}
         <div className={styles.right}>
-          <button
-            type="button"
-            className={styles.iconToggle}
-            onClick={() => setLang(lang === 'en' ? 'id' : 'en')}
-            aria-label="Toggle language"
-            title={lang === 'en' ? 'Switch to Indonesian' : 'Switch to English'}
-          >
-            <span className={styles.langLabel}>{lang.toUpperCase()}</span>
-          </button>
-          <button
-            type="button"
-            className={styles.iconToggle}
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            aria-label="Toggle theme"
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            <span className={styles.langLabel}>{theme === 'dark' ? 'LIGHT' : 'DARK'}</span>
-          </button>
+          <CustomWalletButton />
 
-          {/* Launch App primary CTA */}
+          {/* Launch App primary CTA — rounded-full like Veztra */}
           <Link href="/streams/new" style={{
-            padding: '7px 16px', borderRadius: 9,
-            background: `linear-gradient(135deg, ${DS.accent}, ${DS.accentDk})`,
-            color: '#fff', fontWeight: 700, fontSize: 12,
+            padding: '8px 20px', borderRadius: 9999,
+            background: `linear-gradient(90deg, #9945FF, #00C2FF)`,
+            color: '#fff', fontWeight: 700, fontSize: 13,
             textDecoration: 'none', letterSpacing: '.03em',
             fontFamily: DS.sora, whiteSpace: 'nowrap',
-            boxShadow: '0 0 18px rgba(167,139,255,.3)',
+            boxShadow: '0 0 20px rgba(153,69,255,.35)',
           }}>
             Launch App
           </Link>
 
-          <CustomWalletButton />
           <button
             type="button"
             className={styles.menuToggle}
@@ -279,33 +152,6 @@ export default function Navbar() {
               style={{ fontFamily: DS.sora }}
             >
               <span className={styles.mobileLinkInner}>{link.name}</span>
-            </Link>
-          ))}
-
-          <Link
-            href="/game"
-            className={`${styles.mobileLink} ${pathname === '/game' ? styles.active : ''}`}
-            onClick={() => setMenuOpen(false)}
-            style={{ fontFamily: DS.sora }}
-          >
-            <span className={styles.mobileLinkInner}>GAME — Verify via Game</span>
-          </Link>
-
-          {/* TDP section in mobile */}
-          <div style={{ padding: '8px 20px 4px', fontSize: 9.5, color: 'rgba(167,139,255,.5)', letterSpacing: '.1em', fontWeight: 700, fontFamily: DS.sora }}>
-            ⬡ TDP PROTOCOL
-          </div>
-          {TDP_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`${styles.mobileLink} ${pathname === link.href ? styles.active : ''}`}
-              onClick={() => setMenuOpen(false)}
-              style={{ fontFamily: DS.sora }}
-            >
-              <span className={styles.mobileLinkInner}>
-                {link.icon} {link.name.toUpperCase()}
-              </span>
             </Link>
           ))}
 

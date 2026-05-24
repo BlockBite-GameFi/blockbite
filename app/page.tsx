@@ -84,12 +84,6 @@ const VESTING_MODELS = [
   },
 ];
 
-const ROTATING_HEADLINES = [
-  'Stop Distributing Tokens Blindly.',
-  'Vesting Infrastructure for Solana.',
-  'Cliff. Milestone. Linear. Hybrid.',
-  'Your Token Payroll, On-Chain.',
-];
 
 const HOW_IT_WORKS = [
   {
@@ -127,7 +121,6 @@ interface LiveStats { streams: number; active: number; locked: string; distribut
 export default function Home() {
   const { connection } = useConnection();
   const cvs = useRef<HTMLCanvasElement>(null);
-  const [headlineIdx, setHeadlineIdx] = useState(0);
   const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
   const [wlEmail, setWlEmail] = useState('');
   const [wlState, setWlState] = useState<'idle' | 'success' | 'dup'>('idle');
@@ -167,13 +160,6 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [connection]);
 
-  // Rotating headline
-  useEffect(() => {
-    const id = setInterval(() => {
-      setHeadlineIdx(i => (i + 1) % ROTATING_HEADLINES.length);
-    }, 1800);
-    return () => clearInterval(id);
-  }, []);
 
   // Floating particles background
   useEffect(() => {
@@ -225,7 +211,7 @@ export default function Home() {
         background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(153,69,255,0.07) 0%, rgba(0,194,255,0.04) 55%, transparent 100%)',
       }}>
 
-        {/* Badge — Vestra style: green border + green pulse */}
+        {/* Badge — Veztra style: green border + green pulse */}
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
           padding: '7px 18px', borderRadius: 999,
@@ -239,49 +225,59 @@ export default function Home() {
           POWERED BY SOLANA
         </div>
 
-        {/* H1 — tricolor gradient: purple → cyan → green */}
+        {/* Logo — centered like Veztra */}
+        <img
+          src="/logo.png"
+          alt="BlockBite"
+          style={{ width: 80, height: 80, objectFit: 'contain', filter: 'drop-shadow(0 0 28px rgba(153,69,255,0.55))' }}
+        />
+
+        {/* Brand name — massive like Veztra's huge VEZTRA text */}
         <h1 style={{
           fontFamily: DS.cinzel,
-          fontSize: 'clamp(38px,6.5vw,64px)',
+          fontSize: 'clamp(56px,11vw,120px)',
           fontWeight: 800,
-          lineHeight: 1.08,
-          letterSpacing: '-1px',
+          lineHeight: 1,
+          letterSpacing: '-2px',
           margin: 0,
-          maxWidth: 820,
+          background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 55%, #14F195 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
         }}>
-          Programmable Token<br />
+          BLOCKBITE
+        </h1>
+
+        {/* Tagline — Veztra style: spaced caps */}
+        <p style={{
+          fontFamily: DS.sora,
+          fontSize: 'clamp(12px,1.4vw,15px)',
+          fontWeight: 500,
+          color: DS.muted,
+          letterSpacing: '.22em',
+          textTransform: 'uppercase',
+          margin: 0,
+        }}>
+          Token Distribution.{' '}
           <span style={{
-            background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 55%, #14F195 100%)',
+            background: 'linear-gradient(90deg, #9945FF, #00C2FF)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-          }}>Distribution Protocol</span>
-        </h1>
-
-        {/* Rotating tagline */}
-        <div style={{
-          fontFamily: DS.mono,
-          fontSize: 'clamp(12px,1.5vw,15px)',
-          color: 'rgba(153,69,255,.85)',
-          letterSpacing: '.06em',
-          textTransform: 'uppercase',
-          minHeight: 22,
-          transition: 'opacity .3s',
-        }}>
-          {ROTATING_HEADLINES[headlineIdx]}
-        </div>
+          }}>Anti-Dump by Default.</span>
+        </p>
 
         {/* Sub */}
         <p style={{
-          fontSize: 'clamp(14px,1.8vw,17px)',
+          fontSize: 'clamp(14px,1.6vw,17px)',
           color: DS.muted,
-          maxWidth: 560,
+          maxWidth: 540,
           lineHeight: 1.75,
           margin: 0,
           fontWeight: 400,
         }}>
-          Cliff, linear, and milestone vesting streams — with optional game-based or oracle verification.
-          Built for Web3 projects that take anti-dump seriously.
+          Manage token allocation, milestone unlocks, and vesting streams
+          with full on-chain transparency. Built for teams, DAOs, and investors on Solana.
         </p>
 
         {/* ── WAITLIST FORM (Vestra-style, prominent in hero) ── */}

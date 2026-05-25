@@ -1,32 +1,56 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import {
+  getStreamsByAuthority,
+  getStreamsByBeneficiary,
+  computeUnlocked,
+  StreamInfo,
+} from '@/lib/anchor/vesting-client';
+import { BN } from '@coral-xyz/anchor';
 
-// ─── Mock stream data (replaces on-chain fetch once wallet connected) ─────────
-const MOCK_STREAMS = [
-  { id: 'stm-001', name: 'Team Allocation',   token: 'BBT', total: 500_000, claimed: 80_000,  unlocked: 140_000, cliff: '2025-06-01', end: '2027-01-01', type: 'linear',    status: 'active',    creator: '35z7X5…NxFzr', recipient: '3f7a…c9b2', milestones: 0 },
-  { id: 'stm-002', name: 'Advisor Round',     token: 'BBT', total: 120_000, claimed: 12_000,  unlocked:  30_000, cliff: '2025-03-15', end: '2026-03-15', type: 'milestone', status: 'active',    creator: '35z7X5…NxFzr', recipient: 'B55a…1D3e', milestones: 4 },
-  { id: 'stm-003', name: 'Ecosystem Fund',    token: 'BBT', total: 1_000_000, claimed: 0,     unlocked:       0, cliff: '2026-01-01', end: '2028-01-01', type: 'cliff',     status: 'pending',   creator: 'C99d…8A2f',    recipient: '3f7a…c9b2', milestones: 0 },
-  { id: 'stm-004', name: 'Player Rewards S1', token: 'BBT', total: 200_000, claimed: 200_000, unlocked: 200_000, cliff: '2024-09-01', end: '2025-03-01', type: 'linear',    status: 'completed', creator: 'D44c…5B1a',    recipient: '3f7a…c9b2', milestones: 0 },
-  { id: 'stm-005', name: 'VC Seed Round',     token: 'BBT', total: 750_000, claimed: 0,       unlocked:       0, cliff: '2025-12-01', end: '2027-12-01', type: 'hybrid',    status: 'active',    creator: '35z7X5…NxFzr', recipient: 'E72f…9C4b', milestones: 3 },
-  { id: 'stm-006', name: 'Game Rewards Pool', token: 'BBT', total: 300_000, claimed: 45_000,  unlocked:  90_000, cliff: '2025-05-01', end: '2026-05-01', type: 'milestone', status: 'active',    creator: '35z7X5…NxFzr', recipient: 'F13b…8Qa1', milestones: 4 },
-];
+// ─── Design tokens ──────────────────────────────────────────────────────────
+const C = {
+  accent: '#a78bff', gold: '#f5c66a', green: '#5fd07a',
+  blue: '#7ad7ff', red: '#ff3b6b', muted: 'rgba(232,225,248,.38)',
+  border: 'rgba(167,139,255,.13)', bg0: '#05040d', bg1: '#09071a',
+  mono: "'JetBrains Mono',monospace", serif: "'Space Grotesk',system-ui,sans-serif",
+};
 
 const TYPE_COLORS: Record<string, string> = {
-  linear:    '#a78bfa',
-  milestone: '#7ad7ff',
-  cliff:     '#f5c66a',
-  hybrid:    '#c084fc',
-  pending:   '#94a3b8',
+  linear: C.accent, milestone: C.blue, cliff: C.gold, hybrid: '#c084fc',
 };
-const STATUS_COLORS: Record<string, string> = {
-  active:    '#5fd07a',
-  pending:   '#f5c66a',
-  completed: '#94a3b8',
-  cancelled: '#ff3b6b',
-};
+
+function streamType(s: StreamInfo): string {
+  if (s.milestoneCount > 0 && Number(s.cliffTs.toString()) > Number(s.startTs.toString())) return 'hybrid';
+  if (s.milestoneCount > 0) return 'milestone';
+  if (Number(s.cliffTs.toString()) > Number(s.startTs.toString())) return 'cliff';
+  return 'linear';
+}
+
+function streamStatus(s: StreamInfo, nowSec: number): string {
+  if (s.cancelled) return 'cancelled';
+  if (nowSec < Number(s.cliffTs.toString())) return 'pending';
+  if (nowSec >= Number(s.endTs.toString())) return 'completed';
+  return 'active';
+}
+
+function shortKey(pk: { toBase58(): string } | null): string {
+  if (!pk) return '—';
+  const s = pk.toBase58();
+  return `${s.slice(0, 4)}…${s.slice(-4)}`;
+}
+
+function fmtTokens(bn: BN): string {
+  const n = Number(bn.toString()) / 1e6;
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
+  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
+  return n.toFixed(2);
+}
 
 function Badge({ label, color }: { label: string; color: string }) {
   return (
@@ -38,11 +62,11 @@ function Badge({ label, color }: { label: string; color: string }) {
 }
 
 function StatusDot({ status }: { status: string }) {
-  const c = STATUS_COLORS[status] ?? '#94a3b8';
+  const col = ({ active: C.green, pending: C.gold, completed: C.muted, cancelled: C.red } as Record<string, string>)[status] ?? C.muted;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <div style={{ width: 7, height: 7, borderRadius: '50%', background: c, boxShadow: `0 0 6px ${c}` }} />
-      <span style={{ fontSize: 10.5, color: c, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>{status}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      <div style={{ width: 7, height: 7, borderRadius: '50%', background: col, boxShadow: `0 0 6px ${col}` }} />
+      <span style={{ fontSize: 10.5, color: col, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>{status}</span>
     </div>
   );
 }
@@ -53,224 +77,290 @@ function MiniBar({ pct, color }: { pct: number; color: string }) {
       <div style={{ width: 64, height: 5, borderRadius: 99, background: 'rgba(255,255,255,.07)', overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${Math.min(100, pct)}%`, background: color, borderRadius: 99 }} />
       </div>
-      <span style={{ fontSize: 10.5, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{Math.round(pct)}%</span>
+      <span style={{ fontSize: 10.5, color: '#fff', fontFamily: C.mono }}>{Math.round(pct)}%</span>
     </div>
   );
 }
 
 export default function StreamsPage() {
-  const [filter, setFilter] = useState<'all' | 'active' | 'pending' | 'completed'>('all');
-  const [ticker, setTicker] = useState(0);
+  const { publicKey, connected } = useWallet();
+  const { connection } = useConnection();
+  const { setVisible } = useWalletModal();
 
+  const [streams,  setStreams]  = useState<StreamInfo[]>([]);
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
+  const [filter,   setFilter]   = useState<'all' | 'active' | 'pending' | 'completed' | 'cancelled'>('all');
+  const [nowSec,   setNowSec]   = useState(Math.floor(Date.now() / 1000));
+
+  // Keep clock updated
   useEffect(() => {
-    const t = setInterval(() => setTicker(n => n + 1), 1000);
+    const t = setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 5000);
     return () => clearInterval(t);
   }, []);
 
-  const liveTvl = (1_950_000 + ticker * 0.463).toLocaleString(undefined, { maximumFractionDigits: 0 });
-  const liveRate = (0.000463 + ticker * 0.000001).toFixed(6);
+  const load = useCallback(async () => {
+    if (!publicKey) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const [asCreator, asRecipient] = await Promise.all([
+        getStreamsByAuthority(connection, publicKey),
+        getStreamsByBeneficiary(connection, publicKey),
+      ]);
+      // Deduplicate (could appear in both if creator = beneficiary)
+      const seen = new Set<string>();
+      const all: StreamInfo[] = [];
+      for (const s of [...asCreator, ...asRecipient]) {
+        const key = s.pubkey.toBase58();
+        if (!seen.has(key)) { seen.add(key); all.push(s); }
+      }
+      // Sort by endTs descending (newest end date first)
+      all.sort((a, b) => Number(b.endTs.toString()) - Number(a.endTs.toString()));
+      setStreams(all);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load streams');
+    } finally {
+      setLoading(false);
+    }
+  }, [publicKey, connection]);
 
-  const filtered = MOCK_STREAMS.filter(s => filter === 'all' || s.status === filter);
+  useEffect(() => { load(); }, [load]);
 
-  const stats = [
-    { label: 'Total Locked',     value: '$' + liveTvl,    sub: 'live TVL',               color: '#f5c66a', live: true  },
-    { label: 'Active Streams',   value: String(MOCK_STREAMS.filter(s => s.status === 'active').length),  sub: 'currently streaming', color: '#a78bfa', live: false },
-    { label: 'BBT Distributed',  value: '637K',            sub: 'all-time claimed',       color: '#5fd07a', live: false },
-    { label: 'Stream Rate',      value: liveRate,          sub: 'TOKEN/sec live',         color: '#7ad7ff', live: true  },
-  ];
+  const filtered = streams.filter(s => {
+    if (filter === 'all') return true;
+    return streamStatus(s, nowSec) === filter;
+  });
+
+  // Real aggregate metrics
+  const totalLocked = streams.reduce((acc, s) => acc + Number(s.amountTotal.toString()), 0) / 1e6;
+  const totalWithdrawn = streams.reduce((acc, s) => acc + Number(s.amountWithdrawn.toString()), 0) / 1e6;
+  const activeCount = streams.filter(s => streamStatus(s, nowSec) === 'active').length;
 
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--ds-bg)', color: 'var(--ds-text)' }}>
+    <main style={{ minHeight: '100vh', background: C.bg0, color: '#e8e1f8' }}>
       <Navbar />
 
-      {/* ── Header band ────────────────────────────────────────────── */}
-      <div style={{ padding: '80px 24px 32px', background: 'linear-gradient(180deg,#0d0820 0%,var(--ds-bg) 100%)', borderBottom: '1px solid #1f1f3a' }}>
+      {/* ── Header ── */}
+      <div style={{ padding: '80px 24px 32px', background: 'linear-gradient(180deg,#0d0820 0%,#05040d 100%)', borderBottom: `1px solid ${C.border}` }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ fontSize: 11, letterSpacing: 2, color: '#a78bfa', fontWeight: 800, marginBottom: 8, textTransform: 'uppercase' }}>TDP Protocol · Devnet</div>
+          <div style={{ fontSize: 11, letterSpacing: 2, color: C.accent, fontWeight: 800, marginBottom: 8, textTransform: 'uppercase' }}>TDP Protocol · Devnet</div>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div>
-              <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 'clamp(26px,5vw,44px)', fontWeight: 900, letterSpacing: '-0.5px', marginBottom: 8 }}>
+              <h1 style={{ fontFamily: C.serif, fontSize: 'clamp(26px,5vw,44px)', fontWeight: 900, letterSpacing: '-0.5px', marginBottom: 8, color: '#fff' }}>
                 Token Streams
               </h1>
-              <p style={{ fontSize: 13, color: 'var(--ds-text-dim)', maxWidth: 520 }}>
-                Sablier-style vesting protocol on Solana — cliff · linear · milestone · hybrid streams. Each stream is a PDA vault with configurable unlock conditions.
+              <p style={{ fontSize: 13, color: C.muted, maxWidth: 520 }}>
+                Cliff · linear · milestone · hybrid vesting streams. Each stream is a PDA vault on Solana devnet.
               </p>
             </div>
-            <Link href="/streams/new" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px',
-              background: 'linear-gradient(135deg,#a78bfa,#5e35d4)', color: '#fff', borderRadius: 12,
-              fontWeight: 700, fontSize: 13, textDecoration: 'none', boxShadow: '0 0 20px #a78bfa44',
-              letterSpacing: '.03em',
-            }}>
-              + Create Stream
-            </Link>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <Link href="/demo" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px',
+                background: 'rgba(167,139,255,.08)', color: C.accent,
+                border: `1px solid ${C.border}`, borderRadius: 10,
+                fontWeight: 600, fontSize: 12, textDecoration: 'none',
+              }}>
+                ◈ View Demo
+              </Link>
+              <Link href="/streams/new" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px',
+                background: `linear-gradient(135deg,${C.accent},#5e35d4)`, color: '#fff', borderRadius: 12,
+                fontWeight: 700, fontSize: 13, textDecoration: 'none', boxShadow: `0 0 20px ${C.accent}44`,
+              }}>
+                + Create Stream
+              </Link>
+            </div>
           </div>
         </div>
       </div>
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 100px' }}>
 
-        {/* ── Live KPI Row ──────────────────────────────────────────── */}
+        {/* ── KPI row — REAL numbers ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14, marginBottom: 32 }}>
-          {stats.map(s => (
-            <div key={s.label} style={{
-              background: 'var(--ds-surface)', border: '1px solid var(--ds-border)',
-              borderRadius: 16, padding: '18px 20px', position: 'relative',
-            }}>
-              {s.live && (
-                <div style={{
-                  position: 'absolute', top: 12, right: 12, width: 7, height: 7, borderRadius: '50%',
-                  background: '#5fd07a', boxShadow: '0 0 6px #5fd07a',
-                  animation: 'pulse 1.4s ease-in-out infinite',
-                }} />
-              )}
-              <div style={{ fontSize: 10, color: 'var(--ds-text-dim)', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 6 }}>{s.label}</div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: s.value.length > 10 ? 18 : 24, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
-              <div style={{ fontSize: 10.5, color: 'var(--ds-text-dim)', marginTop: 4 }}>{s.sub}</div>
+          {[
+            { label: 'Your Streams',       value: String(streams.length),               sub: 'as creator or recipient', color: C.accent },
+            { label: 'Active',             value: String(activeCount),                  sub: 'currently streaming',     color: C.green  },
+            { label: 'Total Locked',       value: totalLocked.toFixed(2) + ' TOKEN',    sub: 'across your streams',     color: C.gold   },
+            { label: 'Total Withdrawn',    value: totalWithdrawn.toFixed(2) + ' TOKEN', sub: 'all-time claimed',        color: C.blue   },
+          ].map(s => (
+            <div key={s.label} style={{ background: C.bg1, border: `1px solid ${C.border}`, borderRadius: 16, padding: '18px 20px' }}>
+              <div style={{ fontSize: 10, color: C.muted, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 6 }}>{s.label}</div>
+              <div style={{ fontFamily: C.mono, fontSize: s.value.length > 10 ? 16 : 22, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
+              <div style={{ fontSize: 10.5, color: C.muted, marginTop: 4 }}>{s.sub}</div>
             </div>
           ))}
         </div>
 
-        {/* ── Filter tabs ──────────────────────────────────────────── */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 20 }}>
-          {(['all', 'active', 'pending', 'completed'] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={{
-              padding: '7px 16px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-              letterSpacing: '.04em', textTransform: 'uppercase',
-              background: filter === f ? '#a78bfa' : 'rgba(255,255,255,.06)',
-              color: filter === f ? '#fff' : 'var(--ds-text-dim)',
-              transition: 'all .15s',
-            }}>{f}</button>
-          ))}
-          <div style={{ flex: 1 }} />
-          <span style={{ fontSize: 11, color: 'var(--ds-text-dim)', alignSelf: 'center' }}>{filtered.length} stream{filtered.length !== 1 ? 's' : ''}</span>
-        </div>
-
-        {/* ── Streams table ─────────────────────────────────────────── */}
-        <div style={{ background: 'var(--ds-surface)', border: '1px solid var(--ds-border)', borderRadius: 16, overflow: 'hidden' }}>
-          {/* Table header */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: '1.8fr 110px 1fr 140px 140px 110px 100px',
-            padding: '10px 20px', borderBottom: '1px solid var(--ds-border)',
-            background: 'rgba(255,255,255,.03)',
-          }}>
-            {['STREAM', 'TYPE', 'RECIPIENT', 'TOTAL LOCKED', 'UNLOCKED', 'PROGRESS', 'STATUS'].map(h => (
-              <div key={h} style={{ fontSize: 9.5, color: 'var(--ds-text-dim)', fontWeight: 700, letterSpacing: '.06em' }}>{h}</div>
-            ))}
-          </div>
-
-          {/* Rows */}
-          {filtered.length === 0 && (
-            <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--ds-text-dim)', fontSize: 14 }}>
-              No streams found
+        {/* ── Wallet gate ── */}
+        {!connected && (
+          <div style={{ background: C.bg1, border: `1px solid ${C.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center', marginBottom: 24 }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>◈</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Connect wallet to see your streams</div>
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>
+              Your streams will appear here — streams you created and streams you&apos;re a beneficiary of.
             </div>
-          )}
-          {filtered.map((s, i) => {
-            const pct = s.total > 0 ? (s.unlocked / s.total) * 100 : 0;
-            const typeCol = TYPE_COLORS[s.type] ?? '#a78bfa';
-            return (
-              <div key={s.id}
-                style={{
-                  display: 'grid', gridTemplateColumns: '1.8fr 110px 1fr 140px 140px 110px 100px',
-                  padding: '13px 20px', borderTop: i === 0 ? 'none' : '1px solid var(--ds-border)',
-                  background: i % 2 ? 'rgba(255,255,255,.01)' : 'transparent',
-                  alignItems: 'center', transition: 'background .15s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(167,139,250,.04)')}
-                onMouseLeave={e => (e.currentTarget.style.background = i % 2 ? 'rgba(255,255,255,.01)' : 'transparent')}
-              >
-                {/* Name */}
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: '#fff', marginBottom: 2 }}>{s.name}</div>
-                  <div style={{ fontSize: 10, color: 'var(--ds-text-dim)', fontFamily: "'JetBrains Mono', monospace" }}>
-                    {s.id} {s.milestones > 0 && <span style={{ color: '#7ad7ff' }}>· {s.milestones} milestones</span>}
-                  </div>
-                </div>
-                {/* Type */}
-                <div><Badge label={s.type.toUpperCase()} color={typeCol} /></div>
-                {/* Recipient */}
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, color: 'var(--ds-text-dim)' }}>
-                  {s.recipient}
-                </div>
-                {/* Total */}
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: '#fff' }}>
-                  {s.total.toLocaleString()} <span style={{ color: '#a78bfa', fontSize: 10 }}>{s.token}</span>
-                </div>
-                {/* Unlocked */}
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: '#a78bfa' }}>
-                  {s.unlocked.toLocaleString()}
-                </div>
-                {/* Progress bar */}
-                <MiniBar pct={pct} color={typeCol} />
-                {/* Status */}
-                <StatusDot status={s.status} />
-              </div>
-            );
-          })}
-
-          {/* Footer */}
-          <div style={{ padding: '12px 20px', borderTop: '1px solid var(--ds-border)', background: 'rgba(255,255,255,.02)', fontSize: 11, color: 'var(--ds-text-dim)' }}>
-            Streams update in real-time · PDA-controlled vaults on Solana devnet · Program: <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#a78bfa' }}>DvhxiL5P…XTFf</span>
-          </div>
-        </div>
-
-        {/* ── Stream type breakdown ─────────────────────────────────── */}
-        <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 16 }}>
-          <div style={{ background: 'var(--ds-surface)', border: '1px solid var(--ds-border)', borderRadius: 16, padding: '20px 22px' }}>
-            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 16 }}>
-              Stream Types
+            <button
+              onClick={() => setVisible(true)}
+              style={{
+                padding: '11px 28px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: `linear-gradient(135deg,${C.accent},#5e35d4)`, color: '#fff',
+                fontWeight: 700, fontSize: 13,
+              }}
+            >
+              Connect Wallet
+            </button>
+            <div style={{ marginTop: 14 }}>
+              <Link href="/demo" style={{ fontSize: 12, color: C.accent, textDecoration: 'none' }}>
+                Or explore the demo →
+              </Link>
             </div>
-            {[
-              { type: 'Linear',    pct: 44, col: '#a78bfa', n: 2 },
-              { type: 'Milestone', pct: 28, col: '#7ad7ff', n: 2 },
-              { type: 'Cliff',     pct: 18, col: '#f5c66a', n: 1 },
-              { type: 'Hybrid',    pct: 10, col: '#c084fc', n: 1 },
-            ].map(s => (
-              <div key={s.type} style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.col }} />
-                    <span style={{ fontSize: 12, color: '#fff' }}>{s.type}</span>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: s.col, fontWeight: 700 }}>{s.pct}%</span>
-                    <span style={{ fontSize: 10, color: 'var(--ds-text-dim)', marginLeft: 5 }}>({s.n})</span>
-                  </div>
-                </div>
-                <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,.06)', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${s.pct}%`, borderRadius: 99, background: `linear-gradient(90deg,${s.col}77,${s.col})` }} />
-                </div>
-              </div>
-            ))}
           </div>
+        )}
 
-          <div style={{ background: 'var(--ds-surface)', border: '1px solid var(--ds-border)', borderRadius: 16, padding: '20px 22px' }}>
-            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 16 }}>
-              Quick Actions
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                { label: 'Create New Stream', href: '/streams/new', col: '#a78bfa', desc: 'Lock tokens into a PDA vault' },
-                { label: 'Claim Tokens',      href: '/claim',        col: '#5fd07a', desc: 'Withdraw vested tokens' },
-                { label: 'Verify Milestone',  href: '/milestones',   col: '#7ad7ff', desc: 'Unlock milestone allocation' },
-                { label: 'Vesting Calculator',href: '/calculator',   col: '#f5c66a', desc: 'Model distribution schedule' },
-              ].map(a => (
-                <Link key={a.href} href={a.href} style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-                  background: 'rgba(255,255,255,.03)', border: `1px solid rgba(255,255,255,.06)`,
-                  borderRadius: 10, textDecoration: 'none', transition: 'all .15s',
-                }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = a.col + '44'; (e.currentTarget as HTMLElement).style.background = a.col + '0a'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,.06)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.03)'; }}
-                >
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: a.col, boxShadow: `0 0 6px ${a.col}`, flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: 12.5, fontWeight: 600, color: '#fff' }}>{a.label}</div>
-                    <div style={{ fontSize: 10.5, color: 'var(--ds-text-dim)', marginTop: 1 }}>{a.desc}</div>
-                  </div>
-                </Link>
+        {/* ── Error ── */}
+        {error && (
+          <div style={{ background: '#ff3b6b1a', border: '1px solid #ff3b6b44', borderRadius: 12, padding: '14px 18px', marginBottom: 20, fontSize: 13, color: '#ff3b6b' }}>
+            ✗ {error} — <button onClick={load} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.accent, fontSize: 13 }}>Retry</button>
+          </div>
+        )}
+
+        {/* ── Loading ── */}
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted, fontSize: 13 }}>
+            Loading streams from Solana devnet…
+          </div>
+        )}
+
+        {/* ── Streams table ── */}
+        {connected && !loading && (
+          <>
+            {/* Filter tabs */}
+            <div style={{ display: 'flex', gap: 4, marginBottom: 20, flexWrap: 'wrap' }}>
+              {(['all', 'active', 'pending', 'completed', 'cancelled'] as const).map(f => (
+                <button key={f} onClick={() => setFilter(f)} style={{
+                  padding: '7px 16px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                  letterSpacing: '.04em', textTransform: 'uppercase',
+                  background: filter === f ? C.accent : 'rgba(255,255,255,.06)',
+                  color: filter === f ? '#fff' : C.muted,
+                }}>{f}</button>
               ))}
+              <div style={{ flex: 1 }} />
+              <span style={{ fontSize: 11, color: C.muted, alignSelf: 'center' }}>
+                {filtered.length} stream{filtered.length !== 1 ? 's' : ''}
+              </span>
             </div>
+
+            <div style={{ background: C.bg1, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+              {/* Header */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 100px 1fr 130px 130px 110px 100px', padding: '10px 20px', borderBottom: `1px solid ${C.border}`, background: 'rgba(255,255,255,.03)' }}>
+                {['STREAM PDA', 'TYPE', 'COUNTERPART', 'TOTAL', 'CLAIMABLE NOW', 'PROGRESS', 'STATUS'].map(h => (
+                  <div key={h} style={{ fontSize: 9.5, color: C.muted, fontWeight: 700, letterSpacing: '.06em' }}>{h}</div>
+                ))}
+              </div>
+
+              {/* Empty state */}
+              {filtered.length === 0 && (
+                <div style={{ padding: '60px 20px', textAlign: 'center', color: C.muted, fontSize: 14 }}>
+                  {streams.length === 0
+                    ? <>No streams found. <Link href="/streams/new" style={{ color: C.accent }}>Create your first stream →</Link></>
+                    : 'No streams match this filter.'
+                  }
+                </div>
+              )}
+
+              {/* Rows */}
+              {filtered.map((s, i) => {
+                const type    = streamType(s);
+                const status  = streamStatus(s, nowSec);
+                const typeCol = TYPE_COLORS[type] ?? C.accent;
+                const total   = Number(s.amountTotal.toString());
+                const withdrawn = Number(s.amountWithdrawn.toString());
+                const claimable = Number(computeUnlocked(s, nowSec));
+                const pct     = total > 0 ? (withdrawn / total) * 100 : 0;
+                const isCreator = publicKey && s.authority.toBase58() === publicKey.toBase58();
+                const counterpart = isCreator ? s.beneficiary : s.authority;
+
+                return (
+                  <div key={s.pubkey.toBase58()} style={{
+                    display: 'grid', gridTemplateColumns: '2fr 100px 1fr 130px 130px 110px 100px',
+                    padding: '13px 20px', borderTop: i === 0 ? 'none' : `1px solid ${C.border}`,
+                    background: i % 2 ? 'rgba(255,255,255,.01)' : 'transparent', alignItems: 'center',
+                  }}
+                    onMouseEnter={e => (e.currentTarget.style.background = `${C.accent}06`)}
+                    onMouseLeave={e => (e.currentTarget.style.background = i % 2 ? 'rgba(255,255,255,.01)' : 'transparent')}
+                  >
+                    {/* PDA + role */}
+                    <div>
+                      <div style={{ fontFamily: C.mono, fontSize: 10.5, color: '#fff', marginBottom: 2 }}>
+                        {shortKey(s.pubkey)}
+                      </div>
+                      <div style={{ fontSize: 10, color: isCreator ? C.accent : C.green }}>
+                        {isCreator ? 'You created' : 'You receive'}
+                        {s.milestoneCount > 0 && <span style={{ color: C.blue }}> · {s.milestoneCount} milestone{s.milestoneCount !== 1 ? 's' : ''}</span>}
+                      </div>
+                    </div>
+                    {/* Type */}
+                    <div><Badge label={type.toUpperCase()} color={typeCol} /></div>
+                    {/* Counterpart */}
+                    <div style={{ fontFamily: C.mono, fontSize: 10.5, color: C.muted }}>{shortKey(counterpart)}</div>
+                    {/* Total */}
+                    <div style={{ fontFamily: C.mono, fontSize: 12, color: '#fff' }}>
+                      {fmtTokens(s.amountTotal)} <span style={{ color: C.accent, fontSize: 10 }}>TOKEN</span>
+                    </div>
+                    {/* Claimable */}
+                    <div style={{ fontFamily: C.mono, fontSize: 12, color: claimable > 0 ? C.green : C.muted }}>
+                      {(claimable / 1e6).toFixed(2)}
+                    </div>
+                    {/* Progress */}
+                    <MiniBar pct={pct} color={typeCol} />
+                    {/* Status */}
+                    <StatusDot status={status} />
+                  </div>
+                );
+              })}
+
+              {/* Footer */}
+              <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}`, background: 'rgba(255,255,255,.02)', fontSize: 11, color: C.muted }}>
+                Live on-chain data · Solana devnet · Program:{' '}
+                <span style={{ fontFamily: C.mono, color: C.accent }}>DvhxiL5P…XTFf</span>
+                {streams.length > 0 && (
+                  <button onClick={load} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer', color: C.accent, fontSize: 11 }}>
+                    ↻ Refresh
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── Quick Actions ── */}
+        <div style={{ marginTop: 24, background: C.bg1, border: `1px solid ${C.border}`, borderRadius: 16, padding: '20px 22px' }}>
+          <div style={{ fontFamily: C.serif, fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 14 }}>Quick Actions</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {[
+              { label: 'Create New Stream',  href: '/streams/new',  col: C.accent, desc: 'Lock tokens into a PDA vault' },
+              { label: 'Claim Tokens',       href: '/claim',        col: C.green,  desc: 'Withdraw vested tokens' },
+              { label: 'Verify Milestone',   href: '/milestones',   col: C.blue,   desc: 'Unlock milestone allocation' },
+              { label: 'Vesting Calculator', href: '/calculator',   col: C.gold,   desc: 'Model distribution schedule' },
+              { label: 'View Demo',          href: '/demo',         col: C.muted,  desc: 'Simulated data walkthrough' },
+            ].map(a => (
+              <Link key={a.href} href={a.href} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px',
+                background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)',
+                borderRadius: 10, textDecoration: 'none', flex: '1 1 180px',
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = a.col + '44'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,.06)'; }}
+              >
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: a.col, flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: '#fff' }}>{a.label}</div>
+                  <div style={{ fontSize: 10.5, color: C.muted }}>{a.desc}</div>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </div>

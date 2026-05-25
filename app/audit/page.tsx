@@ -1,290 +1,252 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useConnection } from '@solana/wallet-adapter-react';
+import { VESTING_PROGRAM_ID } from '@/lib/anchor/vesting-client';
+import { ConfirmedSignatureInfo } from '@solana/web3.js';
 
-// ─── Design tokens ──────────────────────────────────────────────────────────
 const C = {
-  accent: '#a78bfa',
-  gold:   '#f5c66a',
-  green:  '#5fd07a',
-  blue:   '#7ad7ff',
-  ember:  '#ff7a3a',
-  red:    '#f87171',
-  muted:  'rgba(148,163,184,0.7)',
-  border: 'rgba(167,139,250,0.15)',
-  bg0:    '#0b0918',
-  bg1:    '#0f0d1e',
-  bg2:    '#140f2a',
-  mono:   '"JetBrains Mono",monospace',
-  serif:  '"Space Grotesk",system-ui,sans-serif',
+  accent: '#a78bfa', gold: '#f5c66a', green: '#5fd07a', blue: '#7ad7ff',
+  red: '#f87171', muted: 'rgba(148,163,184,0.7)', border: 'rgba(167,139,250,0.15)',
+  bg0: '#0b0918', bg1: '#0f0d1e',
+  mono: '"JetBrains Mono",monospace', serif: '"Space Grotesk",system-ui,sans-serif',
 };
 
-// ─── Mock audit log ───────────────────────────────────────────────────────────
-type ActionType = 'create_stream' | 'withdraw' | 'cancel_attempt' | 'milestone_verified' | 'cliff_expired';
+// Map Anchor instruction discriminator prefix (8 bytes) to human name.
+// These are the sha256("global:<ix_name>") discriminators from the IDL.
+// We detect them by matching the base64-encoded first 8 bytes of each
+// instruction's data field in the parsed transaction logs.
+const IX_LABELS: Record<string, { label: string; color: string; icon: string }> = {
+  create_stream:       { label: 'create_stream',       color: C.accent, icon: '＋' },
+  withdraw:            { label: 'withdraw',             color: C.green,  icon: '↓'  },
+  cancel:              { label: 'cancel',               color: C.red,    icon: '✗'  },
+  configure_milestones:{ label: 'configure_milestones', color: C.blue,   icon: '◉'  },
+  verify_milestone:    { label: 'verify_milestone',     color: C.gold,   icon: '✓'  },
+  fund_vault:          { label: 'fund_vault',           color: '#c084fc', icon: '↑'  },
+  update_proof:        { label: 'update_proof',         color: C.blue,   icon: '◈'  },
+};
 
-interface AuditEvent {
-  ts:     string;
-  action: ActionType;
-  stream: string;
-  actor:  string;
-  amount: number;
-  tx:     string | null;
-  status: 'success' | 'failed';
+function formatTs(blockTime: number | null | undefined): string {
+  if (!blockTime) return '—';
+  return new Date(blockTime * 1000).toISOString().replace('T', ' ').slice(0, 19);
 }
 
-const AUDIT_LOG: AuditEvent[] = [
-  { ts:'2025-05-21 14:32:11', action:'withdraw',          stream:'stm-001', actor:'4xK2…1mWd', amount:10_000, tx:'5xKj…3mRd', status:'success' },
-  { ts:'2025-05-20 09:15:44', action:'milestone_verified',stream:'stm-002', actor:'Dn7f…XTFf', amount:0,      tx:'2cVq…7hKn', status:'success' },
-  { ts:'2025-05-19 17:08:02', action:'withdraw',          stream:'stm-005', actor:'Dn7f…XTFf', amount:5_000,  tx:'8mNc…2sDf', status:'success' },
-  { ts:'2025-05-18 11:22:59', action:'create_stream',     stream:'stm-006', actor:'Dn7f…XTFf', amount:100_000,tx:'9qP5…nBjc', status:'success' },
-  { ts:'2025-05-17 15:44:03', action:'cancel_attempt',    stream:'stm-003', actor:'8mNc…2sDf', amount:0,      tx:null,        status:'failed'  },
-  { ts:'2025-05-16 08:55:17', action:'cliff_expired',     stream:'stm-001', actor:'system',    amount:0,      tx:'Bn6h…3kQm', status:'success' },
-  { ts:'2025-05-15 13:11:30', action:'withdraw',          stream:'stm-002', actor:'9qP5…nBjc', amount:30_000, tx:'7rPw…8vLx', status:'success' },
-  { ts:'2025-05-14 10:00:00', action:'create_stream',     stream:'stm-005', actor:'2cVq…7hKn', amount:150_000,tx:'5mRs…2yZp', status:'success' },
-  { ts:'2025-05-13 16:30:22', action:'milestone_verified',stream:'stm-005', actor:'2cVq…7hKn', amount:0,      tx:'6nHk…4pTv', status:'success' },
-  { ts:'2025-05-12 12:45:08', action:'withdraw',          stream:'stm-004', actor:'7rPw…8vLx', amount:20_000, tx:'3qLm…9sWx', status:'success' },
-  { ts:'2025-05-11 07:20:55', action:'create_stream',     stream:'stm-004', actor:'Dn7f…XTFf', amount:300_000,tx:'1cFr…6tUy', status:'success' },
-  { ts:'2025-05-10 14:00:00', action:'create_stream',     stream:'stm-003', actor:'8mNc…2sDf', amount:1_000_000,tx:'4dGs…7uVz', status:'success' },
-  { ts:'2025-05-09 09:30:41', action:'cancel_attempt',    stream:'stm-002', actor:'Dn7f…XTFf', amount:0,      tx:null,        status:'failed'  },
-  { ts:'2025-05-08 18:15:33', action:'create_stream',     stream:'stm-002', actor:'Dn7f…XTFf', amount:200_000,tx:'0xef2c…',   status:'success' },
-  { ts:'2025-05-07 11:00:00', action:'create_stream',     stream:'stm-001', actor:'Dn7f…XTFf', amount:500_000,tx:'0xab3f…',   status:'success' },
-];
-
-const ACTION_COL: Record<ActionType, string> = {
-  create_stream:      C.accent,
-  withdraw:           C.green,
-  cancel_attempt:     C.red,
-  milestone_verified: C.blue,
-  cliff_expired:      C.gold,
-};
-const ACTION_ICON: Record<ActionType, string> = {
-  create_stream:      '＋',
-  withdraw:           '↓',
-  cancel_attempt:     '✗',
-  milestone_verified: '✓',
-  cliff_expired:      '⏱',
-};
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
 function Card({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return (
-    <div style={{ background: C.bg1, border: `1px solid ${C.border}`, borderRadius: 16, padding: '16px 20px', ...style }}>
-      {children}
-    </div>
-  );
+  return <div style={{ background: C.bg1, border: `1px solid ${C.border}`, borderRadius: 16, padding: '16px 20px', ...style }}>{children}</div>;
 }
 
-function Badge({ label, color }: { label: string; color: string }) {
-  return (
-    <span style={{
-      display: 'inline-block', padding: '2px 8px', borderRadius: 6,
-      fontSize: 9.5, fontWeight: 700, letterSpacing: '.05em',
-      background: `${color}18`, border: `1px solid ${color}44`, color,
-      fontFamily: C.mono,
-    }}>
-      {label}
-    </span>
-  );
+interface TxRow {
+  sig:       string;
+  blockTime: number | null;
+  err:       boolean;
+  label:     string;
+  color:     string;
+  icon:      string;
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
-export default function AuditTrailPage() {
-  const [filter, setFilter] = useState<string>('all');
-  const [search, setSearch] = useState('');
+export default function AuditPage() {
+  const { connection } = useConnection();
+  const [txRows,   setTxRows]   = useState<TxRow[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState<string | null>(null);
+  const [filter,   setFilter]   = useState<'all' | string>('all');
 
-  const filtered = AUDIT_LOG.filter(e => {
-    if (filter !== 'all' && !e.action.startsWith(filter)) return false;
-    if (search && !e.stream.includes(search) && !e.action.includes(search) && !e.actor.includes(search)) return false;
-    return true;
-  });
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Fetch most recent 50 confirmed transactions for the program
+      const sigs: ConfirmedSignatureInfo[] = await connection.getSignaturesForAddress(
+        VESTING_PROGRAM_ID,
+        { limit: 50 },
+        'confirmed',
+      );
+
+      // We can't cheaply decode the exact instruction name without fetching
+      // full tx data, so we use the memo / log approach: fetch in batches.
+      // For the first 20 sigs, fetch parsed tx to extract instruction logs.
+      const first20 = sigs.slice(0, 20);
+      const parsedBatch = await Promise.allSettled(
+        first20.map(s => connection.getParsedTransaction(s.signature, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 })),
+      );
+
+      const rows: TxRow[] = sigs.map((s, i) => {
+        let label = 'program_ix';
+        let color = C.muted;
+        let icon  = '◦';
+
+        // Try to identify from logs
+        if (i < parsedBatch.length) {
+          const res = parsedBatch[i];
+          if (res.status === 'fulfilled' && res.value) {
+            const logs = res.value.meta?.logMessages ?? [];
+            // Anchor logs: "Program log: Instruction: CreateStream"
+            for (const log of logs) {
+              if (log.includes('Instruction:')) {
+                const match = log.match(/Instruction:\s*(\w+)/);
+                if (match) {
+                  // Convert CamelCase → snake_case for lookup
+                  const snake = match[1].replace(/([A-Z])/g, '_$1').replace(/^_/, '').toLowerCase();
+                  const known = IX_LABELS[snake];
+                  if (known) { label = known.label; color = known.color; icon = known.icon; }
+                  else        { label = snake; color = C.muted; icon = '◦'; }
+                  break;
+                }
+              }
+            }
+          }
+        } else if (i >= 20) {
+          // For sigs beyond first 20, show generically
+          label = 'program_ix';
+        }
+
+        return { sig: s.signature, blockTime: s.blockTime ?? null, err: s.err != null, label, color, icon };
+      });
+
+      setTxRows(rows);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'RPC error');
+    } finally {
+      setLoading(false);
+    }
+  }, [connection]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const filtered = filter === 'all' ? txRows : txRows.filter(r => r.label === filter);
+  const actionTypes = [...new Set(txRows.map(r => r.label))];
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg0, padding: '0 0 60px' }}>
 
       {/* ── Header ── */}
-      <div style={{
-        padding: '32px 40px 20px',
-        borderBottom: `1px solid ${C.border}`,
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16,
-      }}>
+      <div style={{ padding: '32px 40px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
             <Link href="/streams" style={{ color: C.muted, fontSize: 12, textDecoration: 'none' }}>← Streams</Link>
+            <span style={{ color: C.muted, fontSize: 12 }}>·</span>
+            <Link href="/demo#audit" style={{ color: C.accent, fontSize: 12, textDecoration: 'none' }}>View demo ↗</Link>
           </div>
           <h1 style={{ fontFamily: C.serif, fontSize: 24, fontWeight: 800, color: '#fff', margin: 0 }}>
             Audit Trail
           </h1>
           <p style={{ fontSize: 12.5, color: C.muted, margin: '4px 0 0' }}>
-            Immutable on-chain event log · Full protocol history · Investor-grade transparency
+            Real on-chain transactions · Program {VESTING_PROGRAM_ID.toBase58().slice(0, 8)}…{VESTING_PROGRAM_ID.toBase58().slice(-4)} · Solana devnet
           </p>
         </div>
+        <button onClick={load} style={{ padding: '8px 16px', borderRadius: 9, border: `1px solid ${C.border}`, background: 'transparent', color: C.accent, cursor: 'pointer', fontSize: 11, alignSelf: 'flex-start' }}>
+          ↻ Refresh
+        </button>
       </div>
 
-      <div style={{ padding: '24px 40px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {error && (
+        <div style={{ margin: '16px 40px', background: '#f871711a', border: '1px solid #f8717144', borderRadius: 10, padding: '12px 16px', fontSize: 12, color: C.red }}>
+          RPC error: {error}
+        </div>
+      )}
+
+      <div style={{ padding: '24px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* ── Summary KPIs ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
           {[
-            { l:'Total Events',    v: AUDIT_LOG.length,                                              c: C.accent },
-            { l:'Streams Created', v: AUDIT_LOG.filter(e => e.action === 'create_stream').length,    c: C.green  },
-            { l:'Withdrawals',     v: AUDIT_LOG.filter(e => e.action === 'withdraw').length,         c: C.gold   },
-            { l:'Failed Txns',     v: AUDIT_LOG.filter(e => e.status === 'failed').length,           c: C.red    },
+            { label: 'Transactions Fetched', val: String(txRows.length),                                    col: C.accent },
+            { label: 'Successful',           val: String(txRows.filter(r => !r.err).length),                col: C.green  },
+            { label: 'Failed / Reverted',    val: String(txRows.filter(r => r.err).length),                 col: C.red    },
+            { label: 'Unique Instruction',   val: String(actionTypes.length),                               col: C.blue   },
           ].map(s => (
-            <Card key={s.l} style={{ padding: '12px 16px' }}>
-              <div style={{ fontSize: 9.5, color: C.muted, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 4 }}>
-                {s.l}
-              </div>
-              <div style={{ fontFamily: C.mono, fontSize: 24, fontWeight: 700, color: s.c }}>
-                {s.v}
-              </div>
+            <Card key={s.label} style={{ padding: '14px 16px' }}>
+              <div style={{ fontSize: 9.5, color: C.muted, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 5 }}>{s.label}</div>
+              <div style={{ fontFamily: C.mono, fontSize: 22, fontWeight: 700, color: s.col, lineHeight: 1 }}>{loading ? '…' : s.val}</div>
             </Card>
           ))}
         </div>
 
-        {/* ── Filters ── */}
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{
-            display: 'flex', gap: 2,
-            background: C.bg1, border: `1px solid ${C.border}`,
-            borderRadius: 9, padding: 3,
-          }}>
-            {(['all','create','withdraw','milestone','cancel'] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                style={{
-                  padding: '5px 12px', borderRadius: 7, border: 'none', cursor: 'pointer',
-                  background: filter === f ? C.accent : 'transparent',
-                  color: filter === f ? '#fff' : C.muted,
-                  fontSize: 11, fontWeight: 600, transition: 'all .15s',
-                  textTransform: 'capitalize', fontFamily: C.serif,
-                }}
-              >
-                {f}
+        {/* ── Filter tabs ── */}
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          <button onClick={() => setFilter('all')} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, background: filter === 'all' ? C.accent : 'rgba(255,255,255,.06)', color: filter === 'all' ? '#fff' : C.muted }}>All</button>
+          {actionTypes.map(t => {
+            const meta = IX_LABELS[t];
+            return (
+              <button key={t} onClick={() => setFilter(t)} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, background: filter === t ? (meta?.color ?? C.accent) : 'rgba(255,255,255,.06)', color: filter === t ? '#fff' : C.muted }}>
+                {meta?.icon ?? '◦'} {t}
               </button>
+            );
+          })}
+        </div>
+
+        {/* ── Transaction log ── */}
+        <Card style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontFamily: C.serif, fontSize: 13, fontWeight: 700, color: '#fff' }}>
+              {loading ? 'Loading…' : `${filtered.length} transaction${filtered.length !== 1 ? 's' : ''}`}
+            </span>
+            <span style={{ fontSize: 10, color: C.muted }}>Most recent first</span>
+          </div>
+
+          {/* Table header */}
+          <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 140px 160px 100px', padding: '8px 20px', background: 'rgba(255,255,255,.03)', borderBottom: `1px solid ${C.border}` }}>
+            {['', 'SIGNATURE', 'INSTRUCTION', 'TIMESTAMP (UTC)', 'STATUS'].map(h => (
+              <div key={h} style={{ fontSize: 9.5, color: C.muted, fontWeight: 700, letterSpacing: '.06em' }}>{h}</div>
             ))}
           </div>
 
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search stream ID, action, actor…"
-            style={{
-              flex: 1, maxWidth: 280,
-              padding: '7px 12px',
-              background: 'rgba(255,255,255,.05)',
-              border: `1px solid ${C.border}`,
-              borderRadius: 10,
-              color: '#fff', fontSize: 12,
-              outline: 'none', fontFamily: C.mono,
-            }}
-            onFocus={e  => (e.target.style.borderColor = C.accent)}
-            onBlur={e   => (e.target.style.borderColor = C.border)}
-          />
+          {loading && <div style={{ padding: '40px 20px', textAlign: 'center', color: C.muted, fontSize: 13 }}>Fetching from Solana devnet…</div>}
 
-          <button style={{
-            padding: '7px 14px', borderRadius: 9, border: `1px solid ${C.border}`,
-            background: 'rgba(255,255,255,.04)', color: C.muted,
-            fontSize: 12, cursor: 'pointer', fontFamily: C.serif,
-          }}>
-            ↓ Export CSV
-          </button>
-          <button style={{
-            padding: '7px 14px', borderRadius: 9, border: `1px solid ${C.border}`,
-            background: 'rgba(255,255,255,.04)', color: C.muted,
-            fontSize: 12, cursor: 'pointer', fontFamily: C.serif,
-          }}>
-            ⛓ View on Explorer
-          </button>
-        </div>
-
-        {/* ── Log table ── */}
-        <Card style={{ padding: 0, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: 'rgba(255,255,255,.04)' }}>
-                {['Timestamp','Action','Stream','Actor','Amount','Tx Hash','Status'].map(h => (
-                  <th key={h} style={{
-                    padding: '10px 16px', textAlign: 'left',
-                    fontSize: 9.5, color: C.muted, letterSpacing: '.06em', fontWeight: 700,
-                  }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((e, i) => {
-                const col = ACTION_COL[e.action] ?? C.muted;
-                return (
-                  <tr key={i} style={{
-                    borderTop: `1px solid ${C.border}`,
-                    background: e.status === 'failed' ? `${C.red}06` : i % 2 ? 'rgba(255,255,255,.01)' : 'transparent',
-                    transition: 'background .12s',
-                  }}>
-                    <td style={{ padding: '9px 16px', fontFamily: C.mono, fontSize: 10.5, color: C.muted }}>{e.ts}</td>
-                    <td style={{ padding: '9px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{
-                          width: 22, height: 22, borderRadius: 7,
-                          background: `${col}15`, border: `1px solid ${col}44`,
-                          display: 'grid', placeItems: 'center',
-                          fontSize: 10, color: col, flexShrink: 0,
-                        }}>
-                          {ACTION_ICON[e.action] ?? '·'}
-                        </div>
-                        <span style={{ fontFamily: C.mono, fontSize: 11, color: col }}>{e.action}</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '9px 16px', fontFamily: C.mono, fontSize: 11, color: C.accent }}>
-                      <Link href={`/streams/${e.stream}`} style={{ color: C.accent, textDecoration: 'none' }}>
-                        {e.stream}
-                      </Link>
-                    </td>
-                    <td style={{ padding: '9px 16px', fontFamily: C.mono, fontSize: 10.5, color: C.muted }}>{e.actor}</td>
-                    <td style={{ padding: '9px 16px', fontFamily: C.mono, fontSize: 11, color: e.amount > 0 ? C.gold : C.muted }}>
-                      {e.amount > 0 ? `${e.amount.toLocaleString()} BBT` : '—'}
-                    </td>
-                    <td style={{ padding: '9px 16px', fontFamily: C.mono, fontSize: 10.5, color: C.accent }}>
-                      {e.tx ?? '—'}
-                    </td>
-                    <td style={{ padding: '9px 16px' }}>
-                      <Badge
-                        label={e.status.toUpperCase()}
-                        color={e.status === 'success' ? C.green : C.red}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {filtered.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '32px 0', color: C.muted, fontSize: 13 }}>
-              No events match your filter
+          {!loading && filtered.length === 0 && (
+            <div style={{ padding: '48px 20px', textAlign: 'center', color: C.muted, fontSize: 13 }}>
+              {txRows.length === 0
+                ? <>No transactions found for this program yet. <Link href="/streams/new" style={{ color: C.accent }}>Create a stream</Link> to populate this log.</>
+                : 'No transactions match this filter.'
+              }
             </div>
           )}
+
+          {filtered.map((row, i) => (
+            <div key={row.sig} style={{
+              display: 'grid', gridTemplateColumns: '28px 1fr 140px 160px 100px',
+              padding: '11px 20px', borderTop: i === 0 ? 'none' : `1px solid ${C.border}`,
+              background: row.err ? '#f871710a' : (i % 2 ? 'rgba(255,255,255,.01)' : 'transparent'),
+              alignItems: 'center',
+            }}>
+              {/* Icon */}
+              <div style={{ fontSize: 14, color: row.color, textAlign: 'center' }}>{row.icon}</div>
+              {/* Signature */}
+              <div>
+                <a
+                  href={`https://explorer.solana.com/tx/${row.sig}?cluster=devnet`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ fontFamily: C.mono, fontSize: 10, color: C.accent, textDecoration: 'none' }}
+                >
+                  {row.sig.slice(0, 16)}…{row.sig.slice(-8)}
+                </a>
+              </div>
+              {/* Instruction */}
+              <div>
+                <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 9.5, fontWeight: 700, background: `${row.color}18`, border: `1px solid ${row.color}44`, color: row.color, fontFamily: C.mono }}>
+                  {row.label}
+                </span>
+              </div>
+              {/* Timestamp */}
+              <div style={{ fontFamily: C.mono, fontSize: 10, color: C.muted }}>{formatTs(row.blockTime)}</div>
+              {/* Status */}
+              <div>
+                <span style={{ fontSize: 10.5, fontWeight: 700, color: row.err ? C.red : C.green }}>
+                  {row.err ? '✗ FAILED' : '✓ OK'}
+                </span>
+              </div>
+            </div>
+          ))}
         </Card>
 
-        {/* ── Integrity note ── */}
-        <div style={{
-          padding: '14px 18px',
-          background: `${C.green}08`,
-          border: `1px solid ${C.green}22`,
-          borderRadius: 12,
-          display: 'flex', alignItems: 'center', gap: 12,
-        }}>
-          <div style={{ fontSize: 22 }}>🔐</div>
-          <div>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: C.green, marginBottom: 2 }}>
-              Immutable On-Chain Audit Trail
-            </div>
-            <div style={{ fontSize: 11.5, color: 'rgba(232,225,248,.6)' }}>
-              Every event is permanently recorded on Solana. This log cannot be altered by anyone —
-              including the stream creator. Exportable as verifiable proof for investors, auditors, and regulators.
-            </div>
-          </div>
+        <div style={{ fontSize: 11, color: C.muted, textAlign: 'center' }}>
+          Showing last 50 transactions · Full history on{' '}
+          <a href={`https://explorer.solana.com/address/${VESTING_PROGRAM_ID.toBase58()}?cluster=devnet`} target="_blank" rel="noopener noreferrer" style={{ color: C.accent }}>
+            Solana Explorer ↗
+          </a>
+          {' '}·{' '}
+          <Link href="/demo#audit" style={{ color: C.muted }}>View demo log</Link>
         </div>
       </div>
     </div>

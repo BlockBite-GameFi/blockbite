@@ -1,6 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useConnection } from '@solana/wallet-adapter-react';
+import { getAllStreams } from '@/lib/anchor/vesting-client';
 
 // ─── Design tokens ──────────────────────────────────────────────────────────
 const T = {
@@ -56,8 +59,34 @@ function StatBox({ label, value, sub, color }: { label: string; value: string; s
   );
 }
 
+// ─── Live stats ───────────────────────────────────────────────────────────────
+interface LiveStats { streams: number; active: number; locked: string; distributed: string; }
+
+function fmt(n: bigint): string {
+  if (n >= 1_000_000n) return `${(Number(n) / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000n)     return `${(Number(n) / 1_000).toFixed(1)}K`;
+  return n.toString();
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function ProtocolPage() {
+  const { connection } = useConnection();
+  const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
+
+  useEffect(() => {
+    getAllStreams(connection).then(all => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const active = all.filter(s => !s.cancelled && Number(s.endTs.toString()) > nowSec).length;
+      const locked = all.reduce((sum, s) => {
+        const total   = BigInt(s.amountTotal.toString());
+        const drawn   = BigInt(s.amountWithdrawn.toString());
+        return sum + (total > drawn ? total - drawn : 0n);
+      }, 0n);
+      const distributed = all.reduce((sum, s) => sum + BigInt(s.amountWithdrawn.toString()), 0n);
+      setLiveStats({ streams: all.length, active, locked: fmt(locked), distributed: fmt(distributed) });
+    }).catch(() => {});
+  }, [connection]);
+
   return (
     <div style={{ minHeight: '100vh', background: T.bg0, padding: '0 0 60px' }}>
 
@@ -145,10 +174,10 @@ export default function ProtocolPage() {
         {/* ── Stats row ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
           {[
-            { label:'Total Value Locked', value:'$2.4M',  sub:'in protocol vaults',  color:T.gold   },
-            { label:'Active Streams',     value:'1,840',  sub:'across all projects',  color:T.accent },
-            { label:'Tokens Distributed', value:'48M+',   sub:'BBT distributed',      color:T.green  },
-            { label:'Protocol Uptime',    value:'99.98%', sub:'since mainnet deploy', color:T.blue   },
+            { label:'Total Streams',      value: liveStats ? String(liveStats.streams)    : '—', sub:'on devnet program',     color:T.gold   },
+            { label:'Active Streams',     value: liveStats ? String(liveStats.active)     : '—', sub:'not cancelled & live',  color:T.accent },
+            { label:'Tokens Locked',      value: liveStats ? liveStats.locked             : '—', sub:'in program vaults',     color:T.green  },
+            { label:'Tokens Distributed', value: liveStats ? liveStats.distributed        : '—', sub:'total withdrawn',       color:T.blue   },
           ].map(s => (
             <Card key={s.label} style={{ padding: '18px 18px' }}>
               <StatBox {...s} />

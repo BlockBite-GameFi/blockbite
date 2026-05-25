@@ -3,6 +3,7 @@ import '../styles/globals.css';
 import './globals.css';
 import AppWalletProvider from "@/components/AppWalletProvider";
 import { AppProvider } from '@/lib/useApp';
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: 'BlockBite TDP — Token Distribution Protocol on Solana',
@@ -41,6 +42,7 @@ export default function RootLayout({
             {children}
           </AppWalletProvider>
         </AppProvider>
+        <Analytics />
       </body>
     </html>
   );

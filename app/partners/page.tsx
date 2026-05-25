@@ -43,8 +43,8 @@ const TIERS = [
   },
   {
     name: 'Growth',
-    price: '$99',
-    priceSub: 'per month, billed monthly',
+    price: 'TBD',
+    priceSub: 'Pricing not yet confirmed',
     color: DS.gold,
     popular: true,
     features: [

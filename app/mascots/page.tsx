@@ -118,7 +118,7 @@ export default function MascotsPage() {
           color: '#94a3b8', maxWidth: 520, margin: '0 auto 56px',
           lineHeight: 1.65,
         }}>
-          Four characters. One mission. Conquer 4,000 levels and claim rewards on-chain.
+          Four characters. One mission. Conquer every level and claim rewards on-chain.
         </p>
       </section>
 

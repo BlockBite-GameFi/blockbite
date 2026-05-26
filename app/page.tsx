@@ -443,10 +443,10 @@ export default function Home() {
           {/* Verification methods — inside how it works */}
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
             <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.muted, fontWeight: 600, marginBottom: 8 }}>
-              STEP 2 — CHOOSE HOW TO VERIFY
+              STEP 3 — CHOOSE YOUR VERIFICATION LAYER
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 14, marginBottom: 64 }}>
             {VERIFY_METHODS.map((m, i) => (
               <div key={i} style={{
                 padding: '22px 20px', borderRadius: 16,
@@ -466,6 +466,56 @@ export default function Home() {
                 }}>{m.badge}</div>
               </div>
             ))}
+          </div>
+
+          {/* ── Comparison table — inside HOW IT WORKS ── */}
+          <div style={{ borderTop: `1px solid ${DS.border}`, paddingTop: 56 }}>
+            <div style={{ textAlign: 'center', marginBottom: 40 }}>
+              <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
+                WHY BLOCKBITE
+              </div>
+              <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(22px,3vw,36px)', fontWeight: 700, color: '#F8F6FF', margin: 0 }}>
+                Built different from day one.
+              </h2>
+            </div>
+
+            <div style={{ maxWidth: 900, margin: '0 auto', borderRadius: 20, overflow: 'hidden', border: `1px solid ${DS.border}` }}>
+              {/* Header row */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+                background: DS.bg2, padding: '14px 20px',
+                borderBottom: `1px solid ${DS.border}`,
+              }}>
+                {['Feature', 'BlockBite TDP', 'Sablier v2', 'Superfluid', 'Streamflow'].map((h, i) => (
+                  <div key={i} style={{
+                    fontSize: 10.5, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase',
+                    color: i === 1 ? DS.accent : DS.muted,
+                    textAlign: i === 0 ? 'left' : 'center',
+                    fontFamily: DS.sora,
+                  }}>{h}</div>
+                ))}
+              </div>
+              {/* Rows */}
+              {COMPARISON.map((row, i) => (
+                <div key={i} style={{
+                  display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+                  padding: '13px 20px',
+                  background: i % 2 === 0 ? DS.card : 'transparent',
+                  borderBottom: i < COMPARISON.length - 1 ? `1px solid ${DS.border}` : 'none',
+                  alignItems: 'center',
+                }}>
+                  <div style={{ fontSize: 13, color: '#F8F6FF', fontWeight: 500 }}>{row.feature}</div>
+                  {[row.bb, row.sablier, row.superfluid, row.streamflow].map((val, j) => (
+                    <div key={j} style={{ textAlign: 'center' }}>
+                      {val
+                        ? <span style={{ color: j === 0 ? DS.green : 'rgba(95,208,122,.5)', fontSize: 16 }}>✓</span>
+                        : <span style={{ color: 'rgba(255,59,107,.4)', fontSize: 16 }}>✗</span>
+                      }
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -526,64 +576,6 @@ export default function Home() {
                     <p style={{ fontFamily: DS.mono, fontSize: 11, color: DS.muted, margin: 0 }}>{uc.example}</p>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── COMPARISON TABLE ──────────────────────────────────────────────────── */}
-      <section style={{
-        position: 'relative', zIndex: 1,
-        padding: '80px 24px',
-        background: DS.bg1,
-        borderTop: `1px solid ${DS.border}`,
-      }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
-              WHY BLOCKBITE
-            </div>
-            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 700, color: '#F8F6FF' }}>
-              Built different from day one.
-            </h2>
-          </div>
-
-          <div style={{ borderRadius: 20, overflow: 'hidden', border: `1px solid ${DS.border}` }}>
-            {/* Header */}
-            <div style={{
-              display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-              background: DS.bg2, padding: '14px 20px',
-              borderBottom: `1px solid ${DS.border}`,
-            }}>
-              {['Feature', 'BlockBite TDP', 'Sablier v2', 'Superfluid', 'Streamflow'].map((h, i) => (
-                <div key={i} style={{
-                  fontSize: 10.5, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase',
-                  color: i === 1 ? DS.accent : DS.muted,
-                  textAlign: i === 0 ? 'left' : 'center',
-                  fontFamily: DS.sora,
-                }}>{h}</div>
-              ))}
-            </div>
-
-            {/* Rows */}
-            {COMPARISON.map((row, i) => (
-              <div key={i} style={{
-                display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-                padding: '13px 20px',
-                background: i % 2 === 0 ? DS.card : 'transparent',
-                borderBottom: i < COMPARISON.length - 1 ? `1px solid ${DS.border}` : 'none',
-                alignItems: 'center',
-              }}>
-                <div style={{ fontSize: 13, color: '#F8F6FF', fontWeight: 500 }}>{row.feature}</div>
-                {[row.bb, row.sablier, row.superfluid, row.streamflow].map((val, j) => (
-                  <div key={j} style={{ textAlign: 'center' }}>
-                    {val
-                      ? <span style={{ color: j === 0 ? DS.green : 'rgba(95,208,122,.5)', fontSize: 16 }}>✓</span>
-                      : <span style={{ color: 'rgba(255,59,107,.4)', fontSize: 16 }}>✗</span>
-                    }
-                  </div>
-                ))}
               </div>
             ))}
           </div>

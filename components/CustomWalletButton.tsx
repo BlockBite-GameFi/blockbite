@@ -3,9 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import Link from 'next/link';
-import { CssAvatar, AVATAR_CONFIGS, AvatarPicker } from './CssAvatars';
-import styles from './CustomWalletButton.module.css';
 
 function shortenAddress(address: string) {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -89,38 +86,13 @@ export default function CustomWalletButton() {
   }, [select]);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [subPanel, setSubPanel] = useState<'none' | 'avatar'>('none');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
-
-  const [username, setUsername] = useState('');
-  const [avatarIdx, setAvatarIdx] = useState(0);
-
-  useEffect(() => {
-    setUsername(localStorage.getItem('bb_username') || '');
-    setAvatarIdx(parseInt(localStorage.getItem('bb_avatar') || '0'));
-  }, []);
-
-  useEffect(() => {
-    const sync = () => {
-      setUsername(localStorage.getItem('bb_username') || '');
-      setAvatarIdx(parseInt(localStorage.getItem('bb_avatar') || '0'));
-    };
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
-  }, []);
-
-  const handleAvatarSelect = useCallback((id: number) => {
-    setAvatarIdx(id);
-    localStorage.setItem('bb_avatar', id.toString());
-    window.dispatchEvent(new Event('storage'));
-  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
-        setSubPanel('none');
       }
     };
     document.addEventListener('mousedown', handler);
@@ -238,122 +210,166 @@ export default function CustomWalletButton() {
     );
   }
 
-  // ── Connected ─────────────────────────────────────────────────
+  // ── Connected — Veztra style ──────────────────────────────────
   const base58 = publicKey.toBase58();
-  const avatarCfg = AVATAR_CONFIGS[avatarIdx] ?? AVATAR_CONFIGS[0];
+  const short   = `${base58.slice(0, 4)}...${base58.slice(-4)}`;
+  const explorerHref = `https://explorer.solana.com/address/${base58}`;
 
   return (
     <div style={{ position: 'relative' }} ref={dropdownRef}>
+      {/* Trigger pill — green dot + short address + chevron */}
       <button
         type="button"
-        className={`${styles.triggerPill} ${dropdownOpen ? styles.open : ''}`}
-        style={dropdownOpen ? { borderColor: avatarCfg.glowColor, boxShadow: `0 0 18px ${avatarCfg.glowColor}40` } : {}}
-        onClick={() => { setDropdownOpen(!dropdownOpen); setSubPanel('none'); }}
+        onClick={() => setDropdownOpen(!dropdownOpen)}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          padding: '8px 14px', borderRadius: 9999,
+          background: 'rgba(17,14,31,0.90)',
+          border: dropdownOpen ? '1px solid rgba(153,69,255,0.6)' : '1px solid rgba(153,69,255,0.25)',
+          color: '#F8F6FF', fontSize: 13, fontWeight: 600,
+          fontFamily: '"JetBrains Mono", monospace',
+          cursor: 'pointer', backdropFilter: 'blur(12px)',
+          boxShadow: dropdownOpen ? '0 0 18px rgba(153,69,255,0.25)' : 'none',
+          transition: 'border-color .15s, box-shadow .15s',
+        }}
       >
-        <CssAvatar config={avatarCfg} size={28} />
-        <div className={styles.triggerInfo}>
-          <span className={styles.triggerName}>{username || shortenAddress(base58)}</span>
-          <span className={styles.triggerStatus}>CONNECTED</span>
-        </div>
-        <svg
-          width="11" height="11" viewBox="0 0 24 24"
-          fill="none" stroke="#8888BB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          className={`${styles.chevron} ${dropdownOpen ? styles.rotated : ''}`}
-        >
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#14F195', display: 'inline-block', flexShrink: 0 }} />
+        {short}
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#8888BB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: dropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }}>
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
 
+      {/* Dropdown — Veztra layout */}
       {dropdownOpen && (
-        <div className={`${styles.dropdown} ${subPanel === 'avatar' ? styles.widePanel : ''}`}>
-          {subPanel === 'none' && (
-            <>
-              <div className={styles.profileHeader}>
-                <div className={styles.avatarWrap}>
-                  <CssAvatar config={avatarCfg} size={44} />
-                  <button
-                    type="button"
-                    className={styles.avatarEditBtn}
-                    style={{ background: avatarCfg.glowColor }}
-                    onClick={() => setSubPanel('avatar')}
-                    title="Change Avatar"
-                  >edit</button>
-                </div>
-                <div className={styles.profileMeta}>
-                  <div className={styles.profileUsername}>{username || shortenAddress(base58)}</div>
-                  <button
-                    type="button"
-                    className={`${styles.copyBtn} ${copied ? styles.copied : ''}`}
-                    onClick={handleCopy}
-                  >
-                    {copied ? 'Copied!' : shortenAddress(base58)}
-                  </button>
-                  {wallet?.adapter.name && (
-                    <div className={styles.walletBadge}>
-                      {wallet.adapter.icon && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={wallet.adapter.icon} alt="" className={styles.walletBadgeIcon} />
-                      )}
-                      {wallet.adapter.name}
-                    </div>
-                  )}
-                </div>
-              </div>
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+          width: 260, zIndex: 9999,
+          background: 'rgba(13,10,25,0.97)',
+          border: '1px solid rgba(153,69,255,0.25)',
+          borderRadius: 16,
+          boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 28px rgba(153,69,255,0.12)',
+          backdropFilter: 'blur(24px)',
+          overflow: 'hidden',
+          fontFamily: '"DM Sans", system-ui, sans-serif',
+        }}>
+          {/* Header — CONNECTED + full address */}
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(160,154,191,.6)', letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 6px' }}>
+              Connected
+            </p>
+            <p style={{ fontSize: 11, color: '#F8F6FF', fontFamily: '"JetBrains Mono", monospace', wordBreak: 'break-all', margin: 0, lineHeight: 1.55 }}>
+              {base58}
+            </p>
+          </div>
 
-              <nav className={styles.navLinks}>
-                {([
-                  { href: '/shop',        label: 'Buy Tickets' },
-                  { href: '/leaderboard', label: 'Leaderboard' },
-                ] as const).map(({ href, label }) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={styles.navLink}
-                    onClick={() => setDropdownOpen(false)}
-                  >
-                    {label}
-                  </Link>
-                ))}
-                <button
-                  type="button"
-                  className={styles.navLink}
-                  onClick={() => setSubPanel('avatar')}
-                >
-                  Change Avatar
-                </button>
-              </nav>
+          {/* Actions */}
+          <div style={{ padding: '6px' }}>
+            {/* Copy Address */}
+            <button type="button" onClick={handleCopy}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                padding: '10px 12px', borderRadius: 10, background: 'transparent',
+                border: 'none', color: copied ? '#14F195' : 'rgba(248,246,255,.75)',
+                fontSize: 13, fontWeight: 500, cursor: 'pointer', textAlign: 'left',
+                transition: 'background .12s, color .12s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <CopyIcon copied={copied} />
+              {copied ? 'Copied!' : 'Copy Address'}
+            </button>
 
-              <button
-                type="button"
-                className={styles.disconnectBtn}
-                onClick={() => { disconnect(); setDropdownOpen(false); }}
-              >
-                <DisconnectIcon />Disconnect
-              </button>
-            </>
-          )}
+            {/* View on Explorer */}
+            <a href={explorerHref} target="_blank" rel="noopener noreferrer"
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                padding: '10px 12px', borderRadius: 10,
+                color: 'rgba(248,246,255,.75)', fontSize: 13, fontWeight: 500,
+                textDecoration: 'none', transition: 'background .12s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <ExternalIcon />
+              View on Explorer
+            </a>
 
-          {subPanel === 'avatar' && (
-            <>
-              <div className={styles.subPanelHeader}>
-                <button type="button" className={styles.backBtn} onClick={() => setSubPanel('none')}>←</button>
-                <span className={styles.subPanelTitle}>CHOOSE AVATAR</span>
-              </div>
-              <AvatarPicker selected={avatarIdx} onSelect={handleAvatarSelect} size={46} />
-              <p className={styles.avatarPickerHint}>
-                Avatar: <span style={{ color: avatarCfg.glowColor }}>{avatarCfg.name}</span>
-              </p>
-            </>
-          )}
+            {/* Change Wallet */}
+            <button type="button" onClick={() => { setVisible(true); setDropdownOpen(false); }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                padding: '10px 12px', borderRadius: 10, background: 'transparent',
+                border: 'none', color: 'rgba(248,246,255,.75)',
+                fontSize: 13, fontWeight: 500, cursor: 'pointer', textAlign: 'left',
+                transition: 'background .12s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <WalletIcon />
+              Change Wallet
+            </button>
+
+            {/* Disconnect */}
+            <button type="button" onClick={() => { disconnect(); setDropdownOpen(false); }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                padding: '10px 12px', borderRadius: 10, background: 'transparent',
+                border: 'none', color: '#ef4444',
+                fontSize: 13, fontWeight: 500, cursor: 'pointer', textAlign: 'left',
+                transition: 'background .12s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <DisconnectIcon />
+              Disconnect
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
+function CopyIcon({ copied }: { copied: boolean }) {
+  if (copied) return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#14F195" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function ExternalIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+
+function WalletIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 12V22H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h16v4" />
+      <path d="M22 12h-4a2 2 0 1 0 0 4h4v-4z" />
+    </svg>
+  );
+}
+
 function DisconnectIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
     </svg>

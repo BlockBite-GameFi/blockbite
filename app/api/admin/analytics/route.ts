@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sbGetViewStats, sbGetTotalViewStats, sbAutoProvisionPageViews } from '@/lib/supabase-rest';
+import { sbGetViewStats, sbGetTotalViewStats } from '@/lib/supabase-rest';
 import { timingSafeEqual } from 'crypto';
 
 function checkToken(provided: string): boolean {
@@ -16,12 +16,6 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   const token = req.headers.get('x-admin-token') ?? '';
   if (!checkToken(token)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  // Auto-provision page_views table on first call if missing (requires SUPABASE_ACCESS_TOKEN env var)
-  const totalStatsPrelim = await sbGetTotalViewStats();
-  if (!totalStatsPrelim.tableReady) {
-    await sbAutoProvisionPageViews();
-  }
 
   const [pageStats, totalStats] = await Promise.all([
     sbGetViewStats(),

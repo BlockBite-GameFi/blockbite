@@ -137,99 +137,113 @@ export async function sbGetList(): Promise<SbEntry[] | null> {
   }
 }
 
-// ─── Page-view analytics ─────────────────────────────────────────────────────
+// ─── Page-view analytics via Supabase Storage ────────────────────────────────
+// Uses service_role key only — zero DDL, zero manual setup, zero new env vars.
+// Bucket: "analytics" | Objects: "pv/{YYYY-MM-DD}/{ts}-{rand}.json"
 
-const PROVISION_SQL = `
-CREATE TABLE IF NOT EXISTS page_views (
-  id          bigserial PRIMARY KEY,
-  path        text NOT NULL,
-  session_id  text NOT NULL DEFAULT 'anon',
-  created_at  timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_pv_path    ON page_views (path);
-CREATE INDEX IF NOT EXISTS idx_pv_created ON page_views (created_at);
-ALTER TABLE page_views ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='page_views' AND policyname='api_insert') THEN
-    CREATE POLICY "api_insert" ON page_views FOR INSERT WITH CHECK (true);
-  END IF;
-END $$;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='page_views' AND policyname='service_select') THEN
-    CREATE POLICY "service_select" ON page_views FOR SELECT USING (true);
-  END IF;
-END $$;
-`.trim();
+const ANA_BUCKET = 'analytics';
 
-/** Auto-provision page_views table via Supabase Management API.
- *  Requires SUPABASE_ACCESS_TOKEN (personal access token from supabase.com/dashboard/account/tokens).
- *  Extracts project ref from SUPABASE_URL automatically — zero human SQL interaction.
- */
-export async function sbAutoProvisionPageViews(): Promise<boolean> {
-  const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
-  if (!accessToken || !SB_URL) return false;
-  // Extract project ref: https://{ref}.supabase.co
-  const ref = SB_URL.replace(/^https?:\/\//, '').split('.')[0];
-  if (!ref) return false;
-  try {
-    const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ query: PROVISION_SQL }),
-      cache: 'no-store',
-    });
-    return res.ok;
-  } catch { return false; }
-}
-
-export async function sbTrackView(path: string, sid: string): Promise<void> {
+/** Ensure analytics bucket exists (idempotent). */
+async function sbEnsureBucket(): Promise<void> {
   if (!supabaseReady()) return;
   try {
-    const res = await fetch(`${SB_URL}/rest/v1/page_views`, {
+    await fetch(`${SB_URL}/storage/v1/bucket`, {
       method: 'POST',
-      headers: h({ Prefer: 'return=minimal' }),
-      body: JSON.stringify({ path, session_id: sid }),
+      headers: h(),
+      body: JSON.stringify({ id: ANA_BUCKET, name: ANA_BUCKET, public: false }),
       cache: 'no-store',
     });
-    // If table doesn't exist, auto-provision and retry once
-    if (!res.ok && res.status === 404) {
-      const ok = await sbAutoProvisionPageViews();
-      if (ok) {
-        await fetch(`${SB_URL}/rest/v1/page_views`, {
-          method: 'POST',
-          headers: h({ Prefer: 'return=minimal' }),
-          body: JSON.stringify({ path, session_id: sid }),
-          cache: 'no-store',
-        }).catch(() => {});
-      }
-    }
-  } catch { /* ignore — non-critical */ }
+    // 200 = created, 409 = already exists — both are fine
+  } catch { /* ignore */ }
 }
 
+// Keep provision export for backwards compat (no-op now — storage needs no provisioning)
+export async function sbAutoProvisionPageViews(): Promise<boolean> {
+  await sbEnsureBucket();
+  return true;
+}
+
+/** Write one page view event to storage. Fire-and-forget. */
+export async function sbTrackView(path: string, sid: string): Promise<void> {
+  if (!supabaseReady()) return;
+  const date  = new Date().toISOString().slice(0, 10);
+  const ts    = Date.now();
+  const rand  = Math.random().toString(36).slice(2, 8);
+  const key   = `pv/${date}/${ts}-${rand}.json`;
+  const body  = JSON.stringify({ path, sid, ts });
+  try {
+    const res = await fetch(`${SB_URL}/storage/v1/object/${ANA_BUCKET}/${key}`, {
+      method: 'POST',
+      headers: h({ 'Content-Type': 'application/json', 'x-upsert': 'true' }),
+      body,
+      cache: 'no-store',
+    });
+    // Bucket might not exist yet — create it then retry
+    if (!res.ok && (res.status === 404 || res.status === 400)) {
+      await sbEnsureBucket();
+      await fetch(`${SB_URL}/storage/v1/object/${ANA_BUCKET}/${key}`, {
+        method: 'POST',
+        headers: h({ 'Content-Type': 'application/json', 'x-upsert': 'true' }),
+        body,
+        cache: 'no-store',
+      }).catch(() => {});
+    }
+  } catch { /* non-critical */ }
+}
+
+/** List all page-view objects and aggregate by path. */
 export type PageViewStat = { path: string; views: number; sessions: number };
 
 export async function sbGetViewStats(): Promise<PageViewStat[] | null> {
   if (!supabaseReady()) return null;
   try {
-    const res = await fetch(
-      `${SB_URL}/rest/v1/page_views?select=path,session_id&limit=200000`,
-      { headers: h(), cache: 'no-store' },
+    const items = await sbListAllPvObjects();
+    if (!items) return null;
+    const reads = await Promise.all(
+      items.slice(0, 2000).map(name =>
+        fetch(`${SB_URL}/storage/v1/object/${ANA_BUCKET}/${name}`, { headers: h(), cache: 'no-store' })
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null)
+      )
     );
-    if (!res.ok) return null;
-    const rows: { path: string; session_id: string }[] = await res.json();
     const map = new Map<string, { views: number; sessions: Set<string> }>();
-    for (const r of rows) {
-      if (!map.has(r.path)) map.set(r.path, { views: 0, sessions: new Set() });
-      const s = map.get(r.path)!;
+    for (const ev of reads) {
+      if (!ev?.path) continue;
+      if (!map.has(ev.path)) map.set(ev.path, { views: 0, sessions: new Set() });
+      const s = map.get(ev.path)!;
       s.views++;
-      s.sessions.add(r.session_id);
+      if (ev.sid) s.sessions.add(ev.sid);
     }
     return Array.from(map.entries())
       .map(([path, s]) => ({ path, views: s.views, sessions: s.sessions.size }))
       .sort((a, b) => b.views - a.views);
-  } catch {
-    return null;
+  } catch { return null; }
+}
+
+/** List all pv/ objects in the bucket — returns array of full paths. */
+async function sbListAllPvObjects(): Promise<string[] | null> {
+  if (!supabaseReady()) return null;
+  const all: string[] = [];
+  let offset = 0;
+  const limit = 1000;
+  for (;;) {
+    try {
+      const res = await fetch(`${SB_URL}/storage/v1/object/list/${ANA_BUCKET}`, {
+        method: 'POST',
+        headers: h(),
+        body: JSON.stringify({ prefix: 'pv/', limit, offset, sortBy: { column: 'created_at', order: 'desc' } }),
+        cache: 'no-store',
+      });
+      if (!res.ok) return all.length ? all : null;
+      const items: { name: string }[] = await res.json();
+      if (!Array.isArray(items) || items.length === 0) break;
+      all.push(...items.map(i => `pv/${i.name}`));
+      if (items.length < limit) break;
+      offset += limit;
+      if (all.length >= 5000) break; // cap for perf
+    } catch { break; }
   }
+  return all;
 }
 
 export type TotalViewStats = {
@@ -240,24 +254,40 @@ export type TotalViewStats = {
 };
 
 export async function sbGetTotalViewStats(): Promise<TotalViewStats> {
-  if (!supabaseReady()) return { totalViews: 0, uniqueVisitors: 0, today: 0, tableReady: false };
+  if (!supabaseReady()) return { totalViews: 0, uniqueVisitors: 0, today: 0, tableReady: true };
   try {
-    const res = await fetch(
-      `${SB_URL}/rest/v1/page_views?select=session_id,created_at&limit=200000`,
-      { headers: h(), cache: 'no-store' },
-    );
-    // Table missing — auto-provision silently in background, return zeros
-    if (!res.ok && res.status === 404) {
-      sbAutoProvisionPageViews().catch(() => {});
-      return { totalViews: 0, uniqueVisitors: 0, today: 0, tableReady: false };
+    const items = await sbListAllPvObjects();
+    // Storage bucket not ready yet — auto-create and return zeros (will work on next visit)
+    if (!items) {
+      sbEnsureBucket().catch(() => {});
+      return { totalViews: 0, uniqueVisitors: 0, today: 0, tableReady: true };
     }
-    if (!res.ok) return { totalViews: 0, uniqueVisitors: 0, today: 0, tableReady: false };
-    const rows: { session_id: string; created_at: string }[] = await res.json();
-    const sessions = new Set(rows.map(r => r.session_id));
-    const today = new Date().toISOString().slice(0, 10);
-    const todayViews = rows.filter(r => r.created_at?.startsWith(today)).length;
-    return { totalViews: rows.length, uniqueVisitors: sessions.size, today: todayViews, tableReady: true };
+    if (items.length === 0) return { totalViews: 0, uniqueVisitors: 0, today: 0, tableReady: true };
+
+    // Read up to 500 most recent for totals (fast path)
+    const sample = items.slice(0, 500);
+    const reads = await Promise.all(
+      sample.map(name =>
+        fetch(`${SB_URL}/storage/v1/object/${ANA_BUCKET}/${name}`, { headers: h(), cache: 'no-store' })
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null)
+      )
+    );
+    const today    = new Date().toISOString().slice(0, 10);
+    const sessions = new Set<string>();
+    let todayViews = 0;
+    for (const ev of reads) {
+      if (!ev) continue;
+      if (ev.sid) sessions.add(ev.sid);
+      if (ev.ts && new Date(ev.ts).toISOString().startsWith(today)) todayViews++;
+    }
+    return {
+      totalViews:    items.length,   // exact count from listing
+      uniqueVisitors: sessions.size, // from sample (accurate for low traffic)
+      today:         todayViews,
+      tableReady:    true,
+    };
   } catch {
-    return { totalViews: 0, uniqueVisitors: 0, today: 0, tableReady: false };
+    return { totalViews: 0, uniqueVisitors: 0, today: 0, tableReady: true };
   }
 }

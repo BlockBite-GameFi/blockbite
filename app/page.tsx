@@ -259,6 +259,7 @@ export default function Home() {
 
         {/* Sub-headline */}
         <p style={{
+          fontFamily: DS.sora,
           fontSize: 'clamp(14px,1.6vw,17px)',
           color: DS.muted,
           maxWidth: 580,
@@ -392,7 +393,7 @@ export default function Home() {
             <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: '#F8F6FF', margin: '0 0 16px' }}>
               Four steps to launch.
             </h2>
-            <p style={{ fontSize: 15, color: DS.muted, maxWidth: 520, margin: '0 auto', lineHeight: 1.7 }}>
+            <p style={{ fontFamily: DS.sora, fontSize: 15, color: DS.muted, maxWidth: 520, margin: '0 auto', lineHeight: 1.7 }}>
               From stream creation to recipient claim — every step enforced on-chain, no admin required.
             </p>
           </div>
@@ -412,7 +413,7 @@ export default function Home() {
                 }}>{h.num}</div>
                 <div style={{ fontFamily: DS.mono, fontSize: 12, fontWeight: 700, color: h.color, marginBottom: 14, letterSpacing: '.08em' }}>{h.num}</div>
                 <h3 style={{ fontFamily: DS.cinzel, fontSize: 20, fontWeight: 700, margin: '0 0 12px', color: '#F8F6FF' }}>{h.title}</h3>
-                <p style={{ fontSize: 13, color: DS.muted, lineHeight: 1.65, margin: 0 }}>{h.desc}</p>
+                <p style={{ fontFamily: DS.sora, fontSize: 13, color: DS.muted, lineHeight: 1.65, margin: 0 }}>{h.desc}</p>
               </div>
             ))}
           </div>

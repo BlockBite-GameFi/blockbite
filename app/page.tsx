@@ -21,8 +21,8 @@ const DS = {
   muted:    'rgba(160,154,191,.80)',  // Vestra text-secondary
   border:   'rgba(153,69,255,.20)',   // purple-tinted border
   card:     'rgba(153,69,255,.07)',   // purple glass card
-  cinzel:   "'Montserrat', 'Syne', system-ui, sans-serif", // Montserrat display
-  sora:     "'Montserrat', 'DM Sans', system-ui, sans-serif", // Montserrat body
+  cinzel:   "'Nunito', 'Montserrat', 'Syne', system-ui, sans-serif", // Nunito display
+  sora:     "'Nunito', 'DM Sans', system-ui, sans-serif", // Nunito body
   mono:     "'JetBrains Mono', monospace",
 };
 

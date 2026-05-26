@@ -1,20 +1,22 @@
-/* Theme tokens — switch by [data-theme] on <html>. */
-:root[data-theme='dark'] {
-  --bg: #08081a; --surface: rgba(255,255,255,0.04); --text: #fff;
-  --text-dim: #94a3b8; --border: #1f1f3a;
-  --accent: #a78bfa; --accent2: #5eead4;
-  --warn: #fbbf24; --danger: #ef4444; --ok: #22c55e;
-  --header-grad: linear-gradient(180deg, #1e1b4b 0%, #08081a 100%);
-}
+/* Theme tokens — always dark for TDP design. */
+:root,
+:root[data-theme='dark'],
 :root[data-theme='light'] {
-  --bg: #f7f7fb; --surface: rgba(0,0,0,0.04); --text: #0a0a14;
-  --text-dim: #475569; --border: #e2e8f0;
-  --accent: #6d28d9; --accent2: #0d9488;
-  --warn: #b45309; --danger: #b91c1c; --ok: #15803d;
-  --header-grad: linear-gradient(180deg, #ede9fe 0%, #f7f7fb 100%);
+  --bg: #08081a; --surface: rgba(255,255,255,0.05); --text: #F8F6FF;
+  --text-dim: #94a3b8; --border: #1f1f3a;
+  --accent: #9945FF; --accent2: #00C2FF;
+  --warn: #fbbf24; --danger: #ef4444; --ok: #14F195;
+  --header-grad: linear-gradient(180deg, #1e1b4b 0%, #08081a 100%);
+
+  /* --ds-* aliases used by streams/new and other app pages */
+  --ds-bg:       #08081a;
+  --ds-surface:  rgba(255,255,255,0.05);
+  --ds-text:     #F8F6FF;
+  --ds-text-dim: #94a3b8;
+  --ds-border:   rgba(153,69,255,0.20);
 }
-html, body { margin: 0; background: var(--bg); color: var(--text);
-  font-family: 'Space Grotesk', system-ui, sans-serif;
+html, body { margin: 0; background: var(--ds-bg); color: var(--ds-text);
+  font-family: 'Nunito', 'DM Sans', system-ui, sans-serif;
   transition: background .25s, color .25s; }
 .seg { display: flex; gap: 4px; padding: 3px; border-radius: 999px;
   background: var(--surface); border: 1px solid var(--border); }

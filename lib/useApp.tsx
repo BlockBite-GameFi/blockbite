@@ -88,12 +88,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const l = localStorage.getItem('bb:lang') as Lang | null;
-    const th = localStorage.getItem('bb:theme') as Theme | null;
     if (l === 'en' || l === 'id') setLangState(l);
-    // Apply saved theme immediately to avoid FOUC; default dark
-    const resolvedTheme = (th === 'dark' || th === 'light') ? th : 'dark';
-    if (resolvedTheme !== 'dark') setThemeState(resolvedTheme);
-    document.documentElement.dataset.theme = resolvedTheme;
+    // TDP design is dark-only — always force dark regardless of saved preference
+    localStorage.setItem('bb:theme', 'dark');
+    document.documentElement.dataset.theme = 'dark';
     setMounted(true);
   }, []);
 

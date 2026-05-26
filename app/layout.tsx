@@ -4,6 +4,7 @@ import './globals.css';
 import AppWalletProvider from "@/components/AppWalletProvider";
 import { AppProvider } from '@/lib/useApp';
 import { Analytics } from '@vercel/analytics/next';
+import { PageTracker } from '@/components/PageTracker';
 
 export const metadata: Metadata = {
   title: 'BlockBite TDP — Token Distribution Protocol on Solana',
@@ -43,6 +44,7 @@ export default function RootLayout({
           </AppWalletProvider>
         </AppProvider>
         <Analytics />
+        <PageTracker />
       </body>
     </html>
   );

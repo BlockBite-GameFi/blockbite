@@ -136,3 +136,68 @@ export async function sbGetList(): Promise<SbEntry[] | null> {
     return null;
   }
 }
+
+// ─── Page-view analytics ─────────────────────────────────────────────────────
+
+export async function sbTrackView(path: string, sid: string): Promise<void> {
+  if (!supabaseReady()) return;
+  try {
+    await fetch(`${SB_URL}/rest/v1/page_views`, {
+      method: 'POST',
+      headers: h({ Prefer: 'return=minimal' }),
+      body: JSON.stringify({ path, session_id: sid }),
+      cache: 'no-store',
+    });
+  } catch { /* ignore — non-critical */ }
+}
+
+export type PageViewStat = { path: string; views: number; sessions: number };
+
+export async function sbGetViewStats(): Promise<PageViewStat[] | null> {
+  if (!supabaseReady()) return null;
+  try {
+    const res = await fetch(
+      `${SB_URL}/rest/v1/page_views?select=path,session_id&limit=200000`,
+      { headers: h(), cache: 'no-store' },
+    );
+    if (!res.ok) return null;
+    const rows: { path: string; session_id: string }[] = await res.json();
+    const map = new Map<string, { views: number; sessions: Set<string> }>();
+    for (const r of rows) {
+      if (!map.has(r.path)) map.set(r.path, { views: 0, sessions: new Set() });
+      const s = map.get(r.path)!;
+      s.views++;
+      s.sessions.add(r.session_id);
+    }
+    return Array.from(map.entries())
+      .map(([path, s]) => ({ path, views: s.views, sessions: s.sessions.size }))
+      .sort((a, b) => b.views - a.views);
+  } catch {
+    return null;
+  }
+}
+
+export type TotalViewStats = {
+  totalViews: number;
+  uniqueVisitors: number;
+  today: number;
+  tableReady: boolean;
+};
+
+export async function sbGetTotalViewStats(): Promise<TotalViewStats> {
+  if (!supabaseReady()) return { totalViews: 0, uniqueVisitors: 0, today: 0, tableReady: false };
+  try {
+    const res = await fetch(
+      `${SB_URL}/rest/v1/page_views?select=session_id,created_at&limit=200000`,
+      { headers: h(), cache: 'no-store' },
+    );
+    if (!res.ok) return { totalViews: 0, uniqueVisitors: 0, today: 0, tableReady: false };
+    const rows: { session_id: string; created_at: string }[] = await res.json();
+    const sessions = new Set(rows.map(r => r.session_id));
+    const today = new Date().toISOString().slice(0, 10);
+    const todayViews = rows.filter(r => r.created_at?.startsWith(today)).length;
+    return { totalViews: rows.length, uniqueVisitors: sessions.size, today: todayViews, tableReady: true };
+  } catch {
+    return { totalViews: 0, uniqueVisitors: 0, today: 0, tableReady: false };
+  }
+}

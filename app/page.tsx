@@ -128,20 +128,6 @@ export default function Home() {
   const { connection } = useConnection();
   const cvs = useRef<HTMLCanvasElement>(null);
   const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
-  const [wlEmail, setWlEmail] = useState('');
-  const [wlState, setWlState] = useState<'idle' | 'success' | 'dup'>('idle');
-
-  const handleWaitlist = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!wlEmail.trim()) return;
-    try {
-      const saved: string[] = JSON.parse(localStorage.getItem('bb_waitlist') || '[]');
-      if (saved.includes(wlEmail.trim().toLowerCase())) { setWlState('dup'); return; }
-      localStorage.setItem('bb_waitlist', JSON.stringify([...saved, wlEmail.trim().toLowerCase()]));
-    } catch {}
-    setWlState('success');
-  };
-
   // Live on-chain stats
   useEffect(() => {
     let cancelled = false;
@@ -284,96 +270,32 @@ export default function Home() {
           lifecycle from secure vesting to real-time streaming with built-in validation layers.
         </p>
 
-        {/* ── WAITLIST FORM (Vestra-style, prominent in hero) ── */}
-        {wlState !== 'success' ? (
-          <div style={{
-            width: '100%', maxWidth: 440,
-            padding: '28px 32px 24px',
-            borderRadius: 24,
-            background: 'rgba(17,14,31,0.80)',
-            border: '1px solid rgba(153,69,255,.28)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            boxShadow: '0 0 60px rgba(153,69,255,.10), 0 0 120px rgba(0,194,255,.05)',
-          }}>
-            <div style={{ fontFamily: DS.cinzel, fontWeight: 700, fontSize: 17, marginBottom: 6, color: '#F8F6FF' }}>
-              Join the Early Access List
-            </div>
-            <div style={{ fontSize: 12, color: DS.muted, marginBottom: 20, lineHeight: 1.6 }}>
-              Be first to launch milestone vesting streams on Solana.{' '}
-              {wlState === 'dup' && <span style={{ color: '#FF9D4D' }}>You&apos;re already on the list!</span>}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <Link
-                href="/waitlist"
-                style={{
-                  textAlign: 'center', textDecoration: 'none',
-                  padding: '14px 24px', borderRadius: 9999,
-                  background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 100%)',
-                  color: '#fff', fontWeight: 800, fontSize: 15, fontFamily: DS.cinzel,
-                  border: 'none', cursor: 'pointer',
-                  boxShadow: '0 0 28px rgba(153,69,255,.35)',
-                  letterSpacing: '.03em',
-                }}
-              >
-                Join Waitlist
-              </Link>
-            </div>
-          </div>
-        ) : (
-          /* Success state */
-          <div style={{
-            width: '100%', maxWidth: 440,
-            padding: '32px',
-            borderRadius: 24,
-            background: 'rgba(17,14,31,0.80)',
-            border: '1px solid rgba(20,241,149,.25)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            boxShadow: '0 0 60px rgba(20,241,149,.08)',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
-          }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: '50%',
-              background: 'rgba(20,241,149,.10)',
-              border: '1px solid rgba(20,241,149,.30)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 24,
-            }}>✓</div>
-            <div style={{ fontFamily: DS.cinzel, fontWeight: 700, fontSize: 17, color: '#F8F6FF' }}>You&apos;re on the list!</div>
-            <div style={{ fontSize: 13, color: DS.muted, lineHeight: 1.6, textAlign: 'center' }}>
-              We&apos;ll notify you when BlockBite early access opens. Get ready to launch your first token stream.
-            </div>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '5px 14px', borderRadius: 999, fontSize: 11, fontWeight: 600,
-              background: 'rgba(20,241,149,.10)', border: '1px solid rgba(20,241,149,.25)',
-              color: DS.green,
-            }}>
-              ✓ Waitlist confirmed
-            </div>
-          </div>
-        )}
-
-        {/* CTAs */}
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 4 }}>
-          <Link href="/streams/new" style={{
-            padding: '14px 34px', borderRadius: 9999,
+        {/* ── CTAs — Veztra pattern: primary CTA to /waitlist, secondary to app ── */}
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <Link href="/waitlist" style={{
+            padding: '15px 36px', borderRadius: 9999,
             background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 100%)',
-            color: '#fff', fontWeight: 700, fontSize: 15, textDecoration: 'none',
-            boxShadow: '0 0 32px rgba(153,69,255,.35)',
-            letterSpacing: '.02em',
-          }}>
-            Launch App →
+            color: '#fff', fontWeight: 800, fontSize: 15,
+            textDecoration: 'none', letterSpacing: '.03em',
+            boxShadow: '0 0 32px rgba(153,69,255,.40)',
+            fontFamily: DS.cinzel,
+            transition: 'transform .2s, box-shadow .2s',
+          }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.03)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; }}
+          >
+            Secure Your Spot Now!
           </Link>
-          <Link href="/streams" style={{
-            padding: '14px 28px', borderRadius: 9999,
-            background: 'rgba(153,69,255,.06)',
-            border: `1px solid rgba(153,69,255,.35)`,
-            color: '#F8F6FF', fontWeight: 600, fontSize: 15, textDecoration: 'none',
+          <Link href="/streams/new" style={{
+            padding: '15px 28px', borderRadius: 9999,
+            background: 'rgba(153,69,255,.07)',
+            border: '1px solid rgba(153,69,255,.38)',
+            color: '#F8F6FF', fontWeight: 600, fontSize: 15,
+            textDecoration: 'none', letterSpacing: '.02em',
+            fontFamily: DS.sora,
             backdropFilter: 'blur(8px)',
           }}>
-            View Streams
+            Launch App →
           </Link>
         </div>
       </section>

@@ -16,7 +16,7 @@
   --ds-border:   rgba(153,69,255,0.20);
 }
 html, body { margin: 0; background: var(--ds-bg); color: var(--ds-text);
-  font-family: 'Nunito', 'DM Sans', system-ui, sans-serif;
+  font-family: 'Montserrat', 'Nunito', 'DM Sans', system-ui, sans-serif;
   transition: background .25s, color .25s; }
 .seg { display: flex; gap: 4px; padding: 3px; border-radius: 999px;
   background: var(--surface); border: 1px solid var(--border); }

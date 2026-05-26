@@ -37,7 +37,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700;800;900&family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
         {/* favicon is auto-injected from app/icon.png by Next.js Metadata Files convention */}
       </head>
-      <body style={{ fontFamily: "'Nunito', 'DM Sans', system-ui, sans-serif" }}>
+      <body style={{ fontFamily: "'Montserrat', 'Nunito', 'DM Sans', system-ui, sans-serif" }}>
         <AppProvider>
           <AppWalletProvider>
             {children}

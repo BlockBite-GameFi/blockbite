@@ -351,116 +351,163 @@ export default function Home() {
       </section>
 
       {/* ─── FEATURES ──────────────────────────────────────────────────────────── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 52 }}>
-          <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
-            WHAT WE DO
+      <section style={{ position: 'relative', zIndex: 1, padding: '96px 24px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: DS.green, letterSpacing: '3px', textTransform: 'uppercase', marginBottom: 16, fontFamily: DS.sora }}>
+              FEATURES
+            </p>
+            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(26px,3.5vw,42px)', fontWeight: 700, color: '#F8F6FF', margin: 0 }}>
+              Everything a token distribution needs.{' '}
+              <span style={{
+                fontStyle: 'italic',
+                background: 'linear-gradient(90deg, #9945FF, #14F195)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              }}>Nothing it doesn&apos;t.</span>
+            </h2>
           </div>
-          <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: '#F8F6FF', margin: 0 }}>
-            Token distribution, done right.
-          </h2>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 20 }}>
-          {[
-            {
-              icon: '◎', color: DS.accent,
-              title: 'Flexible Schedules',
-              desc: 'Send tokens to your team, investors, or community with cliff locks, linear streams, and milestone-gated tranches — all in one stream.',
-            },
-            {
-              icon: '◈', color: '#c084fc',
-              title: 'Game-Powered Proof',
-              desc: 'Recipients earn milestone unlocks by playing the BlockBite puzzle game. Gamified, sybil-resistant, and fully verifiable on-chain.',
-            },
-            {
-              icon: '✦', color: DS.green,
-              title: 'Anti-Dump by Default',
-              desc: 'Hard time locks and milestone gates prevent immediate sell pressure. Align your community around long-term growth.',
-            },
-          ].map((f, i) => (
-            <div key={i} style={{
-              padding: '36px 32px', borderRadius: 24,
-              background: DS.card, border: `1px solid ${DS.border}`,
-              transition: 'border-color .2s, transform .2s',
-            }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = f.color + '55'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = DS.border; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
-            >
-              <div style={{
-                width: 48, height: 48, borderRadius: 14,
-                background: `${f.color}18`, border: `1px solid ${f.color}44`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 22, color: f.color, marginBottom: 20,
-              }}>{f.icon}</div>
-              <h3 style={{ fontFamily: DS.cinzel, fontSize: 21, fontWeight: 700, margin: '0 0 14px', color: '#F8F6FF' }}>{f.title}</h3>
-              <p style={{ fontSize: 14, color: DS.muted, lineHeight: 1.72, margin: 0 }}>{f.desc}</p>
-            </div>
-          ))}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+            {([
+              {
+                icon: '◎', color: DS.accent,
+                title: 'Flexible Schedules',
+                desc: 'Send tokens to your team, investors, or community with cliff locks, linear streams, and milestone-gated tranches — all in one stream.',
+                tags: ['Cliff support', 'Linear vesting', 'Milestone gates'],
+              },
+              {
+                icon: '◈', color: '#c084fc',
+                title: 'Game-Powered Proof',
+                desc: 'Recipients earn milestone unlocks by playing the BlockBite puzzle game. Gamified, sybil-resistant, and fully verifiable on-chain.',
+                tags: ['Sybil-resistant', 'On-chain proof'],
+              },
+              {
+                icon: '✦', color: DS.green,
+                title: 'Anti-Dump by Default',
+                desc: 'Hard time locks and milestone gates prevent immediate sell pressure. Align your community around long-term growth.',
+                tags: ['Creator-controlled', 'Fair to recipients'],
+              },
+            ] as const).map((f, i) => (
+              <div key={i} style={{
+                borderRadius: 18, padding: 1,
+                background: 'linear-gradient(135deg, rgba(153,69,255,0.30), rgba(20,241,149,0.20))',
+                transition: 'transform .25s',
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; }}
+              >
+                <div style={{
+                  borderRadius: 17, background: DS.bg1,
+                  padding: '28px 28px 24px',
+                  height: '100%', boxSizing: 'border-box',
+                  display: 'flex', flexDirection: 'column', gap: 16,
+                }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 14,
+                    background: `linear-gradient(135deg, ${f.color}22, ${f.color}10)`,
+                    border: `1px solid ${f.color}44`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 22, color: f.color,
+                  }}>{f.icon}</div>
+                  <h3 style={{ fontFamily: DS.cinzel, fontSize: 19, fontWeight: 700, color: '#F8F6FF', margin: 0 }}>{f.title}</h3>
+                  <p style={{ fontFamily: DS.sora, fontSize: 13.5, color: DS.muted, lineHeight: 1.72, margin: 0, flex: 1 }}>{f.desc}</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {f.tags.map(tag => (
+                      <span key={tag} style={{
+                        fontSize: 11, padding: '4px 12px', borderRadius: 999,
+                        background: DS.bg2, border: `1px solid ${DS.border}`,
+                        color: DS.muted, fontFamily: DS.sora, fontWeight: 500,
+                      }}>{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* ─── HOW IT WORKS ──────────────────────────────────────────────────────── */}
       <section style={{
         position: 'relative', zIndex: 1,
-        padding: '80px 24px',
+        padding: '96px 24px',
         background: DS.bg1,
         borderTop: `1px solid ${DS.border}`,
         borderBottom: `1px solid ${DS.border}`,
       }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 64 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: DS.green, letterSpacing: '3px', textTransform: 'uppercase', marginBottom: 16, fontFamily: DS.sora }}>
               HOW IT WORKS
-            </div>
-            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: '#F8F6FF', margin: '0 0 16px' }}>
-              Four steps to launch.
-            </h2>
-            <p style={{ fontFamily: DS.sora, fontSize: 15, color: DS.muted, maxWidth: 520, margin: '0 auto', lineHeight: 1.7 }}>
-              From stream creation to recipient claim — every step enforced on-chain, no admin required.
             </p>
+            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(26px,3.5vw,42px)', fontWeight: 700, color: '#F8F6FF', margin: 0 }}>
+              Four steps.{' '}
+              <span style={{
+                fontStyle: 'italic',
+                background: 'linear-gradient(90deg, #9945FF, #14F195)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              }}>From setup to claim.</span>
+            </h2>
           </div>
 
-          {/* 3 steps */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 20, marginBottom: 56 }}>
+          {/* 4-column symmetric grid — Vestra standard */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24, position: 'relative', marginBottom: 72 }}>
+            {/* Connector line — runs between badge centers */}
+            <div style={{
+              position: 'absolute', top: 20, left: '14%', right: '14%', height: 1,
+              background: 'linear-gradient(90deg, rgba(153,69,255,0.35), rgba(20,241,149,0.35))',
+              pointerEvents: 'none',
+            }} />
+
             {HOW_IT_WORKS.map((h, i) => (
-              <div key={i} style={{
-                padding: '32px 28px', borderRadius: 20,
-                background: DS.card, border: `1px solid ${DS.border}`,
-                position: 'relative', overflow: 'hidden',
-              }}>
+              <div key={i} style={{ position: 'relative' }}>
+                {/* Ghost large number */}
+                <span style={{
+                  position: 'absolute', top: -10, left: -8,
+                  fontFamily: DS.cinzel, fontSize: 72, fontWeight: 900, lineHeight: 1,
+                  background: 'linear-gradient(135deg, #9945FF, #14F195)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                  opacity: 0.10, userSelect: 'none', pointerEvents: 'none',
+                }}>{h.num}</span>
+
+                {/* Gradient badge */}
                 <div style={{
-                  position: 'absolute', top: 14, right: 18,
-                  fontFamily: DS.mono, fontSize: 44, fontWeight: 800,
-                  color: `${h.color}12`, lineHeight: 1, userSelect: 'none',
-                }}>{h.num}</div>
-                <div style={{ fontFamily: DS.mono, fontSize: 12, fontWeight: 700, color: h.color, marginBottom: 14, letterSpacing: '.08em' }}>{h.num}</div>
-                <h3 style={{ fontFamily: DS.cinzel, fontSize: 20, fontWeight: 700, margin: '0 0 12px', color: '#F8F6FF' }}>{h.title}</h3>
-                <p style={{ fontFamily: DS.sora, fontSize: 13, color: DS.muted, lineHeight: 1.65, margin: 0 }}>{h.desc}</p>
+                  position: 'relative', zIndex: 1,
+                  width: 40, height: 40, borderRadius: 12,
+                  background: 'linear-gradient(135deg, #9945FF, #14F195)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  marginBottom: 20,
+                  boxShadow: '0 0 20px rgba(153,69,255,0.35)',
+                }}>
+                  <span style={{ fontFamily: DS.cinzel, fontWeight: 800, fontSize: 13, color: DS.bg0 }}>{h.num}</span>
+                </div>
+
+                <h3 style={{ fontFamily: DS.cinzel, fontSize: 17, fontWeight: 700, color: '#F8F6FF', margin: '0 0 12px' }}>{h.title}</h3>
+                <p style={{ fontFamily: DS.sora, fontSize: 13, color: DS.muted, lineHeight: 1.72, margin: 0 }}>{h.desc}</p>
               </div>
             ))}
           </div>
 
-          {/* Verification methods — inside how it works */}
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.muted, fontWeight: 600, marginBottom: 8 }}>
-              STEP 3 — CHOOSE YOUR VERIFICATION LAYER
-            </div>
+          {/* Verification layer — 4-column to match step grid */}
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: DS.muted, letterSpacing: '2.5px', textTransform: 'uppercase', margin: 0 }}>
+              CHOOSE YOUR VERIFICATION LAYER
+            </p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 14, marginBottom: 64 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 64 }}>
             {VERIFY_METHODS.map((m, i) => (
               <div key={i} style={{
-                padding: '22px 20px', borderRadius: 16,
-                background: `${m.color}07`, border: `1px solid ${m.color}25`,
-                transition: 'border-color .2s',
+                padding: '20px 18px', borderRadius: 14,
+                background: `${m.color}07`, border: `1px solid ${m.color}22`,
+                transition: 'border-color .2s, transform .2s',
               }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = m.color + '55'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = m.color + '25'; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = m.color + '50'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = m.color + '22'; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
               >
-                <div style={{ fontSize: 11, color: m.color, fontWeight: 700, letterSpacing: '1.5px', marginBottom: 6 }}>{m.title.toUpperCase()}</div>
-                <div style={{ fontFamily: DS.cinzel, fontSize: 15, fontWeight: 600, marginBottom: 8, color: '#F8F6FF' }}>{m.sub}</div>
+                <div style={{ fontSize: 10, color: m.color, fontWeight: 700, letterSpacing: '1.5px', marginBottom: 6 }}>{m.title.toUpperCase()}</div>
+                <div style={{ fontFamily: DS.cinzel, fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#F8F6FF' }}>{m.sub}</div>
                 <p style={{ fontSize: 12, color: DS.muted, lineHeight: 1.6, margin: 0 }}>{m.desc}</p>
                 <div style={{
-                  marginTop: 12, display: 'inline-block',
+                  marginTop: 10, display: 'inline-block',
                   padding: '2px 8px', borderRadius: 99, fontSize: 9, fontWeight: 700,
                   background: `${m.color}15`, color: m.color, letterSpacing: '1px',
                 }}>{m.badge}</div>

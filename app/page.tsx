@@ -200,71 +200,89 @@ export default function Home() {
         position: 'relative', zIndex: 1,
         minHeight: '100vh',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: '120px 24px 80px', textAlign: 'center', gap: 28,
-        background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(153,69,255,0.07) 0%, rgba(0,194,255,0.04) 55%, transparent 100%)',
+        padding: '140px 24px 100px', textAlign: 'center', gap: 32,
+        background: [
+          'radial-gradient(ellipse 80% 55% at 50% 20%, rgba(153,69,255,0.18) 0%, transparent 65%)',
+          'radial-gradient(ellipse 50% 35% at 80% 80%, rgba(0,194,255,0.10) 0%, transparent 60%)',
+          'radial-gradient(ellipse 40% 30% at 20% 70%, rgba(20,241,149,0.07) 0%, transparent 55%)',
+        ].join(','),
       }}>
-
-        {/* Badge — Veztra style: green border + green pulse */}
+        {/* Top glow orb */}
         <div style={{
+          position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+          width: 700, height: 400, borderRadius: '50%',
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(153,69,255,0.22) 0%, transparent 70%)',
+          pointerEvents: 'none', zIndex: 0,
+        }} />
+
+        {/* Badge */}
+        <div style={{
+          position: 'relative', zIndex: 1,
           display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '7px 18px', borderRadius: 999,
-          border: `1px solid rgba(20,241,149,.35)`,
-          background: 'rgba(20,241,149,.08)',
-          fontSize: 11, fontWeight: 700,
+          padding: '8px 20px', borderRadius: 999,
+          border: '1px solid rgba(20,241,149,.40)',
+          background: 'rgba(20,241,149,.10)',
+          fontSize: 11, fontWeight: 800,
           color: DS.green,
-          letterSpacing: '2px', fontFamily: DS.sora,
+          letterSpacing: '2.5px', fontFamily: DS.sora,
+          boxShadow: '0 0 20px rgba(20,241,149,.15)',
         }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: DS.green, display: 'inline-block', animation: 'pulse 2s infinite' }} />
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: DS.green, display: 'inline-block', animation: 'pulse 2s infinite', boxShadow: '0 0 8px rgba(20,241,149,.8)' }} />
           POWERED BY SOLANA
         </div>
 
-        {/* Logo — centered like Veztra */}
+        {/* Logo */}
         <img
           src="/logo.png"
           alt="BlockBite"
-          style={{ width: 80, height: 80, objectFit: 'contain', filter: 'drop-shadow(0 0 28px rgba(153,69,255,0.55))' }}
+          style={{ position: 'relative', zIndex: 1, width: 88, height: 88, objectFit: 'contain', filter: 'drop-shadow(0 0 36px rgba(153,69,255,0.70))' }}
         />
 
-        {/* Kicker — small spaced caps */}
+        {/* Kicker */}
         <p style={{
+          position: 'relative', zIndex: 1,
           fontFamily: DS.cinzel,
-          fontSize: 'clamp(10px,1.2vw,13px)',
-          fontWeight: 700,
-          color: DS.muted,
-          letterSpacing: '.25em',
+          fontSize: 'clamp(10px,1.1vw,12px)',
+          fontWeight: 800,
+          color: 'rgba(160,154,191,.65)',
+          letterSpacing: '.30em',
           textTransform: 'uppercase',
           margin: 0,
         }}>
           THE UNIFIED TOKEN DISTRIBUTION PROTOCOL
         </p>
 
-        {/* Headline — "Stop Distributing Tokens Blindly." */}
+        {/* Headline */}
         <h1 style={{
+          position: 'relative', zIndex: 1,
           fontFamily: DS.cinzel,
-          fontSize: 'clamp(36px,6vw,72px)',
+          fontSize: 'clamp(40px,7vw,80px)',
           fontWeight: 900,
-          lineHeight: 1.05,
-          letterSpacing: '-1px',
+          lineHeight: 1.02,
+          letterSpacing: '-2px',
           margin: 0,
-          maxWidth: 820,
+          maxWidth: 860,
           color: '#F8F6FF',
+          textShadow: '0 0 80px rgba(153,69,255,0.25)',
         }}>
           Stop Distributing{' '}
           <span style={{
-            background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 55%, #14F195 100%)',
+            background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 50%, #14F195 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
+            filter: 'drop-shadow(0 0 24px rgba(153,69,255,0.5))',
           }}>Tokens Blindly.</span>
         </h1>
 
         {/* Sub-headline */}
         <p style={{
+          position: 'relative', zIndex: 1,
           fontFamily: DS.sora,
-          fontSize: 'clamp(14px,1.6vw,17px)',
-          color: DS.muted,
-          maxWidth: 580,
-          lineHeight: 1.75,
+          fontSize: 'clamp(15px,1.6vw,18px)',
+          color: 'rgba(160,154,191,.85)',
+          maxWidth: 600,
+          lineHeight: 1.80,
           margin: 0,
           fontWeight: 400,
         }}>
@@ -272,42 +290,45 @@ export default function Home() {
           lifecycle from secure vesting to real-time streaming with built-in validation layers.
         </p>
 
-        {/* ── CTAs — Veztra pattern: primary CTA to /waitlist, secondary to app ── */}
-        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {/* CTAs */}
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
           <Link href="/waitlist" style={{
-            padding: '15px 36px', borderRadius: 9999,
+            padding: '16px 40px', borderRadius: 9999,
             background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 100%)',
-            color: '#fff', fontWeight: 800, fontSize: 15,
-            textDecoration: 'none', letterSpacing: '.03em',
-            boxShadow: '0 0 32px rgba(153,69,255,.40)',
+            color: '#fff', fontWeight: 800, fontSize: 16,
+            textDecoration: 'none', letterSpacing: '.04em',
+            boxShadow: '0 0 40px rgba(153,69,255,.55), 0 4px 24px rgba(0,0,0,.4)',
             fontFamily: DS.cinzel,
             transition: 'transform .2s, box-shadow .2s',
+            display: 'inline-block',
           }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.03)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.04)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 60px rgba(153,69,255,.70), 0 4px 24px rgba(0,0,0,.4)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 40px rgba(153,69,255,.55), 0 4px 24px rgba(0,0,0,.4)'; }}
           >
             Secure Your Spot Now!
           </Link>
           <Link href="/streams/new" style={{
-            padding: '15px 28px', borderRadius: 9999,
-            background: 'rgba(153,69,255,.07)',
-            border: '1px solid rgba(153,69,255,.38)',
-            color: '#F8F6FF', fontWeight: 600, fontSize: 15,
+            padding: '16px 32px', borderRadius: 9999,
+            background: 'rgba(153,69,255,.08)',
+            border: '1px solid rgba(153,69,255,.45)',
+            color: '#F8F6FF', fontWeight: 600, fontSize: 16,
             textDecoration: 'none', letterSpacing: '.02em',
             fontFamily: DS.sora,
-            backdropFilter: 'blur(8px)',
+            backdropFilter: 'blur(12px)',
+            display: 'inline-block',
           }}>
             Launch App →
           </Link>
         </div>
 
-        {/* ── Stats — Vestra pattern: border-top divider inside hero ── */}
+        {/* Stats */}
         <div style={{
+          position: 'relative', zIndex: 1,
           display: 'grid', gridTemplateColumns: 'repeat(3,1fr)',
-          gap: '24px 32px',
-          marginTop: 56, paddingTop: 40,
-          borderTop: `1px solid ${DS.border}`,
-          maxWidth: 640, width: '100%',
+          gap: '24px 40px',
+          marginTop: 48, paddingTop: 44,
+          borderTop: '1px solid rgba(153,69,255,.22)',
+          maxWidth: 680, width: '100%',
         }}>
           {([
             { label: 'Total Streams',     val: liveStats ? liveStats.streams.toLocaleString() : '0' },
@@ -315,9 +336,9 @@ export default function Home() {
             { label: 'Total Distributed', val: liveStats ? liveStats.distributed + ' tokens'  : '0 tokens' },
           ]).map((s, i) => (
             <div key={i} style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: DS.muted, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 8, margin: '0 0 8px' }}>{s.label}</p>
+              <p style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(160,154,191,.6)', letterSpacing: '2.5px', textTransform: 'uppercase', margin: '0 0 10px' }}>{s.label}</p>
               <p style={{
-                fontFamily: DS.cinzel, fontWeight: 800, fontSize: 'clamp(22px,2.8vw,30px)',
+                fontFamily: DS.cinzel, fontWeight: 900, fontSize: 'clamp(24px,3vw,34px)',
                 margin: 0,
                 background: 'linear-gradient(90deg, #9945FF, #00C2FF)',
                 WebkitBackgroundClip: 'text',
@@ -705,7 +726,8 @@ export default function Home() {
       </footer>
 
       <style>{`
-        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.75)} }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(.65)} }
+        @keyframes heroGlow { 0%,100%{opacity:.18} 50%{opacity:.28} }
       `}</style>
     </div>
   );

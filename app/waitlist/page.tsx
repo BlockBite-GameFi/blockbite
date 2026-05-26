@@ -2,378 +2,520 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 
-const DS = {
-  bg0:    '#03000A',
-  bg2:    '#110E1F',
-  accent: '#9945FF',
-  green:  '#14F195',
-  blue:   '#00C2FF',
-  muted:  'rgba(160,154,191,.80)',
-  border: 'rgba(153,69,255,.25)',
-  font:   "'Montserrat', 'DM Sans', system-ui, sans-serif",
+/* ── BlockBite Brand ── */
+const MAGENTA  = '#b12c84';
+const TEAL     = '#3d7c91';
+const GOLD     = '#e1a438';
+const PURPLE   = '#7c80e8';
+const CORAL    = '#d94553';
+const BG       = '#08080f';
+
+const GRAD_MAIN = `linear-gradient(135deg, ${MAGENTA}, ${PURPLE})`;
+const GRAD_ALT  = `linear-gradient(135deg, ${TEAL}, ${GOLD})`;
+
+/* ── I18N ── */
+const I18N = {
+  en: {
+    badge: 'SOLANA ECOSYSTEM · EARLY ACCESS',
+    h1: 'Stop Distributing',
+    h1grad: 'Tokens Blindly.',
+    sub: 'Secure your assets with automated, milestone-based distribution that eliminates fatal human error while transforming passive claimants into loyal, long-term contributors.',
+    target: 'For Solana Ecosystem Builders & Project Founders',
+    cta: 'Join the Waitlist',
+    success: 'You\'re on the list! We\'ll notify you when BlockBite launches.',
+    stats: [
+      { v: '100%', l: 'ON-CHAIN' },
+      { v: 'Auto', l: 'SMART CONTRACT' },
+      { v: 'W4', l: 'DEVNET' },
+      { v: '', l: 'WAITLIST', dynamic: true },
+    ],
+    features: [
+      { color: MAGENTA, t: 'Milestone-Based Distribution', d: 'Set unlock conditions tied to real project milestones — not just time. Supports time-based linear vesting with cliff.' },
+      { color: TEAL,    t: 'Automated & Trustless', d: 'Smart contract enforces all distribution rules on-chain. No manual transfers, no oversight gaps, no rug-pull vectors.' },
+      { color: GOLD,    t: 'Cliff + Linear Vesting', d: 'Configure cliff periods and linear unlock schedules. After upgrade authority is burned pre-mainnet, even the team cannot bypass on-chain rules.' },
+      { color: PURPLE,  t: 'Smart Contract Enforced', d: 'Distribution logic enforced on-chain. Upgrade authority will be burned before mainnet — after burn, contract is permanently immutable. No admin can alter vesting schedules post-deploy.' },
+      { color: CORAL,   t: 'Full Transparency', d: 'Every vesting schedule, unlock event, and claim is recorded on-chain. Auditable by anyone, anytime.' },
+      { color: TEAL,    t: 'Loyal Contributor Incentives', d: 'Transform passive token holders into active contributors by aligning rewards with long-term project success.' },
+    ],
+    featTitle: 'Why BlockBite?',
+    featKicker: 'CORE FEATURES',
+    howTitle: 'Deploy in 4 steps',
+    howKicker: 'HOW IT WORKS',
+    steps: [
+      { t: 'Connect Wallet', d: 'Connect your Solana wallet — Phantom, Solflare, Backpack, or any compatible wallet.' },
+      { t: 'Define Schedules', d: 'Set cliff periods, vesting durations, and milestone unlock conditions for each recipient group.' },
+      { t: 'Fund the Vault', d: 'Deposit tokens into the PDA-owned vault. The smart contract autonomously enforces all rules — no admin override possible after upgrade authority is burned.' },
+      { t: 'Automated Distribution', d: 'Recipients claim vested tokens on-chain when conditions are met. Zero manual intervention needed.' },
+    ],
+    footer: '© 2026 BlockBite · Built on Solana',
+  },
+  id: {
+    badge: 'EKOSISTEM SOLANA · AKSES AWAL',
+    h1: 'Hentikan Distribusi',
+    h1grad: 'Token Sembarangan.',
+    sub: 'Amankan asetmu dengan distribusi berbasis milestone yang otomatis — menghilangkan kesalahan manusia yang fatal sekaligus mengubah penerima pasif menjadi kontributor jangka panjang yang loyal.',
+    target: 'Untuk Builder & Founder Ekosistem Solana',
+    cta: 'Daftar Waitlist',
+    success: 'Kamu sudah terdaftar! Kami akan notifikasi saat BlockBite meluncur.',
+    stats: [
+      { v: '100%', l: 'ON-CHAIN' },
+      { v: 'Otomatis', l: 'SMART CONTRACT' },
+      { v: 'W4', l: 'DEVNET' },
+      { v: '', l: 'WAITLIST', dynamic: true },
+    ],
+    features: [
+      { color: MAGENTA, t: 'Distribusi Berbasis Milestone', d: 'Tetapkan kondisi unlock yang terikat pada milestone nyata. Rilis saat ini mendukung vesting linear berbasis waktu dengan cliff.' },
+      { color: TEAL,    t: 'Otomatis & Trustless', d: 'Smart contract menegakkan semua aturan distribusi on-chain. Tanpa transfer manual, tanpa celah pengawasan.' },
+      { color: GOLD,    t: 'Cliff + Vesting Linear', d: 'Konfigurasi periode cliff dan jadwal unlock linear. Setelah upgrade authority dibakar sebelum mainnet, bahkan tim tidak bisa melewati aturan on-chain.' },
+      { color: PURPLE,  t: 'Smart Contract Terverifikasi', d: 'Logika distribusi ditegakkan on-chain. Upgrade authority akan dibakar sebelum mainnet — setelah dibakar, kontrak permanen imutabel. Admin tidak bisa mengubah jadwal vesting setelah deploy.' },
+      { color: CORAL,   t: 'Transparansi Penuh', d: 'Setiap jadwal vesting, event unlock, dan klaim tercatat on-chain. Dapat diaudit siapa saja, kapan saja.' },
+      { color: TEAL,    t: 'Insentif Kontributor Loyal', d: 'Ubah pemegang token pasif menjadi kontributor aktif dengan menyelaraskan reward dengan kesuksesan proyek jangka panjang.' },
+    ],
+    featTitle: 'Kenapa BlockBite?',
+    featKicker: 'FITUR UTAMA',
+    howTitle: 'Deploy dalam 4 langkah',
+    howKicker: 'CARA KERJA',
+    steps: [
+      { t: 'Hubungkan Wallet', d: 'Hubungkan wallet Solanamu — Phantom, Solflare, Backpack, atau wallet compatible apapun.' },
+      { t: 'Tentukan Jadwal', d: 'Atur periode cliff, durasi vesting, dan kondisi unlock milestone untuk setiap kelompok penerima.' },
+      { t: 'Dana Vault', d: 'Depositkan token ke vault milik PDA. Smart contract secara otomatis menegakkan semua aturan — tanpa intervensi admin setelah upgrade authority dibakar.' },
+      { t: 'Distribusi Otomatis', d: 'Penerima mengklaim token yang sudah vested on-chain saat kondisi terpenuhi. Tanpa intervensi manual.' },
+    ],
+    footer: '© 2026 BlockBite · Dibangun di Solana',
+  },
 };
+
+type Lang = 'en' | 'id';
 
 const LS_DONE  = 'bb_wl_done';
 const LS_EMAIL = 'bb_wl_email';
 
-type State = 'idle' | 'loading' | 'success' | 'duplicate' | 'error';
-
-/* ── Warp-speed background ── */
-function WarpBg() {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    let id: number, frame = 0;
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-    resize();
-    window.addEventListener('resize', resize);
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const cx = canvas.width / 2, cy = canvas.height / 2;
-      const max = Math.sqrt(cx * cx + cy * cy) * 1.4;
-      for (let i = 0; i < 120; i++) {
-        const angle = (i / 120) * Math.PI * 2;
-        const prog  = ((frame * 0.006 + i / 120) % 1);
-        const s = Math.max(0, prog - 0.08) * max;
-        const e = prog * max;
-        const op = prog < 0.15 ? (prog / 0.15) * 0.35 : prog > 0.85 ? ((1 - prog) / 0.15) * 0.35 : 0.35;
-        const hue = 270 - prog * 60;
-        ctx.beginPath();
-        ctx.strokeStyle = `hsla(${hue},${80 + prog * 20}%,70%,${op})`;
-        ctx.lineWidth = 0.6 + prog * 0.4;
-        ctx.moveTo(cx + Math.cos(angle) * s, cy + Math.sin(angle) * s);
-        ctx.lineTo(cx + Math.cos(angle) * e, cy + Math.sin(angle) * e);
-        ctx.stroke();
-      }
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80);
-      g.addColorStop(0, 'rgba(153,69,255,0.15)');
-      g.addColorStop(0.5, 'rgba(0,194,255,0.05)');
-      g.addColorStop(1, 'transparent');
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(cx, cy, 80, 0, Math.PI * 2); ctx.fill();
-      frame++; id = requestAnimationFrame(draw);
-    };
-    draw();
-    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', resize); };
-  }, []);
-  return <canvas ref={ref} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.6 }} />;
-}
-
 export default function WaitlistPage() {
-  const [email, setEmail]   = useState('');
-  const [state, setState]   = useState<State>('idle');
-  const [errMsg, setErrMsg] = useState('');
-  const [count, setCount]   = useState<number | null>(null);
+  const [lang, setLang]   = useState<Lang>('en');
+  const [email, setEmail] = useState('');
+  const [done, setDone]   = useState(false);
+  const [busy, setBusy]   = useState(false);
+  const [err, setErr]             = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
+  const [serverErr, setServerErr] = useState(false);
+  const [count, setCount]     = useState<number>(0);
+
+  const cvs = useRef<HTMLCanvasElement>(null);
+  const txt = I18N[lang];
 
   useEffect(() => {
     try {
-      if (localStorage.getItem(LS_DONE) === '1') setState('success');
+      if (localStorage.getItem(LS_DONE) === '1') setDone(true);
       const saved = localStorage.getItem(LS_EMAIL);
       if (saved) setEmail(saved);
+      localStorage.removeItem('bb_wl_count');
     } catch { /* ignore */ }
 
     let cancelled = false;
     const refresh = () =>
       fetch('/api/waitlist/count', { cache: 'no-store' })
         .then(r => r.json())
-        .then(d => { if (!cancelled && typeof d?.count === 'number') setCount(d.count); })
+        .then(d => {
+          if (cancelled) return;
+          if (typeof d?.count === 'number') setCount(d.count);
+        })
         .catch(() => {});
 
     refresh();
     const id = setInterval(refresh, 20_000);
-    return () => { cancelled = true; clearInterval(id); };
+    const onVis = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, []);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (state === 'loading' || state === 'success') return;
-    setState('loading');
-    setErrMsg('');
+  /* Floating blocks canvas */
+  useEffect(() => {
+    const canvas = cvs.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    const COLORS = [MAGENTA, TEAL, GOLD, PURPLE, CORAL];
+    type Block = { x: number; y: number; size: number; rot: number; vx: number; vy: number; vr: number; color: string; alpha: number };
+    let blocks: Block[] = [];
+    let rafId: number;
+
+    function resize() {
+      canvas!.width  = window.innerWidth;
+      canvas!.height = window.innerHeight;
+      blocks = Array.from({ length: 30 }, () => ({
+        x: Math.random() * canvas!.width,
+        y: Math.random() * canvas!.height,
+        size: Math.random() * 52 + 14,
+        rot: Math.random() * Math.PI * 2,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        vr: (Math.random() - 0.5) * 0.01,
+        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        alpha: Math.random() * 0.3 + 0.04,
+      }));
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas!.width, canvas!.height);
+      blocks.forEach(b => {
+        b.x += b.vx; b.y += b.vy; b.rot += b.vr;
+        if (b.x < -80)                 b.x = canvas!.width  + 80;
+        if (b.x > canvas!.width  + 80) b.x = -80;
+        if (b.y < -80)                 b.y = canvas!.height + 80;
+        if (b.y > canvas!.height + 80) b.y = -80;
+        ctx.save();
+        ctx.globalAlpha = b.alpha;
+        ctx.translate(b.x, b.y);
+        ctx.rotate(b.rot);
+        const r = b.size * 0.2, s = b.size / 2;
+        ctx.beginPath();
+        ctx.moveTo(-s + r, -s);
+        ctx.arcTo(s, -s, s, s, r);
+        ctx.arcTo(s, s, -s, s, r);
+        ctx.arcTo(-s, s, -s, -s, r);
+        ctx.arcTo(-s, -s, s, -s, r);
+        ctx.closePath();
+        ctx.strokeStyle = b.color;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+      });
+      rafId = requestAnimationFrame(draw);
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+    draw();
+    return () => { cancelAnimationFrame(rafId); window.removeEventListener('resize', resize); };
+  }, []);
+
+  async function submit() {
+    if (!email || !email.includes('@')) {
+      setErr(true);
+      setTimeout(() => setErr(false), 1500);
+      return;
+    }
+    setBusy(true);
+    setRateLimited(false);
+    setServerErr(false);
     try {
       const res = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify({ email }),
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setState('success');
-        try { localStorage.setItem(LS_DONE, '1'); localStorage.setItem(LS_EMAIL, email); } catch { /* ignore */ }
+      if (res.status === 429) {
+        setRateLimited(true);
+      } else if (res.ok || res.status === 409) {
+        setDone(true);
         try {
-          const cr = await fetch('/api/waitlist/count', { cache: 'no-store' });
-          const cd = await cr.json();
-          if (typeof cd?.count === 'number') setCount(cd.count);
+          localStorage.setItem(LS_DONE, '1');
+          localStorage.setItem(LS_EMAIL, email);
         } catch { /* ignore */ }
-      } else if (res.status === 409) {
-        setState('duplicate');
-      } else if (res.status === 429) {
-        setState('error'); setErrMsg('Too many requests. Please wait a moment.');
+        try {
+          const cRes = await fetch('/api/waitlist/count', { cache: 'no-store' });
+          const cData = await cRes.json();
+          if (typeof cData?.count === 'number') setCount(cData.count);
+        } catch { /* keep prior value */ }
       } else {
-        setState('error'); setErrMsg(data.error ?? 'Something went wrong. Try again.');
+        setServerErr(true);
+        setTimeout(() => setServerErr(false), 4000);
       }
     } catch {
-      setState('error'); setErrMsg('Network error. Please try again.');
+      setDone(true);
+      try { localStorage.setItem(LS_DONE, '1'); } catch { /* ignore */ }
     }
+    setBusy(false);
   }
 
-  const isSuccess = state === 'success';
-  const isDup     = state === 'duplicate';
-  const isErr     = state === 'error';
-  const isLoading = state === 'loading';
+  const border  = 'rgba(255,255,255,0.08)';
+  const surface = 'rgba(255,255,255,0.04)';
+  const dim     = '#8892a4';
 
   return (
-    <div style={{
-      position: 'relative', minHeight: '100vh',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      overflow: 'hidden', background: DS.bg0, padding: '24px',
-      fontFamily: DS.font,
-    }}>
+    <div style={{ minHeight: '100vh', background: BG, color: '#fff', fontFamily: "'Montserrat', 'Roboto', system-ui, sans-serif", overflowX: 'hidden' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
         @keyframes bbPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
-        @keyframes bbSpin { to{transform:rotate(360deg)} }
+        @keyframes bbFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        @keyframes bbSlide { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+        .wl-feature:hover { border-color: ${MAGENTA} !important; background: rgba(177,44,132,0.07) !important; }
+        .wl-input:focus { border-color: ${MAGENTA} !important; box-shadow: 0 0 0 3px rgba(177,44,132,0.2) !important; outline:none; }
+        .wl-btn:hover { filter: brightness(1.1); }
+        .wl-btn:active { transform: translateY(2px); }
       `}</style>
 
-      {/* Warp background */}
-      <WarpBg />
+      {/* BG canvas */}
+      <canvas ref={cvs} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.22 }} />
 
-      {/* Ambient glow */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(153,69,255,0.07) 0%, rgba(0,194,255,0.04) 50%, transparent 100%)',
-      }} />
+      <div style={{ position: 'relative', zIndex: 1 }}>
 
-      {/* Back link */}
-      <Link href="/" style={{
-        position: 'absolute', top: 24, left: 24,
-        display: 'flex', alignItems: 'center', gap: 6,
-        fontSize: 13, fontWeight: 600, color: DS.muted,
-        textDecoration: 'none', zIndex: 10,
-        transition: 'color .2s',
-      }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#F8F6FF')}
-        onMouseLeave={e => (e.currentTarget.style.color = DS.muted)}
-      >
-        ← Back
-      </Link>
+        {/* Nav */}
+        <nav style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 32px', borderBottom: `1px solid ${border}`,
+          background: 'rgba(8,8,15,0.75)', backdropFilter: 'blur(20px)',
+          position: 'sticky', top: 0, zIndex: 100,
+        }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: '#fff' }}>
+            <img src="/logo.png" alt="BlockBite" width={40} height={40} style={{ objectFit: 'contain', flexShrink: 0 }}/>
+            <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.5px', fontFamily: 'Montserrat,sans-serif' }}>BlockBite</span>
+          </Link>
 
-      {/* Card */}
-      <div style={{
-        position: 'relative', zIndex: 10,
-        width: '100%', maxWidth: 460,
-        borderRadius: 32,
-        padding: '40px 40px 32px',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20,
-        background: 'rgba(17,14,31,0.85)',
-        border: `1px solid ${DS.border}`,
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        boxShadow: '0 0 80px rgba(153,69,255,0.12), 0 0 160px rgba(0,194,255,0.06)',
-        textAlign: 'center',
-      }}>
-
-        {/* Logo */}
-        <div style={{ position: 'relative', width: 64, height: 64 }}>
-          <Image
-            src="/logo.png"
-            alt="BlockBite"
-            fill
-            style={{ objectFit: 'contain', filter: 'drop-shadow(0 0 20px rgba(153,69,255,0.6))' }}
-          />
-        </div>
-
-        {/* Brand */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <h1 style={{
-            fontFamily: DS.font,
-            fontWeight: 900,
-            fontSize: 28,
-            letterSpacing: '.1em',
-            margin: 0,
-            background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 60%, #14F195 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}>
-            BLOCKBITE
-          </h1>
-          <p style={{
-            fontFamily: DS.font,
-            fontWeight: 600,
-            fontSize: 10,
-            color: DS.muted,
-            letterSpacing: '.18em',
-            textTransform: 'uppercase',
-            margin: 0,
-          }}>
-            Token Distribution.{' '}
-            <span style={{
-              background: 'linear-gradient(90deg, #9945FF, #00C2FF)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}>
-              Anti-Dump by Default.
-            </span>
-          </p>
-        </div>
-
-        {!isSuccess ? (
-          <>
-            {/* Heading */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <h2 style={{
-                fontFamily: DS.font, fontWeight: 800,
-                fontSize: 20, color: '#F8F6FF', margin: 0,
+          {/* Lang switcher */}
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', border: `1px solid ${border}`, borderRadius: 999, padding: 3, gap: 3 }}>
+            {(['en','id'] as Lang[]).map(l => (
+              <button key={l} onClick={() => setLang(l)} style={{
+                border: 'none', background: lang === l ? MAGENTA : 'transparent',
+                color: lang === l ? '#fff' : dim,
+                padding: '6px 14px', borderRadius: 999, fontWeight: 700, fontSize: 11,
+                cursor: 'pointer', fontFamily: 'Montserrat,sans-serif', transition: '0.15s', letterSpacing: '0.5px',
               }}>
-                Join the Early Access List
-              </h2>
-              <p style={{ fontFamily: DS.font, fontSize: 13, color: DS.muted, lineHeight: 1.65, margin: 0 }}>
-                Be first to launch milestone vesting streams, token distributions,
-                and automated payouts on Solana — fully on-chain.
-              </p>
-            </div>
-
-            {/* Count badge */}
-            {count !== null && count > 0 && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                padding: '6px 16px', borderRadius: 999,
-                background: 'rgba(153,69,255,0.12)',
-                border: '1px solid rgba(153,69,255,0.30)',
-                fontSize: 11, fontWeight: 700, color: '#B57FFF',
-                fontFamily: DS.font,
-              }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#9945FF', display: 'inline-block', animation: 'bbPulse 2s infinite' }} />
-                {count.toLocaleString()} {count === 1 ? 'person' : 'people'} already signed up
-              </div>
-            )}
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input
-                type="email"
-                value={email}
-                onChange={e => { setEmail(e.target.value); if (state !== 'idle') setState('idle'); }}
-                placeholder="your@email.com"
-                required
-                disabled={isLoading}
-                style={{
-                  width: '100%', boxSizing: 'border-box',
-                  padding: '14px 18px', borderRadius: 16,
-                  background: 'rgba(255,255,255,0.04)',
-                  border: isDup || isErr ? '1px solid rgba(255,77,77,0.5)' : '1px solid rgba(153,69,255,0.25)',
-                  color: '#F8F6FF', fontSize: 14, fontFamily: DS.font, outline: 'none',
-                  transition: 'border .15s, box-shadow .15s',
-                  opacity: isLoading ? 0.5 : 1,
-                }}
-                onFocus={e => {
-                  e.currentTarget.style.border = '1px solid rgba(153,69,255,0.65)';
-                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(153,69,255,0.12)';
-                }}
-                onBlur={e => {
-                  e.currentTarget.style.border = isDup || isErr ? '1px solid rgba(255,77,77,0.5)' : '1px solid rgba(153,69,255,0.25)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              />
-
-              <button
-                type="submit"
-                disabled={isLoading || !email.trim()}
-                style={{
-                  width: '100%', padding: '14px 24px', borderRadius: 9999,
-                  background: isLoading ? 'rgba(153,69,255,0.6)' : 'linear-gradient(90deg, #9945FF 0%, #00C2FF 100%)',
-                  color: '#fff', fontWeight: 800, fontSize: 15,
-                  fontFamily: DS.font, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer',
-                  boxShadow: isLoading ? 'none' : '0 0 28px rgba(153,69,255,0.35)',
-                  letterSpacing: '.02em', transition: 'all .2s',
-                  opacity: !email.trim() ? 0.5 : 1,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                }}
-              >
-                {isLoading ? (
-                  <>
-                    <span style={{
-                      width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)',
-                      borderTopColor: '#fff', borderRadius: '50%',
-                      display: 'inline-block', animation: 'bbSpin 0.8s linear infinite',
-                    }} />
-                    Joining…
-                  </>
-                ) : 'Secure Your Spot Now!'}
+                {l.toUpperCase()}
               </button>
+            ))}
+          </div>
+        </nav>
 
-              {/* Inline feedback */}
-              {isDup && (
-                <p style={{ textAlign: 'center', fontSize: 12, fontFamily: DS.font, color: '#FF9D4D', margin: 0 }}>
-                  ✓ You&apos;re already on the list — we&apos;ll be in touch!
-                </p>
-              )}
-              {isErr && (
-                <p style={{ textAlign: 'center', fontSize: 12, fontFamily: DS.font, color: '#FF6B6B', margin: 0 }}>
-                  {errMsg}
-                </p>
-              )}
-            </form>
+        {/* ── Hero ── */}
+        <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '72px 24px 48px', gap: 28, animation: 'bbSlide 0.6s ease both' }}>
 
-            {/* Footer note */}
-            <p style={{ fontSize: 11, fontFamily: DS.font, color: DS.muted, margin: 0 }}>
-              No spam. Just early access updates.
-            </p>
-          </>
-        ) : (
-          /* ── Success state ── */
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '8px 0' }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: '50%',
-              background: 'rgba(20,241,149,0.10)',
-              border: '1px solid rgba(20,241,149,0.30)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 28,
-            }}>
-              ✓
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <h2 style={{ fontFamily: DS.font, fontWeight: 800, fontSize: 20, color: '#F8F6FF', margin: 0 }}>
-                You&apos;re on the list!
-              </h2>
-              <p style={{ fontFamily: DS.font, fontSize: 13, color: DS.muted, lineHeight: 1.65, margin: 0 }}>
-                Welcome aboard. We&apos;ll notify you when BlockBite early access opens.
-                Get ready to launch your first token distribution on Solana.
-              </p>
-            </div>
-            {count !== null && count > 0 && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                padding: '6px 16px', borderRadius: 999,
-                background: 'rgba(20,241,149,0.10)',
-                border: '1px solid rgba(20,241,149,0.25)',
-                fontSize: 11, fontWeight: 700, color: DS.green,
-                fontFamily: DS.font,
+          {/* Headline */}
+          <h1 style={{ fontSize: 'clamp(36px,8vw,90px)', fontWeight: 900, lineHeight: 0.95, letterSpacing: '-2px', maxWidth: 820, margin: 0, fontFamily: 'Montserrat,sans-serif' }}>
+            {txt.h1}<br/>
+            <span style={{ background: GRAD_MAIN, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              {txt.h1grad}
+            </span>
+          </h1>
+
+          {/* Subheadline */}
+          <p style={{ fontSize: 'clamp(15px,2vw,19px)', color: '#c8ccd6', maxWidth: 600, lineHeight: 1.65, margin: 0, fontFamily: 'Roboto,sans-serif', fontWeight: 400 }}>
+            {txt.sub}
+          </p>
+
+          {/* Floating block decorations */}
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+            {[
+              { c1: MAGENTA, c2: '#e0408c', d: '3.1s', icon: '◆' },
+              { c1: TEAL,    c2: '#5aa8c0', d: '2.7s', icon: '◈' },
+              { c1: GOLD,    c2: '#f5c34a', d: '3.4s', icon: '◉' },
+              { c1: PURPLE,  c2: '#a0a4f5', d: '2.4s', icon: '*' },
+              { c1: CORAL,   c2: '#f07080', d: '3.7s', icon: '⬡' },
+              { c1: TEAL,    c2: '#3d9fb5', d: '2.9s', icon: '◇' },
+            ].map((b, i) => (
+              <div key={i} style={{
+                width: 44, height: 44, borderRadius: 11,
+                background: `linear-gradient(135deg, ${b.c1}, ${b.c2})`,
+                boxShadow: `0 4px 18px ${b.c1}55, inset 0 1px 0 rgba(255,255,255,0.25)`,
+                border: `1.5px solid rgba(255,255,255,0.15)`,
+                animation: `bbFloat ${b.d} ease-in-out infinite`,
+                animationDelay: `${i * 0.18}s`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+                fontSize: 18, color: 'rgba(255,255,255,0.92)',
               }}>
-                #{count.toLocaleString()} on the waitlist
+                {b.icon}
+              </div>
+            ))}
+          </div>
+
+          {/* Email form */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, width: '100%', maxWidth: 440 }}>
+            {!done ? (
+              <>
+                <input
+                  className="wl-input"
+                  type="email" value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && submit()}
+                  placeholder={lang === 'en' ? 'your@email.com' : 'email@anda.com'}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: '15px 20px', borderRadius: 12,
+                    background: 'rgba(255,255,255,0.05)', border: `1.5px solid ${err ? CORAL : border}`,
+                    color: '#fff', fontFamily: 'Roboto,sans-serif', fontSize: 15,
+                    transition: '0.15s',
+                  }}
+                />
+                <button
+                  className="wl-btn"
+                  onClick={submit} disabled={busy}
+                  style={{
+                    width: '100%', padding: '15px 28px', borderRadius: 12,
+                    background: GRAD_MAIN, color: '#fff',
+                    fontWeight: 800, fontSize: 15, border: 'none', cursor: 'pointer',
+                    fontFamily: 'Montserrat,sans-serif',
+                    boxShadow: `0 4px 32px ${MAGENTA}44`, transition: '0.15s', letterSpacing: '0.5px',
+                  }}
+                >
+                  {busy ? (lang === 'en' ? 'Joining...' : 'Mendaftar...') : txt.cta}
+                </button>
+                {rateLimited && (
+                  <div style={{ color: CORAL, fontSize: 13, fontFamily: 'Roboto,sans-serif', textAlign: 'center' }}>
+                    {lang === 'en' ? 'Too many attempts. Please wait 60 seconds.' : 'Terlalu banyak percobaan. Tunggu 60 detik.'}
+                  </div>
+                )}
+                {serverErr && (
+                  <div style={{ color: CORAL, fontSize: 13, fontFamily: 'Roboto,sans-serif', textAlign: 'center' }}>
+                    {lang === 'en' ? 'Server error. Please try again in a moment.' : 'Kesalahan server. Coba lagi sebentar lagi.'}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{
+                padding: '18px 28px', borderRadius: 14,
+                background: `${TEAL}18`, border: `1.5px solid ${TEAL}`,
+                color: TEAL, fontWeight: 700, fontSize: 15, textAlign: 'center',
+                fontFamily: 'Roboto,sans-serif',
+              }}>
+                {txt.success}
               </div>
             )}
-            <Link href="/" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '10px 24px', borderRadius: 9999,
-              fontFamily: DS.font, fontWeight: 600, fontSize: 13,
-              color: DS.muted, textDecoration: 'none',
-              border: '1px solid rgba(153,69,255,0.25)',
-              transition: 'all .2s',
-            }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#F8F6FF'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(153,69,255,0.5)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = DS.muted; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(153,69,255,0.25)'; }}
-            >
-              ← Back to home
-            </Link>
           </div>
-        )}
+
+          {/* Stats row */}
+          <div style={{ display: 'flex', gap: '40px', marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {txt.stats.map((s, i) => (
+              <div key={i} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', fontFamily: 'Montserrat,sans-serif', letterSpacing: '-0.5px' }}>
+                  {s.dynamic ? count : s.v}
+                </div>
+                <div style={{ fontSize: 10, color: dim, letterSpacing: '2px', marginTop: 2, fontFamily: 'IBM Plex Mono,monospace' }}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Divider ── */}
+        <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${MAGENTA}44, transparent)`, margin: '0 40px' }}/>
+
+        {/* ── Features ── */}
+        <section style={{ padding: '72px 24px', maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ fontSize: 11, letterSpacing: '3px', color: MAGENTA, marginBottom: 10, textAlign: 'center', fontFamily: 'IBM Plex Mono,monospace' }}>{txt.featKicker}</div>
+          <div style={{ fontSize: 'clamp(24px,3vw,36px)', fontWeight: 900, textAlign: 'center', marginBottom: 48, fontFamily: 'Montserrat,sans-serif' }}>{txt.featTitle}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+            {txt.features.map((f, i) => (
+              <div className="wl-feature" key={i} style={{
+                padding: '28px 24px', borderRadius: 20,
+                background: surface, border: `1.5px solid ${border}`,
+                transition: '0.2s', cursor: 'default',
+              }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: `${f.color}22`, border: `1.5px solid ${f.color}44`, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 16, height: 16, borderRadius: 4, background: f.color }}/>
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, fontFamily: 'Montserrat,sans-serif', color: '#fff' }}>{f.t}</div>
+                <div style={{ fontSize: 13, color: dim, lineHeight: 1.65, fontFamily: 'Roboto,sans-serif' }}>{f.d}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Divider ── */}
+        <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${TEAL}44, transparent)`, margin: '0 40px' }}/>
+
+        {/* ── How it works ── */}
+        <section style={{ padding: '72px 24px', maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ fontSize: 11, letterSpacing: '3px', color: TEAL, marginBottom: 10, textAlign: 'center', fontFamily: 'IBM Plex Mono,monospace' }}>{txt.howKicker}</div>
+          <div style={{ fontSize: 'clamp(24px,3vw,36px)', fontWeight: 900, textAlign: 'center', marginBottom: 48, fontFamily: 'Montserrat,sans-serif' }}>{txt.howTitle}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+            {txt.steps.map((s, i) => (
+              <div key={i} style={{
+                padding: '24px 20px', borderRadius: 18,
+                background: surface, border: `1.5px solid ${border}`,
+                position: 'relative', overflow: 'hidden',
+              }}>
+                <div style={{
+                  position: 'absolute', top: 10, right: 16,
+                  fontSize: 64, fontWeight: 900, color: MAGENTA, opacity: 0.1, lineHeight: 1,
+                  fontFamily: 'Montserrat,sans-serif',
+                }}>
+                  {i + 1}
+                </div>
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%', background: GRAD_MAIN,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 14, fontWeight: 900, color: '#fff', marginBottom: 14,
+                  fontFamily: 'Montserrat,sans-serif',
+                }}>
+                  {i + 1}
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8, fontFamily: 'Montserrat,sans-serif' }}>{s.t}</div>
+                <div style={{ fontSize: 13, color: dim, lineHeight: 1.6, fontFamily: 'Roboto,sans-serif' }}>{s.d}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Bottom CTA ── */}
+        <section style={{ padding: '60px 24px 80px', textAlign: 'center' }}>
+          <div style={{
+            maxWidth: 600, margin: '0 auto',
+            padding: '48px 32px', borderRadius: 24,
+            background: 'rgba(177,44,132,0.08)', border: `1.5px solid ${MAGENTA}33`,
+          }}>
+            <div style={{ fontSize: 'clamp(22px,3vw,32px)', fontWeight: 900, marginBottom: 16, fontFamily: 'Montserrat,sans-serif' }}>
+              Ready to secure your token distribution?
+            </div>
+            <p style={{ color: dim, fontSize: 15, marginBottom: 28, lineHeight: 1.6, fontFamily: 'Roboto,sans-serif' }}>
+              {lang === 'en'
+                ? 'Join the waitlist and be first to automate trust-minimized vesting on Solana.'
+                : 'Daftar waitlist dan jadilah yang pertama mengotomasi vesting berbasis kepercayaan di Solana.'}
+            </p>
+            {!done ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 400, margin: '0 auto', width: '100%' }}>
+                <input
+                  className="wl-input"
+                  type="email" value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && submit()}
+                  placeholder={lang === 'en' ? 'your@email.com' : 'email@anda.com'}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: '14px 18px', borderRadius: 12,
+                    background: 'rgba(255,255,255,0.06)', border: `1.5px solid ${border}`,
+                    color: '#fff', fontFamily: 'Roboto,sans-serif', fontSize: 14,
+                    transition: '0.15s',
+                  }}
+                />
+                <button
+                  className="wl-btn"
+                  onClick={submit} disabled={busy}
+                  style={{
+                    width: '100%', padding: '14px 24px', borderRadius: 12,
+                    background: GRAD_MAIN, color: '#fff',
+                    fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer',
+                    fontFamily: 'Montserrat,sans-serif', boxShadow: `0 4px 24px ${MAGENTA}44`, transition: '0.15s',
+                  }}
+                >
+                  {busy ? '...' : txt.cta}
+                </button>
+              </div>
+            ) : (
+              <div style={{ padding: '16px 24px', borderRadius: 12, background: `${TEAL}18`, border: `1.5px solid ${TEAL}`, color: TEAL, fontWeight: 700, fontFamily: 'Roboto,sans-serif' }}>
+                {txt.success}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── Footer ── */}
+        <footer style={{
+          borderTop: `1px solid ${border}`, padding: '28px 32px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexWrap: 'wrap', gap: 12, fontSize: 12, color: dim,
+          fontFamily: 'IBM Plex Mono,monospace',
+        }}>
+          <div>{txt.footer}</div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            {[MAGENTA, TEAL, GOLD, PURPLE, CORAL].map((c, i) => (
+              <div key={i} style={{ width: 10, height: 10, borderRadius: 3, background: c }}/>
+            ))}
+          </div>
+        </footer>
       </div>
     </div>
   );

@@ -128,6 +128,7 @@ export default function Home() {
   const { connection } = useConnection();
   const cvs = useRef<HTMLCanvasElement>(null);
   const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
+  const [faqOpen, setFaqOpen] = useState<boolean[]>(Array(6).fill(false));
   // Live on-chain stats
   useEffect(() => {
     let cancelled = false;
@@ -448,6 +449,68 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ─── WHO USES IT ───────────────────────────────────────────────────────── */}
+      <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 52 }}>
+            <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
+              USE CASES
+            </div>
+            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: '#F8F6FF', margin: 0 }}>
+              Who uses{' '}
+              <span style={{
+                fontStyle: 'italic',
+                background: 'linear-gradient(90deg, #9945FF, #14F195)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>BlockBite TDP.</span>
+            </h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 24 }}>
+            {([
+              {
+                audience: 'TEAMS',
+                headline: 'Enforce vesting on-chain,\nnot in spreadsheets.',
+                body: 'Give co-founders and employees their tokens over time. Standard 4-year vesting with 1-year cliff — enforce agreements on-chain.',
+                example: '4-year linear · 1-year cliff',
+              },
+              {
+                audience: 'INVESTORS',
+                headline: 'Deliver the unlock schedule\nyou committed to.',
+                body: 'Investors claim on their own — no manual transfers, no trust required. Fully transparent on-chain.',
+                example: '2-year linear · 3-month cliff',
+              },
+              {
+                audience: 'COMMUNITY',
+                headline: 'Reward contributors\nfairly and transparently.',
+                body: 'Reward contributors, airdrop participants, or ecosystem grants. Each recipient sees only their own allocation.',
+                example: 'Custom schedule per recipient',
+              },
+            ] as const).map((uc, i) => (
+              <div key={i} style={{
+                borderRadius: 18, padding: 1,
+                background: 'linear-gradient(135deg, rgba(153,69,255,0.25), rgba(20,241,149,0.12))',
+              }}>
+                <div style={{
+                  borderRadius: 17, background: DS.bg1,
+                  padding: '28px 28px 24px',
+                  height: '100%', boxSizing: 'border-box',
+                  display: 'flex', flexDirection: 'column', gap: 16,
+                }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: DS.accent, letterSpacing: '2.5px', textTransform: 'uppercase', margin: 0 }}>{uc.audience}</p>
+                  <h3 style={{ fontFamily: DS.cinzel, fontSize: 20, fontWeight: 700, color: '#F8F6FF', whiteSpace: 'pre-line', lineHeight: 1.3, margin: 0 }}>{uc.headline}</h3>
+                  <p style={{ fontFamily: DS.sora, fontSize: 13.5, color: DS.muted, lineHeight: 1.72, margin: 0, flex: 1 }}>{uc.body}</p>
+                  <div style={{ borderTop: `1px solid ${DS.border}`, paddingTop: 14 }}>
+                    <p style={{ fontFamily: DS.mono, fontSize: 11, color: DS.muted, margin: 0 }}>{uc.example}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── COMPARISON TABLE ──────────────────────────────────────────────────── */}
       <section style={{
         position: 'relative', zIndex: 1,
@@ -500,6 +563,86 @@ export default function Home() {
                     }
                   </div>
                 ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── FAQ ───────────────────────────────────────────────────────────────── */}
+      <section id="faq" style={{ position: 'relative', zIndex: 1, padding: '80px 24px' }}>
+        <div style={{ maxWidth: 720, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
+              FAQ
+            </div>
+            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: '#F8F6FF', margin: 0 }}>
+              Questions,{' '}
+              <span style={{
+                fontStyle: 'italic',
+                background: 'linear-gradient(90deg, #9945FF, #14F195)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>answered.</span>
+            </h2>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {([
+              {
+                q: 'What is BlockBite TDP?',
+                a: 'BlockBite TDP is a token distribution protocol on Solana. It lets project teams create vesting streams for team members, investors, and contributors — directly on-chain, with no intermediary.',
+              },
+              {
+                q: 'Who controls the locked tokens?',
+                a: 'Nobody. Tokens are locked in a PDA-controlled vault — a program-derived address with no private key. Only the on-chain program can release tokens, and only when the vesting schedule allows it.',
+              },
+              {
+                q: 'What vesting schedules are supported?',
+                a: 'Cliff vesting (all tokens at a single date), linear vesting (gradual release over time), and milestone-gated tranches. All schedules support an optional cliff period before linear release begins.',
+              },
+              {
+                q: 'What is the game verification layer?',
+                a: 'Recipients can earn milestone unlocks by playing the BlockBite puzzle game. It\'s gamified, sybil-resistant, and the result is fully verifiable on-chain — no one can fake a score.',
+              },
+              {
+                q: 'What happens if a stream is cancelled?',
+                a: 'Vesting freezes immediately. The recipient keeps everything already vested and can claim it at any time. Unvested tokens are returned to the stream creator.',
+              },
+              {
+                q: 'What wallets are supported?',
+                a: 'Phantom and Solflare are fully supported via Solana wallet-adapter. Any wallet compatible with the adapter standard will work.',
+              },
+            ] as const).map((item, i) => (
+              <div key={i} style={{
+                borderRadius: 14, overflow: 'hidden',
+                border: `1px solid ${faqOpen[i] ? 'rgba(153,69,255,0.45)' : DS.border}`,
+                transition: 'border-color .2s',
+              }}>
+                <button
+                  onClick={() => setFaqOpen(prev => prev.map((v, idx) => idx === i ? !v : v))}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '16px 20px', textAlign: 'left',
+                    background: faqOpen[i] ? DS.bg2 : 'transparent',
+                    border: 'none', cursor: 'pointer',
+                    color: '#F8F6FF', fontFamily: DS.sora, fontSize: 14.5, fontWeight: 600,
+                    transition: 'background .2s',
+                  }}
+                >
+                  <span>{item.q}</span>
+                  <span style={{
+                    fontSize: 18, color: DS.muted, flexShrink: 0, marginLeft: 16,
+                    transform: faqOpen[i] ? 'rotate(180deg)' : 'none',
+                    transition: 'transform .2s',
+                    display: 'inline-block',
+                  }}>⌄</span>
+                </button>
+                {faqOpen[i] && (
+                  <div style={{ padding: '0 20px 16px', fontFamily: DS.sora, fontSize: 13.5, color: DS.muted, lineHeight: 1.75 }}>
+                    {item.a}
+                  </div>
+                )}
               </div>
             ))}
           </div>

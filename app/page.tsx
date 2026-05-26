@@ -298,33 +298,30 @@ export default function Home() {
             Launch App →
           </Link>
         </div>
-      </section>
 
-      {/* ─── STATS ROW ─────────────────────────────────────────────────────────── */}
-      <section style={{
-        position: 'relative', zIndex: 1,
-        borderTop: `1px solid ${DS.border}`,
-        borderBottom: `1px solid ${DS.border}`,
-        background: DS.bg1,
-        padding: '32px 24px',
-      }}>
+        {/* ── Stats — Vestra pattern: border-top divider inside hero ── */}
         <div style={{
-          maxWidth: 1000, margin: '0 auto',
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))',
-          gap: 24,
+          display: 'grid', gridTemplateColumns: 'repeat(3,1fr)',
+          gap: '24px 32px',
+          marginTop: 56, paddingTop: 40,
+          borderTop: `1px solid ${DS.border}`,
+          maxWidth: 640, width: '100%',
         }}>
           {([
-            { label: 'Total Streams',     val: liveStats ? liveStats.streams.toLocaleString() : '—',  col: DS.accent },
-            { label: 'Active Streams',    val: liveStats ? liveStats.active.toLocaleString()  : '—',  col: '#5fd07a' },
-            { label: 'Total Distributed', val: liveStats ? liveStats.distributed + ' tokens'  : '—',  col: '#7ad7ff' },
+            { label: 'Total Streams',     val: liveStats ? liveStats.streams.toLocaleString() : '0' },
+            { label: 'Active Streams',    val: liveStats ? liveStats.active.toLocaleString()  : '0' },
+            { label: 'Total Distributed', val: liveStats ? liveStats.distributed + ' tokens'  : '0 tokens' },
           ]).map((s, i) => (
-            <div key={i} style={{
-              padding: '20px 24px', borderRadius: 16,
-              background: DS.card, border: `1px solid ${DS.border}`,
-              textAlign: 'center',
-            }}>
-              <div style={{ fontFamily: DS.mono, fontSize: 28, fontWeight: 700, color: s.col, marginBottom: 4 }}>{s.val}</div>
-              <div style={{ fontSize: 11, color: DS.muted, letterSpacing: '1.4px', textTransform: 'uppercase' }}>{s.label}</div>
+            <div key={i} style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: DS.muted, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 8, margin: '0 0 8px' }}>{s.label}</p>
+              <p style={{
+                fontFamily: DS.cinzel, fontWeight: 800, fontSize: 'clamp(22px,2.8vw,30px)',
+                margin: 0,
+                background: 'linear-gradient(90deg, #9945FF, #00C2FF)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>{s.val}</p>
             </div>
           ))}
         </div>

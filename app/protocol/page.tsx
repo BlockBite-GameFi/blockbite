@@ -174,10 +174,10 @@ export default function ProtocolPage() {
         {/* ── Stats row ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
           {[
-            { label:'Total Streams',      value: liveStats ? String(liveStats.streams)    : '—', sub:'on devnet program',     color:T.gold   },
-            { label:'Active Streams',     value: liveStats ? String(liveStats.active)     : '—', sub:'not cancelled & live',  color:T.accent },
-            { label:'Tokens Locked',      value: liveStats ? liveStats.locked             : '—', sub:'in program vaults',     color:T.green  },
-            { label:'Tokens Distributed', value: liveStats ? liveStats.distributed        : '—', sub:'total withdrawn',       color:T.blue   },
+            { label:'Total Streams',      value: liveStats ? String(liveStats.streams)    : '0',  sub:'on devnet program',     color:T.gold   },
+            { label:'Active Streams',     value: liveStats ? String(liveStats.active)     : '0',  sub:'not cancelled & live',  color:T.accent },
+            { label:'Tokens Locked',      value: liveStats ? liveStats.locked             : '0',  sub:'in program vaults',     color:T.green  },
+            { label:'Tokens Distributed', value: liveStats ? liveStats.distributed        : '0',  sub:'total withdrawn',       color:T.blue   },
           ].map(s => (
             <Card key={s.label} style={{ padding: '18px 18px' }}>
               <StatBox {...s} />

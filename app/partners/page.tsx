@@ -23,9 +23,6 @@ const DS = {
   mono:     "'JetBrains Mono', monospace",
 };
 
-const TRUSTED_BY = [
-  'SolarDAO', 'FrostChain', 'VerdantFi', 'VoidLabs', 'EmberDAO', 'NexusVault',
-];
 
 const TIERS = [
   {
@@ -115,30 +112,27 @@ export default function PartnersPage() {
         </Link>
       </section>
 
-      {/* ─── TRUSTED BY ───────────────────────────────────────────────────────── */}
+      {/* ─── FIRST PARTNER CTA ────────────────────────────────────────────────── */}
       <section style={{
         position: 'relative', zIndex: 1,
         borderTop: `1px solid ${DS.border}`, borderBottom: `1px solid ${DS.border}`,
-        background: DS.bg1, padding: '36px 24px',
+        background: DS.bg1, padding: '36px 24px', textAlign: 'center',
       }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{ fontSize: 10, letterSpacing: '2.5px', color: DS.muted, fontWeight: 700, marginBottom: 24, textTransform: 'uppercase' }}>
-            TRUSTED BY
+        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+          <div style={{ fontSize: 10, letterSpacing: '2.5px', color: DS.muted, fontWeight: 700, marginBottom: 14, textTransform: 'uppercase' }}>
+            EARLY ADOPTERS
           </div>
-          <div style={{
-            display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center', alignItems: 'center',
+          <p style={{ fontSize: 14, color: DS.muted, lineHeight: 1.7, margin: '0 0 20px' }}>
+            No partners yet — BlockBite TDP is in early access. Join the waitlist and be the first project to build on the protocol.
+          </p>
+          <Link href="/waitlist" style={{
+            display: 'inline-block', padding: '10px 26px', borderRadius: 10,
+            border: `1px solid ${DS.accent}44`, background: `${DS.accent}10`,
+            color: DS.accent, fontWeight: 700, fontSize: 13, textDecoration: 'none',
+            letterSpacing: '.03em',
           }}>
-            {TRUSTED_BY.map((name) => (
-              <div key={name} style={{
-                padding: '10px 22px', borderRadius: 10,
-                background: DS.card, border: `1px solid ${DS.border}`,
-                fontSize: 13, fontWeight: 700, color: DS.muted,
-                letterSpacing: '.04em', fontFamily: DS.mono,
-              }}>
-                {name}
-              </div>
-            ))}
-          </div>
+            Become a Partner →
+          </Link>
         </div>
       </section>
 

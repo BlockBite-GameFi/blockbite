@@ -314,10 +314,10 @@ export default function Home() {
           gap: 24,
         }}>
           {([
-            { label: 'Total Distributed', val: '$2.4B+', col: DS.accent },
-            { label: 'Active Streams',    val: '14,000+', col: '#5fd07a' },
-            { label: 'Uptime',            val: '99.97%', col: '#7ad7ff' },
-          ] as const).map((s, i) => (
+            { label: 'Total Streams',     val: liveStats ? liveStats.streams.toLocaleString() : '—',  col: DS.accent },
+            { label: 'Active Streams',    val: liveStats ? liveStats.active.toLocaleString()  : '—',  col: '#5fd07a' },
+            { label: 'Total Distributed', val: liveStats ? liveStats.distributed + ' tokens'  : '—',  col: '#7ad7ff' },
+          ]).map((s, i) => (
             <div key={i} style={{
               padding: '20px 24px', borderRadius: 16,
               background: DS.card, border: `1px solid ${DS.border}`,

@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from 'react';
 
 const BG     = '#0a0a0f';
 const CARD   = '#13131a';
-const CARD2  = '#0f0f16';
 const PURPLE = '#7c3aed';
 const TEAL   = '#0891b2';
 const GREEN  = '#10b981';
@@ -17,19 +16,6 @@ const BORDER = '#1e293b';
 type Entry      = { email: string; ts: number };
 type PageStat   = { path: string; views: number; sessions: number };
 type TotalStats = { totalViews: number; uniqueVisitors: number; today: number; tableReady: boolean };
-
-const SQL_SETUP = `-- Run this once in your Supabase SQL Editor:
-CREATE TABLE IF NOT EXISTS page_views (
-  id          bigserial PRIMARY KEY,
-  path        text NOT NULL,
-  session_id  text NOT NULL DEFAULT 'anon',
-  created_at  timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_pv_path    ON page_views (path);
-CREATE INDEX IF NOT EXISTS idx_pv_created ON page_views (created_at);
-ALTER TABLE page_views ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "api_insert"    ON page_views FOR INSERT WITH CHECK (true);
-CREATE POLICY "service_select" ON page_views FOR SELECT USING (true);`;
 
 function downloadCSV(entries: Entry[]) {
   const rows = entries.map(e => {
@@ -87,8 +73,6 @@ export default function DashboardPage() {
   const [pageStats, setPageStats]   = useState<PageStat[] | null>(null);
   const [totalStats, setTotalStats] = useState<TotalStats | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [showSQL, setShowSQL]       = useState(false);
-  const [sqlCopied, setSqlCopied]   = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -158,10 +142,6 @@ export default function DashboardPage() {
       setEntries(prev => prev.filter(e => e.email !== email));
       setWlCount(prev => Math.max(0, prev - 1));
     } catch { alert('Delete failed. Try again.'); } finally { setDeleting(null); }
-  }
-
-  function copySQL() {
-    navigator.clipboard.writeText(SQL_SETUP).then(() => { setSqlCopied(true); setTimeout(() => setSqlCopied(false), 2000); }).catch(() => {});
   }
 
   // ── Login screen ──
@@ -234,21 +214,15 @@ export default function DashboardPage() {
         </div>
 
         {/* Per-page breakdown */}
-        <Section title="Page Views Breakdown" badge={tableReady ? `${topPages.length} pages` : 'setup needed'}>
+        <Section title="Page Views Breakdown" badge={tableReady ? `${topPages.length} pages` : 'initializing'}>
           {!tableReady ? (
-            <div style={{ padding: '24px 20px' }}>
-              <p style={{ color: MUTED, fontSize: 13, margin: '0 0 12px' }}>
-                Analytics table not yet created in Supabase. Run this SQL once to enable page-view tracking:
+            <div style={{ padding: '32px 20px', textAlign: 'center' }}>
+              <div style={{ fontSize: 28, marginBottom: 12 }}>◌</div>
+              <p style={{ color: MUTED, fontSize: 13, margin: '0 0 6px', fontWeight: 600 }}>
+                Analytics initializing automatically…
               </p>
-              <div style={{ position: 'relative' }}>
-                <pre style={{ background: CARD2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '14px 16px', fontSize: 12, color: '#94a3b8', overflowX: 'auto', margin: 0, whiteSpace: 'pre-wrap' }}>{SQL_SETUP}</pre>
-                <button type="button" onClick={copySQL}
-                  style={{ position: 'absolute', top: 8, right: 8, background: sqlCopied ? GREEN : PURPLE, color: '#fff', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                  {sqlCopied ? '✓ Copied' : 'Copy SQL'}
-                </button>
-              </div>
-              <p style={{ color: MUTED, fontSize: 11, marginTop: 8 }}>
-                Go to <strong style={{ color: TEXT }}>supabase.com → SQL Editor</strong> → paste → Run. Then refresh this page.
+              <p style={{ color: MUTED, fontSize: 11, margin: 0 }}>
+                Page view tracking will activate on the next site visit. No manual steps required.
               </p>
             </div>
           ) : topPages.length === 0 ? (
@@ -353,25 +327,6 @@ export default function DashboardPage() {
             </div>
           )}
         </Section>
-
-        {/* SQL setup toggle (for reference) */}
-        {tableReady && (
-          <div style={{ marginBottom: 20 }}>
-            <button type="button" onClick={() => setShowSQL(v => !v)}
-              style={{ background: 'transparent', color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 14px', fontSize: 12, cursor: 'pointer' }}>
-              {showSQL ? 'Hide' : 'Show'} Analytics SQL (Supabase setup)
-            </button>
-            {showSQL && (
-              <div style={{ marginTop: 12, position: 'relative' }}>
-                <pre style={{ background: CARD2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '14px 16px', fontSize: 12, color: '#94a3b8', overflowX: 'auto', margin: 0, whiteSpace: 'pre-wrap' }}>{SQL_SETUP}</pre>
-                <button type="button" onClick={copySQL}
-                  style={{ position: 'absolute', top: 8, right: 8, background: sqlCopied ? GREEN : PURPLE, color: '#fff', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                  {sqlCopied ? '✓ Copied' : 'Copy SQL'}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
 
         <p style={{ color: MUTED, fontSize: 11, textAlign: 'center', marginTop: 8 }}>
           BlockBite Admin · Waitlist from Supabase · Page views via /api/track · Auto-refreshes every 30s

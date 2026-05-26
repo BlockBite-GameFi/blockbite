@@ -139,15 +139,70 @@ export async function sbGetList(): Promise<SbEntry[] | null> {
 
 // ─── Page-view analytics ─────────────────────────────────────────────────────
 
+const PROVISION_SQL = `
+CREATE TABLE IF NOT EXISTS page_views (
+  id          bigserial PRIMARY KEY,
+  path        text NOT NULL,
+  session_id  text NOT NULL DEFAULT 'anon',
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_pv_path    ON page_views (path);
+CREATE INDEX IF NOT EXISTS idx_pv_created ON page_views (created_at);
+ALTER TABLE page_views ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='page_views' AND policyname='api_insert') THEN
+    CREATE POLICY "api_insert" ON page_views FOR INSERT WITH CHECK (true);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='page_views' AND policyname='service_select') THEN
+    CREATE POLICY "service_select" ON page_views FOR SELECT USING (true);
+  END IF;
+END $$;
+`.trim();
+
+/** Auto-provision page_views table via Supabase Management API.
+ *  Requires SUPABASE_ACCESS_TOKEN (personal access token from supabase.com/dashboard/account/tokens).
+ *  Extracts project ref from SUPABASE_URL automatically — zero human SQL interaction.
+ */
+export async function sbAutoProvisionPageViews(): Promise<boolean> {
+  const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
+  if (!accessToken || !SB_URL) return false;
+  // Extract project ref: https://{ref}.supabase.co
+  const ref = SB_URL.replace(/^https?:\/\//, '').split('.')[0];
+  if (!ref) return false;
+  try {
+    const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ query: PROVISION_SQL }),
+      cache: 'no-store',
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
 export async function sbTrackView(path: string, sid: string): Promise<void> {
   if (!supabaseReady()) return;
   try {
-    await fetch(`${SB_URL}/rest/v1/page_views`, {
+    const res = await fetch(`${SB_URL}/rest/v1/page_views`, {
       method: 'POST',
       headers: h({ Prefer: 'return=minimal' }),
       body: JSON.stringify({ path, session_id: sid }),
       cache: 'no-store',
     });
+    // If table doesn't exist, auto-provision and retry once
+    if (!res.ok && res.status === 404) {
+      const ok = await sbAutoProvisionPageViews();
+      if (ok) {
+        await fetch(`${SB_URL}/rest/v1/page_views`, {
+          method: 'POST',
+          headers: h({ Prefer: 'return=minimal' }),
+          body: JSON.stringify({ path, session_id: sid }),
+          cache: 'no-store',
+        }).catch(() => {});
+      }
+    }
   } catch { /* ignore — non-critical */ }
 }
 
@@ -191,6 +246,11 @@ export async function sbGetTotalViewStats(): Promise<TotalViewStats> {
       `${SB_URL}/rest/v1/page_views?select=session_id,created_at&limit=200000`,
       { headers: h(), cache: 'no-store' },
     );
+    // Table missing — auto-provision silently in background, return zeros
+    if (!res.ok && res.status === 404) {
+      sbAutoProvisionPageViews().catch(() => {});
+      return { totalViews: 0, uniqueVisitors: 0, today: 0, tableReady: false };
+    }
     if (!res.ok) return { totalViews: 0, uniqueVisitors: 0, today: 0, tableReady: false };
     const rows: { session_id: string; created_at: string }[] = await res.json();
     const sessions = new Set(rows.map(r => r.session_id));

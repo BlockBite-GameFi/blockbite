@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { useApp } from '@/lib/useApp';
 
 function shortenAddress(address: string) {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -11,6 +12,20 @@ function shortenAddress(address: string) {
 export default function CustomWalletButton() {
   const { wallet, wallets, publicKey, disconnect, connecting, connected, select, connect } = useWallet();
   const { setVisible } = useWalletModal();
+  const isId = false;
+  const TX = {
+    connect:       isId ? 'Hubungkan Wallet' : 'Connect Wallet',
+    connecting:    isId ? 'Menghubungkan...' : 'Connecting...',
+    pickWallet:    isId ? 'Pilih wallet Solana kamu' : 'Pick your Solana wallet',
+    detected:      isId ? 'TERDETEKSI' : 'DETECTED',
+    cancel:        isId ? 'Batal' : 'Cancel',
+    connected:     isId ? 'TERHUBUNG' : 'CONNECTED',
+    copyAddr:      isId ? 'Salin Alamat' : 'Copy Address',
+    copied:        isId ? 'Disalin!' : 'Copied!',
+    viewExplorer:  isId ? 'Lihat di Explorer' : 'View on Explorer',
+    changeWallet:  isId ? 'Ganti Wallet' : 'Change Wallet',
+    disconnect:    isId ? 'Putuskan' : 'Disconnect',
+  };
 
   // autoConnect is disabled globally (prevents stuck-connecting on page load).
   // But that means after the user picks a wallet via the standard modal,
@@ -119,9 +134,9 @@ export default function CustomWalletButton() {
           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 20px', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}
         >
           {connecting ? (
-            <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />Connecting...</>
+            <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />{TX.connecting}</>
           ) : (
-            <>Connect Wallet</>
+            <>{TX.connect}</>
           )}
         </button>
 
@@ -155,7 +170,7 @@ export default function CustomWalletButton() {
               fontSize: 10, letterSpacing: 2.5, color: '#7dd3fc',
               fontWeight: 800, marginBottom: 10, textTransform: 'uppercase',
             }}>
-              Pick your Solana wallet
+              {TX.pickWallet}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {wallets.map(w => {
@@ -185,7 +200,7 @@ export default function CustomWalletButton() {
                         background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(134,239,172,0.35)',
                         padding: '3px 7px', borderRadius: 999,
                       }}>
-                        DETECTED
+                        {TX.detected}
                       </span>
                     )}
                   </button>
@@ -202,7 +217,7 @@ export default function CustomWalletButton() {
                 fontSize: 12, fontWeight: 600, cursor: 'pointer',
               }}
             >
-              Cancel
+              {TX.cancel}
             </button>
           </div>
         )}
@@ -257,7 +272,7 @@ export default function CustomWalletButton() {
           {/* Header — CONNECTED + full address */}
           <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(160,154,191,.6)', letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 6px' }}>
-              Connected
+              {TX.connected}
             </p>
             <p style={{ fontSize: 11, color: '#F8F6FF', fontFamily: '"JetBrains Mono", monospace', wordBreak: 'break-all', margin: 0, lineHeight: 1.55 }}>
               {base58}
@@ -279,7 +294,7 @@ export default function CustomWalletButton() {
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               <CopyIcon copied={copied} />
-              {copied ? 'Copied!' : 'Copy Address'}
+              {copied ? TX.copied : TX.copyAddr}
             </button>
 
             {/* View on Explorer */}
@@ -294,7 +309,7 @@ export default function CustomWalletButton() {
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               <ExternalIcon />
-              View on Explorer
+              {TX.viewExplorer}
             </a>
 
             {/* Change Wallet */}
@@ -310,7 +325,7 @@ export default function CustomWalletButton() {
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               <WalletIcon />
-              Change Wallet
+              {TX.changeWallet}
             </button>
 
             {/* Disconnect */}
@@ -326,7 +341,7 @@ export default function CustomWalletButton() {
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               <DisconnectIcon />
-              Disconnect
+              {TX.disconnect}
             </button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
@@ -9,12 +9,22 @@ import { LedgerWalletAdapter } from '@solana/wallet-adapter-ledger';
 import { CoinbaseWalletAdapter } from '@solana/wallet-adapter-coinbase';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { ACTIVE_NETWORK, RPC_URL } from '@/lib/solana/config';
+import { preWarmRpc } from '@/lib/solana/rpc-manager';
+import { WalletTracker } from '@/components/WalletTracker';
 
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 export default function AppWalletProvider({ children }: { children: React.ReactNode }) {
   const network = ACTIVE_NETWORK;
   const endpoint = useMemo(() => RPC_URL, []);
+
+  // Connection config — commitment 'confirmed' is the right trade-off between
+  // speed and finality for a devnet dApp. The 60s timeout prevents phantom
+  // "transaction expired" errors when the devnet is under load.
+  const connectionConfig = useMemo(() => ({
+    commitment: 'confirmed' as const,
+    confirmTransactionInitialTimeout: 60_000,
+  }), []);
 
   const wallets = useMemo(
     () => [
@@ -48,10 +58,18 @@ export default function AppWalletProvider({ children }: { children: React.ReactN
     console.warn('[wallet-adapter] error:', err);
   }, []);
 
+  // Pre-warm RPC endpoints on app mount — probes all candidates in parallel
+  // and caches the fastest one in localStorage for zero-latency first calls.
+  // Fire-and-forget, fully automatic (Pasal 27 compliant).
+  useEffect(() => { preWarmRpc(); }, []);
+
   return (
-    <ConnectionProvider endpoint={endpoint}>
+    <ConnectionProvider endpoint={endpoint} config={connectionConfig}>
       <WalletProvider wallets={wallets} autoConnect={false} onError={onError}>
-        <WalletModalProvider>{children}</WalletModalProvider>
+        <WalletModalProvider>
+          {children}
+          <WalletTracker />
+        </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
   );

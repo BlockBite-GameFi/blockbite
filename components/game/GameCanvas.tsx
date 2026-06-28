@@ -99,7 +99,21 @@ function drawTrayPiece(
   ctx.restore();
 }
 
-export default function GameCanvas({ initialLevel = 1, onBack, biome }: { initialLevel?: number; onBack?: () => void; biome?: Biome }) {
+export default function GameCanvas({
+  initialLevel = 1,
+  onBack,
+  biome,
+  verificationContext,
+}: {
+  initialLevel?: number;
+  onBack?: () => void;
+  biome?: Biome;
+  verificationContext?: {
+    streamPda: string;
+    requiredLevel: number;
+    onVerified: (level: number, score: number) => void;
+  };
+}) {
   const { connected, publicKey, connecting, select } = useWallet();
   const { setVisible: setWalletModalVisible } = useWalletModal();
   const openWalletPicker = useCallback(() => {
@@ -133,6 +147,7 @@ export default function GameCanvas({ initialLevel = 1, onBack, biome }: { initia
 
   const { state, placePiece, newGame, newGameAt, clearAnimationDone, removeScorePop, mysteryBoxPicked, levelName } = useGameEngine(initialLevel);
   const sessionTokenRef = useRef<string | null>(null);
+  const verificationFiredRef = useRef(false);
 
   // Board origin
   const originX = 12;
@@ -166,15 +181,33 @@ export default function GameCanvas({ initialLevel = 1, onBack, biome }: { initia
   }, [connected, publicKey]);
 
   const handleStartGame = async () => {
-    if (!connected || !publicKey) return;
+    if (!connected || !publicKey) {
+      // Free play — no wallet required, no ticket consumed, no session
+      setHasStartedGame(true);
+      if (initialLevel > 1) newGameAt(initialLevel);
+      else newGame();
+      return;
+    }
+    // Campaign mode: no ticket consumed — milestone reward already funded by campaign
+    if (verificationContext) {
+      verificationFiredRef.current = false; // allow re-trigger if replaying
+      setHasStartedGame(true);
+      if (initialLevel > 1) newGameAt(initialLevel);
+      else newGame();
+      return;
+    }
     if (ticketBalance && ticketBalance > 0) {
       const newBal = ticketBalance - 1;
       setTicketBalance(newBal);
       localStorage.setItem(`tickets_${publicKey.toBase58()}`, newBal.toString());
-      // Hide the START overlay immediately — synchronous state update so the
-      // user gets instant visual feedback even before the async session POST.
       setHasStartedGame(true);
-      // Start a server-side session so the submit endpoint can validate the score
+      // Start the game immediately (before the async session call) so the
+      // button disappears at once and isGameOver resets in the same render.
+      if (initialLevel > 1) {
+        newGameAt(initialLevel);
+      } else {
+        newGame();
+      }
       try {
         const res = await fetch('/api/session/start', {
           method: 'POST',
@@ -186,75 +219,82 @@ export default function GameCanvas({ initialLevel = 1, onBack, biome }: { initia
           sessionTokenRef.current = data.token ?? null;
         }
       } catch { /* non-fatal — game proceeds without server session */ }
-      if (initialLevel > 1) {
-        newGameAt(initialLevel);
-      } else {
-        newGame();
-      }
     }
   };
 
   const gameOverHandledRef = useRef(false);
   useEffect(() => {
-    if (state.isGameOver && !gameOverHandledRef.current && connected && publicKey) {
+    if (state.isGameOver && !gameOverHandledRef.current) {
       gameOverHandledRef.current = true;
-      reportError({
-        severity: 'info',
-        message: `Game over at ${getStageName(state.level)} — score ${state.score}`,
-        level: state.level,
-        sessionId: state.sessionId,
-        walletAddress: publicKey.toBase58(),
-        component: 'GameCanvas',
-      });
-      // Advance map progress: move to next map level after playing
+
+      // Show the start/play-again button exactly once per game-over event.
+      // Placed inside the guard so dep changes while isGameOver=true cannot
+      // accidentally reset hasStartedGame a second time.
+      setHasStartedGame(false);
+
+      // Always track games played — no wallet required
       if (state.score > 0) {
-        const prevMapLevel = parseInt(localStorage.getItem('bb_max_level') ?? '1');
-        if (initialLevel >= prevMapLevel) {
-          localStorage.setItem('bb_max_level', String(initialLevel + 1));
-        }
         const prevGames = parseInt(localStorage.getItem('bb_games_played') ?? '0');
         localStorage.setItem('bb_games_played', String(prevGames + 1));
       }
 
-      // ── Score submission: double-database strategy ──────────────────
-      // Primary path: session-token verified submit (when SESSION_SECRET is set)
-      // Fallback path: simplified submit (always runs as safety net)
-      // Both paths write to KV sorted sets (monthly/daily/all-time).
+      // Wallet-only: analytics + map progress + on-chain score submission
+      if (connected && publicKey) {
+        reportError({
+          severity: 'info',
+          message: `Game over at ${getStageName(state.level)} — score ${state.score}`,
+          level: state.level,
+          sessionId: state.sessionId,
+          walletAddress: publicKey.toBase58(),
+          component: 'GameCanvas',
+        });
+        if (state.score > 0) {
+          const prevMapLevel = parseInt(localStorage.getItem('bb_max_level') ?? '1');
+          if (initialLevel >= prevMapLevel) {
+            localStorage.setItem('bb_max_level', String(initialLevel + 1));
+          }
+        }
 
-      const scorePayload = {
-        score: state.score,
-        level: initialLevel,
-        walletAddress: publicKey.toBase58(),
-      };
-
-      if (sessionTokenRef.current) {
-        // Primary: full HMAC-verified submission
-        fetch('/api/session/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: sessionTokenRef.current, ...scorePayload }),
-        }).catch(() => {
-          // Primary failed — fall through to fallback
+        const scorePayload = {
+          score: state.score,
+          level: initialLevel,
+          walletAddress: publicKey.toBase58(),
+        };
+        if (sessionTokenRef.current) {
+          fetch('/api/session/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: sessionTokenRef.current, ...scorePayload }),
+          }).catch(() => {
+            fetch('/api/score/submit', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(scorePayload),
+            }).catch(() => { /* best-effort */ });
+          });
+        } else {
           fetch('/api/score/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(scorePayload),
           }).catch(() => { /* best-effort */ });
-        });
-      } else {
-        // Fallback: direct submit (no session token — devnet / SESSION_SECRET not set)
-        fetch('/api/score/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(scorePayload),
-        }).catch(() => { /* best-effort */ });
+        }
       }
     }
     if (!state.isGameOver) gameOverHandledRef.current = false;
-    // When the engine declares game over, allow the START overlay back so the
-    // player can buy another ticket and play again.
-    if (state.isGameOver) setHasStartedGame(false);
   }, [state.isGameOver, connected, publicKey, state.level, state.score, state.sessionId, state.placements]);
+
+  // Auto-trigger verification once when player ADVANCES PAST the required level.
+  // Uses strict > so the game starting at initialLevel=requiredLevel does not
+  // immediately count — the player must actually score enough to level up.
+  // Fires even during isGameOver so a last-placement level-up still counts.
+  useEffect(() => {
+    if (!verificationContext || verificationFiredRef.current) return;
+    if (state.level > verificationContext.requiredLevel) {
+      verificationFiredRef.current = true;
+      verificationContext.onVerified(state.level, state.score);
+    }
+  }, [state.level, state.score, state.isGameOver, verificationContext]);
 
   const handleMysteryBoxResult = useCallback((result: BoxResult) => {
     mysteryBoxPicked(result.halvScore, result.pointsDelta, result.nextMultiplier);
@@ -552,44 +592,6 @@ export default function GameCanvas({ initialLevel = 1, onBack, biome }: { initia
   }, [handleEsc]);
 
   // UI Overlays
-  if (!connected) {
-    return (
-      <div className={styles.overlay}>
-        <h2 className={`orbitron neon-cyan ${styles.overlayTitle}`}>CONNECT WALLET</h2>
-        <p className={styles.overlayBody}>
-          BlockBite runs on <strong style={{ color: '#00FF88' }}>Solana</strong>.
-          Pick a wallet to start playing — you'll get free preview tickets on first connect.
-        </p>
-        {/* Big primary button — opens the wallet picker modal directly. The
-            navbar Connect Wallet button still works, but this lets the
-            player who's already on /game start the flow with one click. */}
-        <button
-          type="button"
-          className="btn btn-primary btn-lg"
-          onClick={() => openWalletPicker()}
-          style={{ marginTop: 4, marginBottom: 12, minWidth: 240 }}
-        >
-          {connecting ? 'CONNECTING…' : 'CONNECT WALLET'}
-        </button>
-        <div className={styles.walletIcons}>
-          {['Phantom', 'Solflare', 'Backpack'].map((name) => (
-            <button
-              key={name}
-              type="button"
-              className={styles.walletChip}
-              onClick={() => openWalletPicker()}
-              style={{ cursor: 'pointer', border: 'none' }}
-              title={`Open wallet picker (${name} supported)`}
-            >
-              <span>{name}</span>
-            </button>
-          ))}
-        </div>
-        <Link href="/" className="btn btn-secondary" style={{ marginTop: 8 }}>BACK TO HOME</Link>
-      </div>
-    );
-  }
-
   if (isCheckingTicket) {
     return (
       <div className={styles.overlay}>
@@ -599,7 +601,9 @@ export default function GameCanvas({ initialLevel = 1, onBack, biome }: { initia
     );
   }
 
-  if (state.score === 0 && !state.isGameOver && (ticketBalance === 0 || ticketBalance === null)) {
+  // Only block connected wallets that have run out of tickets.
+  // Campaign mode (verificationContext) is ticket-free — campaign founder pays for verification.
+  if (connected && state.score === 0 && !state.isGameOver && ticketBalance === 0 && !verificationContext) {
     return (
       <div className={styles.overlay}>
         <div className={styles.noTickets}>
@@ -614,6 +618,43 @@ export default function GameCanvas({ initialLevel = 1, onBack, biome }: { initia
 
   return (
     <div className={styles.wrapper}>
+      {/* Verification banner */}
+      {verificationContext && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          padding: '10px 16px',
+          background: 'linear-gradient(90deg, rgba(153,69,255,0.15), rgba(0,194,255,0.15))',
+          borderBottom: '1px solid rgba(153,69,255,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 12,
+          fontSize: 13,
+          fontWeight: 600,
+          color: '#c4b5fd',
+        }}>
+          <span style={{ fontSize: 16 }}>◈</span>
+          <span>Verify Milestone — Score past Level {verificationContext.requiredLevel} to unlock tokens</span>
+          {state.level > verificationContext.requiredLevel && (
+            <span style={{
+              padding: '4px 12px',
+              borderRadius: 999,
+              background: 'rgba(20,241,149,0.15)',
+              border: '1px solid rgba(20,241,149,0.3)',
+              color: '#14F195',
+              fontSize: 11,
+              fontWeight: 700,
+            }}>
+              ✓ LEVEL REACHED
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Mystery Box overlay — auto-shows when pendingMysteryBox=true */}
       {state.pendingMysteryBox && (
         <MysteryBoxModal
@@ -673,10 +714,12 @@ export default function GameCanvas({ initialLevel = 1, onBack, biome }: { initia
         <span className={styles.hintKey}>1-3</span> SELECT PIECE · <span className={styles.hintKey}>CLICK</span> BOARD TO PLACE · <span className={styles.hintKey}>ESC</span> DESELECT
       </div>
 
-      {(state.isGameOver || (!hasStartedGame && ticketBalance !== null && ticketBalance > 0)) && (
+      {!hasStartedGame && (state.isGameOver || (connected ? (verificationContext ? true : (ticketBalance !== null && ticketBalance > 0)) : true)) && (
         <div className={styles.gameOverActions}>
           <button type="button" className="btn btn-primary btn-lg" onClick={handleStartGame}>
-            {state.isGameOver ? 'PLAY AGAIN (1 TICKET)' : 'START GAME (1 TICKET)'}
+            {state.isGameOver
+              ? (connected ? 'PLAY AGAIN (1 TICKET)' : 'PLAY AGAIN')
+              : (connected ? 'START GAME (1 TICKET)' : 'START GAME')}
           </button>
           {onBack ? (
             <button type="button" className="btn btn-secondary" onClick={onBack}>
@@ -686,21 +729,6 @@ export default function GameCanvas({ initialLevel = 1, onBack, biome }: { initia
             <Link href="/leaderboard" className="btn btn-secondary">
               LEADERBOARD
             </Link>
-          )}
-        </div>
-      )}
-
-      {/* No-tickets dead-end: connected but ran out, and we're not in or done with a game.
-          Without this overlay the canvas just sits there with no way forward. */}
-      {!hasStartedGame && !state.isGameOver && connected && ticketBalance === 0 && (
-        <div className={styles.gameOverActions}>
-          <Link href="/shop" className="btn btn-primary btn-lg">
-            GET TICKETS →
-          </Link>
-          {onBack && (
-            <button type="button" className="btn btn-secondary" onClick={onBack}>
-              BACK TO MAP
-            </button>
           )}
         </div>
       )}

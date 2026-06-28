@@ -1,0 +1,332 @@
+/* ─── MapScreen Design System Styles ─────────────────────────────────────────
+   Static classes used by MapScreen.tsx.
+   Dynamic values (biome colors, layout-conditional widths) stay inline.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Shared glass mixin (repeated inline to satisfy linter property-order) ── */
+
+/* ── SideCards ── */
+.sidePanel {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  background: rgba(8, 8, 26, 0.97);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(167, 139, 255, 0.15);
+}
+
+.sidePanelHeader {
+  padding: 16px 14px 12px;
+  border-bottom: 1px solid rgba(167, 139, 255, 0.08);
+}
+
+.sidePanelKicker {
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  font-weight: 700;
+  color: #a78bfa;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+.sidePanelLevelRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.sidePanelLevelLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.sidePanelLevelNum {
+  font-size: 22px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+}
+
+/* ── Stats table ── */
+.statsWrapper {
+  padding: 10px 12px;
+}
+
+.statsTable {
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(167, 139, 255, 0.08);
+  border-radius: 10px;
+}
+
+.statsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+}
+
+.statsRowDivider {
+  border-bottom: 1px solid rgba(167, 139, 255, 0.08);
+}
+
+.statsLabel {
+  font-size: 8px;
+  font-weight: 700;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  color: #94a3b8;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.statsValue {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  color: #fff;
+}
+
+/* ── CTA button wrapper ── */
+.ctaWrapper {
+  padding: 4px 12px 16px;
+  margin-top: auto;
+}
+
+/* ── DesktopRail ── */
+.rail {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100%;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  background: rgba(8, 8, 26, 0.97);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(167, 139, 255, 0.15);
+}
+
+.railPlayer {
+  padding: 14px 12px 10px;
+  border-bottom: 1px solid rgba(167, 139, 255, 0.08);
+}
+
+.railPlayerInner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.railPlayerInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.railTier {
+  font-size: 8px;
+  font-weight: 700;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  color: #a78bfa;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 1px;
+}
+
+.railName {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.railGames {
+  font-size: 9px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+.railNav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 8px;
+}
+
+.railNavLink {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border-left: 2px solid transparent;
+  font-size: 12px;
+  font-weight: 400;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  color: #94a3b8;
+  letter-spacing: 0;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+
+.railNavLink:hover {
+  color: #c4b5fd;
+  background: rgba(167, 139, 255, 0.04);
+}
+
+.railNavLinkActive {
+  background: rgba(167, 139, 255, 0.07);
+  border-left-color: #a78bfa;
+  color: #c4b5fd;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.railBottom {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  padding: 10px 10px 12px;
+  border-top: 1px solid rgba(167, 139, 255, 0.08);
+}
+
+.railStats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(167, 139, 255, 0.08);
+}
+
+.railStatsDivider {
+  flex-shrink: 0;
+  width: 1px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.railStatsTkt {
+  font-size: 8px;
+  font-weight: 800;
+  color: #fde047;
+  letter-spacing: 0.5px;
+}
+
+/* ── ActSelector ── */
+.actStrip {
+  /* hide scrollbar — all engines */
+  display: flex;
+  overflow-x: auto;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  height: 40px;
+  padding: 0 10px;
+  white-space: nowrap;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  background: rgba(8, 8, 26, 0.97);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(167, 139, 255, 0.15);
+  /* Chrome 121+ / Firefox */
+  scrollbar-width: none;
+}
+
+/* Safari / older Chrome */
+.actStrip::-webkit-scrollbar {
+  display: none;
+}
+
+.actLink {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 10px;
+  font-weight: 500;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  color: #4a5568;
+  letter-spacing: 0.3px;
+  text-decoration: none;
+  background: transparent;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.actLink:hover {
+  color: #94a3b8;
+}
+
+.actLinkActive {
+  padding: 3px 10px 3px 8px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.actDot {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  /* dynamic color injected via --dot-color CSS custom property */
+  background: var(--dot-color, #a78bfa);
+  box-shadow: 0 0 6px var(--dot-color, #a78bfa);
+}
+
+.actNumeral {
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.actName {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* ── MobileTabBar ── */
+.mobileTabBar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-around;
+  padding: 8px 16px 14px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  background: rgba(8, 8, 26, 0.97);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(167, 139, 255, 0.15);
+}
+
+/* ── TopHeader (mobile/tablet) ── */
+.topHeader {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+/* ── BottomCard (mobile) ── */
+.bottomCard {
+  flex-shrink: 0;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  background: rgba(8, 8, 26, 0.97);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(167, 139, 255, 0.15);
+}

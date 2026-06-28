@@ -13,20 +13,20 @@ const CustomWalletButton = dynamic(
   { ssr: false, loading: () => <div className={styles.walletPlaceholder} /> }
 );
 
-// ─── Design System V3 colors ──────────────────────────────────────────────────
+// ─── Design tokens — CSS var refs so dark/light toggle propagates to inline styles
 const DS = {
-  accent:   '#a78bff',
-  accentDk: '#5e35d4',
-  border:   'rgba(167,139,255,.13)',
-  bg1:      '#09071a',
-  muted:    'rgba(232,225,248,.5)',
-  cinzel:   "'Space Grotesk', system-ui, sans-serif",
-  sora:     "'Sora', system-ui, sans-serif",
+  accent:   'var(--p-accent)',
+  accentDk: 'var(--p-accent-dk)',
+  border:   'var(--p-border)',
+  bg1:      'var(--p-bg1)',
+  muted:    'var(--p-muted)',
+  font:     "'Space Grotesk', system-ui, sans-serif",
 };
 
 const TDP_LINKS = [
   { name: 'Streams Dashboard', href: '/streams',     desc: 'All active vesting streams',        icon: '◈' },
-  { name: 'Create Stream',     href: '/streams/new', desc: 'Lock tokens into a PDA vault',      icon: '＋' },
+  { name: 'Demo',              href: '/demo',        desc: 'Interactive protocol walkthrough',  icon: '◇' },
+  { name: 'Create Stream',     href: '/new', desc: 'Lock tokens into a PDA vault',      icon: '＋' },
   { name: 'Claim Portal',      href: '/claim',       desc: 'Withdraw vested tokens',            icon: '◎' },
   { name: 'Milestones',        href: '/milestones',  desc: 'Verify milestone unlocks on-chain', icon: '◉' },
   { name: 'Calculator',        href: '/calculator',  desc: 'Model your vesting schedule',       icon: '∿' },
@@ -36,26 +36,26 @@ const TDP_LINKS = [
   { name: 'Partners',          href: '/partners',    desc: 'Partnership program & tiers',       icon: '◆' },
 ];
 
-const NAV_LINKS = [
-  { name: 'PRODUCT',      href: '/protocol' },
-  { name: 'HOW IT WORKS', href: '/protocol' },
-  { name: 'GAME',         href: '/game' },
-  { name: 'WAITLIST',     href: '/waitlist' },
+// NAV_LINKS hrefs — HARDCODED. DO NOT change how-it-works to /how-to-play.
+// HOW IT WORKS → /#how-it-works (homepage section anchor)
+// /how-to-play  → game guide page (DIFFERENT PAGE — not this nav item)
+const NAV_HREFS = [
+  { key: 'nav_product',       href: '/protocol'      },
+  { key: 'nav_how_it_works',  href: '/#how-it-works' }, // HARDCODED — homepage section
+  { key: 'nav_token_streams', href: '/streams'       }, // Public global dashboard
+  { key: 'nav_my_campaign',   href: '/my-campaign'   }, // User claim & interaction portal
+  { key: 'nav_faq',           href: '/#faq'          }, // HARDCODED — homepage FAQ section
+  { key: 'nav_demo',          href: '/#video'        }, // HARDCODED — homepage video section
 ] as const;
 
 export default function Navbar() {
-  const [menuOpen, setMenuOpen]   = useState(false);
-  const [scrolled, setScrolled]   = useState(false);
-  const [tdpOpen,  setTdpOpen]    = useState(false);
-  const [gameTooltip, setGameTooltip] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
-  const { lang, setLang, theme, setTheme } = useApp();
+  const { t } = useApp();
 
-  const isTdpActive = pathname.startsWith('/streams') || pathname.startsWith('/claim')
-    || pathname === '/milestones' || pathname === '/calculator'
-    || pathname === '/analytics'  || pathname === '/audit'
-    || pathname === '/protocol'   || pathname === '/distribute'
-    || pathname === '/partners';
+  // Build nav links inside the component so the t() lookup happens
+  const NAV_LINKS = NAV_HREFS.map(item => ({ name: t(item.key), href: item.href }));
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -67,30 +67,50 @@ export default function Navbar() {
     <nav className={`${styles.nav} ${scrolled ? styles.scrolled : ''}`}>
       <div className={styles.inner}>
 
-        {/* ── Logo ──────────────────────────────────────────────────────── */}
-        <Link href="/" className={styles.logo}>
-          <Image
-            src="/logo.png"
-            alt="BlockBite"
-            width={38}
-            height={38}
-            style={{ objectFit: 'contain', flexShrink: 0 }}
-            priority
-          />
-          <div className={styles.logoText} style={{ fontFamily: DS.cinzel }}>
-            BLOCK<span className={styles.logoAccent}>BITE</span>
-            <span style={{
-              marginLeft: 7, fontSize: 9, fontWeight: 700, letterSpacing: '1.5px',
-              padding: '2px 6px', borderRadius: 5,
-              background: `linear-gradient(135deg, ${DS.accent}33, ${DS.accentDk}33)`,
-              border: `1px solid ${DS.border}`,
+        {/* ── Logo + conditional Back-to-Landing button ──────────────── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+          <Link href="/" className={styles.logo}>
+            <Image
+              src="/logo.png"
+              alt="BlockBite"
+              width={38}
+              height={38}
+              style={{ objectFit: 'contain', flexShrink: 0 }}
+              priority
+            />
+            <div className={styles.logoText}>
+              BlockBite
+            </div>
+          </Link>
+
+          {/* ← Home / Beranda — only visible on sub-pages */}
+          {pathname !== '/' && (
+            <Link href="/" style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '6px 14px', borderRadius: 8,
+              border: '1px solid color-mix(in srgb, var(--p-accent) 28%, transparent)',
+              background: 'color-mix(in srgb, var(--p-accent) 7%, transparent)',
               color: DS.accent,
-              fontFamily: DS.sora,
-              verticalAlign: 'middle',
-              lineHeight: 1,
-            }}>TDP</span>
-          </div>
-        </Link>
+              fontSize: 12, fontWeight: 700,
+              textDecoration: 'none', letterSpacing: '.04em',
+              fontFamily: DS.font, whiteSpace: 'nowrap',
+              transition: 'all .15s',
+            }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.color = 'var(--p-text)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb, var(--p-accent) 50%, transparent)';
+                (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, var(--p-accent) 14%, transparent)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.color = 'var(--p-accent)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb, var(--p-accent) 28%, transparent)';
+                (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, var(--p-accent) 7%, transparent)';
+              }}
+            >
+              {t('nav_back')}
+            </Link>
+          )}
+        </div>
 
         {/* ── Desktop links — Veztra clean style ────────────────────────── */}
         <ul className={styles.links}>
@@ -99,11 +119,10 @@ export default function Navbar() {
               <Link
                 href={link.href}
                 className={`${styles.link} ${
-                  (link.href === '/game' && (pathname === '/game' || pathname?.startsWith('/tutorial')))
-                  || (link.href !== '/game' && (pathname === link.href || pathname?.startsWith(link.href + '/')))
+                  pathname === link.href || pathname?.startsWith(link.href + '/')
                     ? styles.active : ''
                 }`}
-                style={{ fontFamily: DS.sora }}
+                style={{ fontFamily: DS.font }}
               >
                 {link.name}
               </Link>
@@ -113,18 +132,19 @@ export default function Navbar() {
 
         {/* ── Right controls — Veztra clean: Launch App + Wallet only ── */}
         <div className={styles.right}>
+
           <CustomWalletButton />
 
-          {/* Launch App primary CTA — rounded-full like Veztra */}
-          <Link href="/streams/new" style={{
+          {/* Launch App primary CTA */}
+          <Link href="/new" style={{
             padding: '8px 20px', borderRadius: 9999,
-            background: `linear-gradient(90deg, #9945FF, #00C2FF)`,
+            background: 'var(--p-grad-alt)',
             color: '#fff', fontWeight: 700, fontSize: 13,
             textDecoration: 'none', letterSpacing: '.03em',
-            fontFamily: DS.sora, whiteSpace: 'nowrap',
-            boxShadow: '0 0 20px rgba(153,69,255,.35)',
+            fontFamily: DS.font, whiteSpace: 'nowrap',
+            boxShadow: '0 0 20px color-mix(in srgb, var(--p-accent) 21%, transparent)',
           }}>
-            Launch App
+            {t('cta_launch')}
           </Link>
 
           <button
@@ -143,13 +163,34 @@ export default function Navbar() {
       {/* ── Mobile drawer ──────────────────────────────────────────────────── */}
       {menuOpen && (
         <div className={styles.mobileMenu}>
+
+          {/* ← Home / Beranda — mobile */}
+          {pathname !== '/' && (
+            <Link
+              href="/"
+              onClick={() => setMenuOpen(false)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                margin: '4px 16px 8px',
+                padding: '11px 16px', borderRadius: 10,
+                border: '1px solid color-mix(in srgb, var(--p-accent) 28%, transparent)',
+                background: 'color-mix(in srgb, var(--p-accent) 7%, transparent)',
+                color: DS.accent,
+                fontSize: 13, fontWeight: 700, textDecoration: 'none',
+                fontFamily: DS.font, letterSpacing: '.03em',
+              }}
+            >
+              {t('nav_back')}
+            </Link>
+          )}
+
           {NAV_LINKS.map((link) => (
             <Link
               key={link.name}
               href={link.href}
               className={`${styles.mobileLink} ${pathname === link.href || pathname?.startsWith(link.href + '/') ? styles.active : ''}`}
               onClick={() => setMenuOpen(false)}
-              style={{ fontFamily: DS.sora }}
+              style={{ fontFamily: DS.font }}
             >
               <span className={styles.mobileLinkInner}>{link.name}</span>
             </Link>

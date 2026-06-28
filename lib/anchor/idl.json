@@ -1,17 +1,14 @@
 {
-  "address": "DvhxiL5PF8Cq3icqcjdbQvtMhJcj6LWheUgovRpaXTFf",
+  "address": "EVSuD7EHDgJuDmpYdhmUBWdokHZf4hdtcb34hWtWtrKS",
   "metadata": {
-    "name": "blockbite_vesting",
+    "name": "blockbite",
     "version": "0.1.0",
     "spec": "0.1.0",
-    "description": "BlockBite token vesting — linear unlock with partial withdrawal on Solana devnet"
+    "description": "Created with Anchor"
   },
   "instructions": [
     {
       "name": "cancel",
-      "docs": [
-        "Creator cancels stream: remaining unvested tokens return to creator."
-      ],
       "discriminator": [
         232,
         219,
@@ -24,7 +21,8 @@
       ],
       "accounts": [
         {
-          "name": "authority",
+          "name": "creator",
+          "writable": true,
           "signer": true
         },
         {
@@ -45,47 +43,35 @@
               },
               {
                 "kind": "account",
-                "path": "stream.authority",
+                "path": "stream.creator",
                 "account": "StreamAccount"
               },
               {
                 "kind": "account",
-                "path": "stream.stream_id",
+                "path": "stream.recipient",
+                "account": "StreamAccount"
+              },
+              {
+                "kind": "account",
+                "path": "stream.seed",
                 "account": "StreamAccount"
               }
             ]
           }
         },
         {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "stream.authority",
-                "account": "StreamAccount"
-              },
-              {
-                "kind": "account",
-                "path": "stream.stream_id",
-                "account": "StreamAccount"
-              }
-            ]
-          }
+          "name": "mint"
         },
         {
-          "name": "authority_ata",
+          "name": "escrow_token_account",
+          "writable": true
+        },
+        {
+          "name": "creator_token_account",
+          "writable": true
+        },
+        {
+          "name": "recipient_token_account",
           "writable": true
         },
         {
@@ -96,13 +82,524 @@
       "args": []
     },
     {
-      "name": "create_stream",
-      "docs": [
-        "Lock `amount` tokens from creator into a PDA vault.",
-        "Vesting is linear from `start_ts` to `end_ts`.",
-        "`cliff_ts = 0` means no cliff (behaves as start_ts).",
-        "Pass cliff_ts between start_ts and end_ts to enforce a cliff period."
+      "name": "claim_milestone",
+      "discriminator": [
+        211,
+        134,
+        152,
+        37,
+        3,
+        82,
+        214,
+        189
       ],
+      "accounts": [
+        {
+          "name": "recipient",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "milestone",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  108,
+                  101,
+                  115,
+                  116,
+                  111,
+                  110,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "milestone.campaign",
+                "account": "MilestoneAccount"
+              },
+              {
+                "kind": "arg",
+                "path": "milestone_seed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "campaign",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign.founder",
+                "account": "CampaignAccount"
+              },
+              {
+                "kind": "arg",
+                "path": "campaign_seed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "campaign_escrow",
+          "docs": [
+            "Campaign escrow — authority is the campaign PDA."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110,
+                  95,
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign"
+              }
+            ]
+          }
+        },
+        {
+          "name": "recipient_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "milestone_seed",
+          "type": "u64"
+        },
+        {
+          "name": "campaign_seed",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "close_stream",
+      "discriminator": [
+        255,
+        241,
+        196,
+        212,
+        95,
+        93,
+        160,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "stream",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  114,
+                  101,
+                  97,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "account",
+                "path": "recipient"
+              },
+              {
+                "kind": "account",
+                "path": "stream.seed",
+                "account": "StreamAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "recipient",
+          "docs": [
+            "The recipient's stream vesting context."
+          ]
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "escrow_token_account",
+          "docs": [
+            "Escrow token account — must be empty before closing."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "stream"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator_token_account",
+          "docs": [
+            "Creator's token account — receives any remaining escrow balance."
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_campaign",
+      "discriminator": [
+        111,
+        131,
+        187,
+        98,
+        160,
+        193,
+        114,
+        244
+      ],
+      "accounts": [
+        {
+          "name": "founder",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "founder_token_account",
+          "writable": true
+        },
+        {
+          "name": "campaign_escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110,
+                  95,
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign"
+              }
+            ]
+          }
+        },
+        {
+          "name": "campaign",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "founder"
+              },
+              {
+                "kind": "arg",
+                "path": "_seed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "title_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "total_budget",
+          "type": "u64"
+        },
+        {
+          "name": "seed",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "create_milestone",
+      "discriminator": [
+        239,
+        58,
+        201,
+        28,
+        40,
+        186,
+        173,
+        48
+      ],
+      "accounts": [
+        {
+          "name": "founder",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "campaign",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign.founder",
+                "account": "CampaignAccount"
+              },
+              {
+                "kind": "arg",
+                "path": "campaign_seed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "milestone",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  108,
+                  101,
+                  115,
+                  116,
+                  111,
+                  110,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign"
+              },
+              {
+                "kind": "arg",
+                "path": "milestone_seed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "campaign_escrow",
+          "docs": [
+            "Campaign escrow — backs the milestone's reward payout on `claim_milestone`.",
+            "No protocol fee is charged on `create_milestone`; the full `total_budget`",
+            "is held in escrow and paid out as milestones are claimed."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110,
+                  95,
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "description_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "campaign_seed",
+          "type": "u64"
+        },
+        {
+          "name": "milestone_seed",
+          "type": "u64"
+        },
+        {
+          "name": "token_amount",
+          "type": "u64"
+        },
+        {
+          "name": "game_authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "recipient",
+          "type": "pubkey"
+        },
+        {
+          "name": "target_level",
+          "type": "u8"
+        },
+        {
+          "name": "difficulty",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "create_stream",
       "discriminator": [
         71,
         188,
@@ -115,15 +612,42 @@
       ],
       "accounts": [
         {
-          "name": "authority",
+          "name": "creator",
           "writable": true,
           "signer": true
         },
         {
-          "name": "beneficiary"
+          "name": "recipient"
         },
         {
           "name": "mint"
+        },
+        {
+          "name": "creator_token_account",
+          "writable": true
+        },
+        {
+          "name": "escrow_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "stream"
+              }
+            ]
+          }
         },
         {
           "name": "stream",
@@ -143,48 +667,52 @@
               },
               {
                 "kind": "account",
-                "path": "authority"
+                "path": "creator"
+              },
+              {
+                "kind": "account",
+                "path": "recipient"
               },
               {
                 "kind": "arg",
-                "path": "stream_id"
+                "path": "seed"
               }
             ]
           }
         },
         {
-          "name": "vault",
-          "docs": [
-            "PDA token account; authority = stream PDA so withdraw can sign via seeds."
-          ],
-          "writable": true,
+          "name": "protocol_config",
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  118,
-                  97,
-                  117,
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
                   108,
-                  116
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "authority"
-              },
-              {
-                "kind": "arg",
-                "path": "stream_id"
               }
             ]
           }
         },
         {
-          "name": "authority_ata",
+          "name": "treasury_token_account",
           "docs": [
-            "Creator's token account to debit."
+            "The protocol treasury's ATA for the stream's mint. Validated against",
+            "the canonical `(treasury, mint)` ATA derivation and against",
+            "`protocol_config.treasury`."
           ],
           "writable": true
         },
@@ -195,41 +723,227 @@
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "rent",
-          "address": "SysvarRent111111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "stream_id",
+          "name": "total_amount",
           "type": "u64"
         },
         {
-          "name": "amount",
+          "name": "start_time",
+          "type": "i64"
+        },
+        {
+          "name": "end_time",
+          "type": "i64"
+        },
+        {
+          "name": "cliff_time",
+          "type": "i64"
+        },
+        {
+          "name": "seed",
           "type": "u64"
         },
         {
-          "name": "start_ts",
-          "type": "i64"
+          "name": "milestone_enabled",
+          "type": "bool"
         },
         {
-          "name": "cliff_ts",
-          "type": "i64"
+          "name": "name",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "init_protocol_config",
+      "discriminator": [
+        91,
+        97,
+        211,
+        137,
+        96,
+        222,
+        139,
+        40
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
         },
         {
-          "name": "end_ts",
-          "type": "i64"
+          "name": "protocol_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "treasury",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_milestone",
+      "discriminator": [
+        174,
+        213,
+        91,
+        82,
+        156,
+        42,
+        105,
+        3
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "stream",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  114,
+                  101,
+                  97,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "stream.creator",
+                "account": "StreamAccount"
+              },
+              {
+                "kind": "account",
+                "path": "stream.recipient",
+                "account": "StreamAccount"
+              },
+              {
+                "kind": "account",
+                "path": "stream.seed",
+                "account": "StreamAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "verify_game",
+      "discriminator": [
+        81,
+        26,
+        37,
+        190,
+        207,
+        209,
+        205,
+        211
+      ],
+      "accounts": [
+        {
+          "name": "campaign",
+          "docs": [
+            "Not read or written by this instruction."
+          ]
+        },
+        {
+          "name": "milestone",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  108,
+                  101,
+                  115,
+                  116,
+                  111,
+                  110,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign"
+              },
+              {
+                "kind": "arg",
+                "path": "milestone_seed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_authority",
+          "docs": [
+            "The game server's signing key — must match milestone.game_authority."
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "milestone_seed",
+          "type": "u64"
+        },
+        {
+          "name": "achieved_level",
+          "type": "u8"
         }
       ]
     },
     {
       "name": "withdraw",
-      "docs": [
-        "Beneficiary claims however many tokens have vested since last withdrawal.",
-        "VGPV: tracks withdrawal velocity; enforcement logic added in W5."
-      ],
       "discriminator": [
         183,
         18,
@@ -242,7 +956,8 @@
       ],
       "accounts": [
         {
-          "name": "beneficiary",
+          "name": "recipient",
+          "writable": true,
           "signer": true
         },
         {
@@ -263,47 +978,31 @@
               },
               {
                 "kind": "account",
-                "path": "stream.authority",
+                "path": "stream.creator",
                 "account": "StreamAccount"
               },
               {
                 "kind": "account",
-                "path": "stream.stream_id",
+                "path": "stream.recipient",
+                "account": "StreamAccount"
+              },
+              {
+                "kind": "account",
+                "path": "stream.seed",
                 "account": "StreamAccount"
               }
             ]
           }
         },
         {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "stream.authority",
-                "account": "StreamAccount"
-              },
-              {
-                "kind": "account",
-                "path": "stream.stream_id",
-                "account": "StreamAccount"
-              }
-            ]
-          }
+          "name": "mint"
         },
         {
-          "name": "beneficiary_ata",
+          "name": "escrow_token_account",
+          "writable": true
+        },
+        {
+          "name": "recipient_token_account",
           "writable": true
         },
         {
@@ -315,6 +1014,45 @@
     }
   ],
   "accounts": [
+    {
+      "name": "CampaignAccount",
+      "discriminator": [
+        167,
+        6,
+        205,
+        183,
+        220,
+        156,
+        200,
+        113
+      ]
+    },
+    {
+      "name": "MilestoneAccount",
+      "discriminator": [
+        21,
+        222,
+        32,
+        140,
+        43,
+        166,
+        109,
+        19
+      ]
+    },
+    {
+      "name": "ProtocolConfig",
+      "discriminator": [
+        207,
+        91,
+        250,
+        28,
+        152,
+        179,
+        215,
+        209
+      ]
+    },
     {
       "name": "StreamAccount",
       "discriminator": [
@@ -329,106 +1067,262 @@
       ]
     }
   ],
-  "events": [
-    {
-      "name": "Cancelled",
-      "discriminator": [
-        136,
-        23,
-        42,
-        65,
-        143,
-        233,
-        234,
-        46
-      ]
-    },
-    {
-      "name": "StreamCreated",
-      "discriminator": [
-        93,
-        150,
-        91,
-        15,
-        166,
-        8,
-        251,
-        166
-      ]
-    },
-    {
-      "name": "Withdrawn",
-      "discriminator": [
-        20,
-        89,
-        223,
-        198,
-        194,
-        124,
-        219,
-        13
-      ]
-    }
-  ],
   "errors": [
     {
       "code": 6000,
-      "name": "ZeroAmount",
-      "msg": "Amount must be greater than zero"
+      "name": "Unauthorized",
+      "msg": "Signer is not authorised to perform this action"
     },
     {
       "code": 6001,
-      "name": "InvalidTimeRange",
-      "msg": "end_ts must be strictly after start_ts"
+      "name": "NothingToWithdraw",
+      "msg": "No tokens available to withdraw"
     },
     {
       "code": 6002,
-      "name": "InvalidCliff",
-      "msg": "cliff_ts must be between start_ts and end_ts (or 0 for no cliff)"
+      "name": "StreamCancelled",
+      "msg": "Stream has been cancelled"
     },
     {
       "code": 6003,
-      "name": "NothingToWithdraw",
-      "msg": "Nothing available to withdraw yet"
+      "name": "AlreadyCancelled",
+      "msg": "Stream is already cancelled"
     },
     {
       "code": 6004,
-      "name": "Unauthorized",
-      "msg": "Caller is not authorized for this action"
+      "name": "StreamNotStarted",
+      "msg": "Stream has not started yet"
     },
     {
       "code": 6005,
-      "name": "StreamCancelled",
-      "msg": "Stream has already been cancelled"
+      "name": "InvalidTimestamp",
+      "msg": "Invalid timestamps: end must be after start, cliff must be before end"
     },
     {
       "code": 6006,
-      "name": "Overflow",
-      "msg": "Arithmetic overflow"
+      "name": "InvalidAmount",
+      "msg": "Amount must be greater than zero"
     },
     {
       "code": 6007,
-      "name": "VelocityViolation",
-      "msg": "Velocity exceeds human threshold — VGPV violation (enforced W5)"
+      "name": "InvalidRecipient",
+      "msg": "Creator and recipient cannot be the same account"
+    },
+    {
+      "code": 6008,
+      "name": "FullyVested",
+      "msg": "Stream is fully vested and cannot be cancelled"
+    },
+    {
+      "code": 6009,
+      "name": "MilestoneAlreadyReached",
+      "msg": "Milestone has already been reached"
+    },
+    {
+      "code": 6010,
+      "name": "CampaignNotFound",
+      "msg": "Campaign not found"
+    },
+    {
+      "code": 6011,
+      "name": "MilestoneNotFound",
+      "msg": "Milestone not found"
+    },
+    {
+      "code": 6012,
+      "name": "MilestoneAlreadyVerified",
+      "msg": "Milestone has already been verified"
+    },
+    {
+      "code": 6013,
+      "name": "InsufficientBudget",
+      "msg": "Campaign budget is insufficient for this milestone"
+    },
+    {
+      "code": 6014,
+      "name": "MilestoneNotVerified",
+      "msg": "Milestone has not been verified yet"
+    },
+    {
+      "code": 6015,
+      "name": "StreamNotSettled",
+      "msg": "Stream must be fully withdrawn or cancelled before closing"
+    },
+    {
+      "code": 6016,
+      "name": "InvalidGameAuthority",
+      "msg": "Provided game authority does not match the milestone's declared game authority"
+    },
+    {
+      "code": 6017,
+      "name": "AlreadyClaimed",
+      "msg": "Milestone reward has already been claimed"
+    },
+    {
+      "code": 6018,
+      "name": "InvalidLevel",
+      "msg": "Target level must be between 1 and 30"
+    },
+    {
+      "code": 6019,
+      "name": "LevelNotReached",
+      "msg": "Achieved level does not meet the target level requirement"
+    },
+    {
+      "code": 6020,
+      "name": "InvalidDifficulty",
+      "msg": "Difficulty must be 1 (easy), 2 (medium), or 3 (hard)"
+    },
+    {
+      "code": 6021,
+      "name": "ProtocolNotInitialized",
+      "msg": "Protocol config has not been initialised yet"
+    },
+    {
+      "code": 6022,
+      "name": "ProtocolAlreadyInitialized",
+      "msg": "Protocol config is already initialised"
+    },
+    {
+      "code": 6023,
+      "name": "InvalidTreasury",
+      "msg": "Provided treasury token account does not match ProtocolConfig.treasury for this mint"
+    },
+    {
+      "code": 6024,
+      "name": "InvalidProtocolAdmin",
+      "msg": "Provided protocol config admin does not match signer"
     }
   ],
   "types": [
     {
-      "name": "Cancelled",
+      "name": "CampaignAccount",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "stream",
+            "name": "founder",
             "type": "pubkey"
           },
           {
-            "name": "authority",
-            "type": "pubkey"
+            "name": "title_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           },
           {
-            "name": "refunded",
+            "name": "total_budget",
             "type": "u64"
+          },
+          {
+            "name": "allocated_amount",
+            "type": "u64"
+          },
+          {
+            "name": "milestone_count",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MilestoneAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "campaign",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "description_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "game_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "target_level",
+            "type": "u8"
+          },
+          {
+            "name": "achieved_level",
+            "type": "u8"
+          },
+          {
+            "name": "difficulty",
+            "type": "u8"
+          },
+          {
+            "name": "is_verified",
+            "type": "bool"
+          },
+          {
+            "name": "is_claimed",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolConfig",
+      "docs": [
+        "Protocol-wide configuration. Single PDA, init once by the deployer.",
+        "",
+        "Stores the canonical treasury wallet that owns the per-mint treasury ATAs.",
+        "`create_stream` charges a 0.9% fee and routes it to the treasury ATA for",
+        "the stream's mint. `create_milestone` charges no protocol fee — game",
+        "verification is free.",
+        "",
+        "PDA seeds: `[\"protocol_config\"]`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "Wallet authorised to update `treasury` (single-signer for now; a",
+              "multisig can sit in front of this pubkey for production governance)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "docs": [
+              "Wallet that owns the per-mint treasury ATAs. Fees are paid into the",
+              "ATA derived from `(treasury, mint)` for each stream/milestone mint."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
@@ -439,11 +1333,11 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "authority",
+            "name": "creator",
             "type": "pubkey"
           },
           {
-            "name": "beneficiary",
+            "name": "recipient",
             "type": "pubkey"
           },
           {
@@ -451,7 +1345,11 @@
             "type": "pubkey"
           },
           {
-            "name": "amount_total",
+            "name": "escrow_token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_amount",
             "type": "u64"
           },
           {
@@ -459,23 +1357,19 @@
             "type": "u64"
           },
           {
-            "name": "start_ts",
+            "name": "start_time",
             "type": "i64"
           },
           {
-            "name": "cliff_ts",
+            "name": "end_time",
             "type": "i64"
           },
           {
-            "name": "end_ts",
+            "name": "cliff_time",
             "type": "i64"
           },
           {
-            "name": "stream_id",
-            "type": "u64"
-          },
-          {
-            "name": "cancelled",
+            "name": "is_cancelled",
             "type": "bool"
           },
           {
@@ -483,72 +1377,37 @@
             "type": "u8"
           },
           {
-            "name": "velocity_strikes",
-            "type": "u8"
-          },
-          {
-            "name": "last_action_ts",
-            "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "StreamCreated",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "stream",
-            "type": "pubkey"
-          },
-          {
-            "name": "authority",
-            "type": "pubkey"
-          },
-          {
-            "name": "beneficiary",
-            "type": "pubkey"
-          },
-          {
-            "name": "amount",
+            "name": "seed",
             "type": "u64"
           },
           {
-            "name": "start_ts",
-            "type": "i64"
+            "name": "milestone_reached",
+            "docs": [
+              "When `true`, tokens are gated behind a milestone condition.",
+              "Set by `set_milestone`. Only the creator can call it."
+            ],
+            "type": "bool"
           },
           {
-            "name": "cliff_ts",
-            "type": "i64"
+            "name": "milestone_enabled",
+            "docs": [
+              "When `true`, milestone gate is active for this stream.",
+              "Auto-set to `true` when `cliff_time > 0` on creation.",
+              "When `false`, milestone gate is bypassed (pure linear)."
+            ],
+            "type": "bool"
           },
           {
-            "name": "end_ts",
-            "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "Withdrawn",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "stream",
-            "type": "pubkey"
-          },
-          {
-            "name": "beneficiary",
-            "type": "pubkey"
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
+            "name": "name",
+            "docs": [
+              "Human-readable stream label (up to 31 UTF-8 chars, null-padded)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           }
         ]
       }

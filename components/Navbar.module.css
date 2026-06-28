@@ -8,6 +8,7 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border, #1f1f3a);
+  transition: background 0.25s, border-color 0.25s;
 }
 
 .inner {
@@ -31,15 +32,11 @@
 }
 
 .logoText {
-  font-family: 'Montserrat', 'Space Grotesk', system-ui, sans-serif;
-  font-size: 18px;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 20px;
   font-weight: 900;
-  color: var(--text, #fff);
-  letter-spacing: -0.5px;
-}
-
-.logoAccent {
-  color: var(--accent, #a78bfa);
+  color: #fff;
+  letter-spacing: -0.3px;
 }
 
 
@@ -57,13 +54,14 @@
   gap: 6px;
   padding: 6px 14px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-dim, #94a3b8);
   text-decoration: none;
   transition: all 0.2s ease;
   white-space: nowrap;
   font-family: 'Space Grotesk', system-ui, sans-serif;
+  letter-spacing: 0.04em;
 }
 
 .link:hover {
@@ -176,35 +174,6 @@
 }
 
 .walletBtn { white-space: nowrap; }
-
-/* ── Lang / Theme toggles ── */
-.iconToggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  background: var(--surface, rgba(255,255,255,0.05));
-  border: 1px solid var(--border, rgba(255,255,255,0.1));
-  border-radius: 8px;
-  color: var(--text-dim, #94a3b8);
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-  flex-shrink: 0;
-}
-
-.iconToggle:hover {
-  background: rgba(167, 139, 250, 0.12);
-  border-color: rgba(167, 139, 250, 0.3);
-  color: var(--accent, #a78bfa);
-}
-
-.langLabel {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-}
 
 /* ── Mobile toggle ── */
 .menuToggle {

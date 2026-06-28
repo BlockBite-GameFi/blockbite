@@ -2,11 +2,74 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import type { Biome } from '@/lib/game/biomes';
 import { levelConfig } from '@/lib/game/levelConfig';
 import { getLevelTier } from '@/lib/game/constants';
 import { ART, buildPathD, generateLongNodes } from '@/lib/components/MapArt';
 import { BIOMES } from '@/lib/game/biomes';
+import styles from './MapScreen.module.css';
+import { T } from '@/lib/theme';
+import { useApp } from '@/lib/useApp';
+
+const CustomWalletButton = dynamic(
+  () => import('@/components/CustomWalletButton'),
+  { ssr: false, loading: () => <div style={{ height: 36 }} /> }
+);
+
+// ─── Design System tokens — CSS-variable-backed for instant theme switching ───
+const DS = {
+  bg:        T.bg,
+  bgPanel:   `color-mix(in srgb, ${T.bg} 97%, transparent)`,
+  blur:      'blur(20px)',
+  border:    T.border,
+  borderSub: `color-mix(in srgb, ${T.border} 55%, transparent)`,
+  surface:   T.surface,
+  surface2:  T.surface2,
+  accent:    T.accent,
+  accentDk:  T.accent,
+  text:      T.text,
+  textDim:   T.textDim,
+  font:      T.serif,
+  fontMono:  T.mono,
+  kicker: {
+    fontSize: 9, letterSpacing: 2.5, fontWeight: 700,
+    color: T.accent, textTransform: 'uppercase' as const,
+  },
+};
+// ──────────────────────────────────────────────────────────────────────────────
+
+// ─── Strings for the map UI ───────────────────────────────────────────────────
+const MAP_TX = {
+  navPlay:        'Play',
+  navHowItWorks:  'How It Works',
+  act:            'Act',
+  diff:           'DIFFICULTY',
+  reward:         'REWARD',
+  goal:           'GOAL',
+  moves:          'MOVES',
+  diff2:          'DIFF',
+  ongoingJourney: 'Ongoing Journey',
+  levelLabel:     'Level',
+  startExpedition:'START EXPEDITION →',
+  playBtn:        'PLAY →',
+  played:         'played',
+  rewardLbl:      'reward',
+  journeyStart:   '▼ JOURNEY START ▼',
+  higherLevels:   '▲ HIGHER LEVELS ▲',
+  blocks:         (n: number) => `${n} blocks`,
+  actGateway:     (act: string, lvl: string) => `ACT ${act} GATEWAY · LVL ${lvl}`,
+  finalLevel:     (lvl: string) => `FINAL LEVEL · LVL ${lvl}`,
+  actEnd:         (act: string) => `ACT ${act} END`,
+  actStart:       (act: string, lvl: string) => `ACT ${act} · LVL ${lvl}`,
+  gameVerif:      'Game Verification',
+  verifSuccess:   'Verification Success!',
+  thanksHuman:    'Thanks, human! 🎉',
+  verifDesc:      (n: number) => `You cleared all ${n} level${n !== 1 ? 's' : ''} of the BlockBite game. Your completion has been recorded — the campaign tokens are now ready to claim.`,
+  claimTokens:    'Claim Tokens →',
+  backToMap:      '← Back to Map',
+};
+// ──────────────────────────────────────────────────────────────────────────────
 
 /**
  * Backdrop3D is intentionally a no-op as of 2026-05-16.
@@ -33,6 +96,13 @@ interface Props {
   layout: Layout;
   onEnterLevel: (lvl: number) => void;
   walletAddress?: string;
+  topOffset?: number;
+  /** Campaign-mode: cap the map at this many levels (1-based from range[0]).
+   *  When all levels are completed the map replaces itself with a verification
+   *  success screen. Omit for free-play (full 5000-level act). */
+  maxLevel?: number;
+  /** Campaign ID shown on the success screen's claim button */
+  campaignId?: string;
 }
 
 // One SVG node per level. 5000 levels per act → 5000 nodes.
@@ -59,34 +129,19 @@ function romanize(n: number) {
 
 function usePlayerData(currentLevel: number) {
   const [username, setUsername]       = useState('Explorer');
-  const [tickets, setTickets]         = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const u      = localStorage.getItem('bb_username') || 'Explorer';
-    const wallet = localStorage.getItem('bb_wallet') || '';
-    const raw    = wallet ? localStorage.getItem(`tickets_${wallet}`) : null;
-    const t      = parseInt(raw ?? '0');
-    const g      = parseInt(localStorage.getItem('bb_games_played') ?? '0');
+    const u = localStorage.getItem('bb_username') || 'Explorer';
+    const g = parseInt(localStorage.getItem('bb_games_played') ?? '0');
     setUsername(u || 'Explorer');
-    setTickets(isNaN(t) ? 0 : t);
     setGamesPlayed(isNaN(g) ? 0 : g);
   }, [currentLevel]);
 
-  return { username, tickets, gamesPlayed, tier: getLevelTier(currentLevel) };
+  return { username, gamesPlayed, tier: getLevelTier(currentLevel) };
 }
 
-function usePrizePool() {
-  const [pool, setPool] = useState(0);
-  useEffect(() => {
-    fetch('/api/prizepool')
-      .then(r => r.json())
-      .then(d => setPool(typeof d.balance === 'number' ? d.balance : 0))
-      .catch(() => {});
-  }, []);
-  return pool;
-}
 
 function Avatar({ biome, small }: { biome: Biome; small?: boolean }) {
   const size = small ? 36 : 48;
@@ -106,12 +161,13 @@ function Pill({ label, value, biome, small }: {
 }) {
   return (
     <div style={{
-      padding: small ? '6px 10px' : '8px 12px', borderRadius: 12,
-      background: 'rgba(0,0,0,0.4)', border: `1px solid ${biome.accent}44`,
-      display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0,
+      padding: small ? '7px 10px' : '9px 12px', borderRadius: 10,
+      background: DS.surface, border: `1px solid ${DS.border}`,
+      display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0,
+      fontFamily: DS.font,
     }}>
-      <div style={{ fontSize: 9, letterSpacing: 1.5, color: biome.glow, opacity: 0.85 }}>{label}</div>
-      <div style={{ fontSize: small ? 12 : 14, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <div style={{ ...DS.kicker, color: DS.textDim, letterSpacing: 1.5 }}>{label}</div>
+      <div style={{ fontSize: small ? 12 : 13, fontWeight: 700, color: DS.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {value}
       </div>
     </div>
@@ -237,54 +293,33 @@ function StarShape({ cx, cy, r, color }: { cx: number; cy: number; r: number; co
   return <polygon points={pts} fill={color} />;
 }
 
+const ACT_NUMERALS = ['I','II','III','IV','V','VI','VII','VIII'];
+
 function ActSelector({ biome }: { biome: Biome }) {
   return (
-    <div style={{
-      flexShrink: 0,
-      padding: '8px 12px',
-      display: 'flex', alignItems: 'center', gap: 8,
-      background: 'rgba(8,8,22,0.7)', backdropFilter: 'blur(14px)',
-      borderTop: `1px solid ${biome.accent}22`,
-      borderBottom: `1px solid ${biome.accent}33`,
-      overflowX: 'auto', whiteSpace: 'nowrap',
-    }}>
-      <span style={{
-        fontSize: 10, letterSpacing: 2, color: biome.glow, opacity: 0.7,
-        marginRight: 6, flexShrink: 0,
-      }}>
-        ACTS
-      </span>
+    <div className={styles.actStrip}>
       {BIOMES.map((b) => {
         const active = b.id === biome.id;
         return (
           <Link
             key={b.id}
             href={`/map/${b.act}`}
-            style={{
-              flexShrink: 0,
-              padding: '7px 13px', borderRadius: 999,
-              background: active
-                ? `linear-gradient(135deg, ${b.accent}, ${b.glow})`
-                : 'rgba(255,255,255,0.04)',
-              border: active
-                ? `1px solid ${b.glow}`
-                : `1px solid ${b.accent}33`,
-              color: active ? '#0a0a14' : '#cbd5e1',
-              fontSize: 11, fontWeight: active ? 900 : 600,
-              letterSpacing: 1, textDecoration: 'none',
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              boxShadow: active ? `0 0 14px ${b.accent}66` : 'none',
-            }}
+            className={`${styles.actLink} ${active ? styles.actLinkActive : ''}`}
+            style={active ? {
+              background: `${b.accent}20`,
+              borderColor: `${b.glow}55`,
+              color: b.glow,
+            } : undefined}
           >
-            <span style={{
-              width: 8, height: 8, borderRadius: 2,
-              background: b.accent,
-              boxShadow: `0 0 6px ${b.glow}`,
-            }} />
-            {`ACT ${['I','II','III','IV','V','VI','VII','VIII'][b.act - 1]}`}
-            <span style={{ opacity: active ? 0.7 : 0.5, fontWeight: 600 }}>
-              {b.name}
-            </span>
+            {active && (
+              /* CSS var bridges the dynamic biome color into the module class */
+              <span
+                className={styles.actDot}
+                style={{ '--dot-color': b.glow } as React.CSSProperties}
+              />
+            )}
+            <span className={styles.actNumeral}>{ACT_NUMERALS[b.act - 1]}</span>
+            {active && <span className={styles.actName}>{b.name}</span>}
           </Link>
         );
       })}
@@ -293,110 +328,139 @@ function ActSelector({ biome }: { biome: Biome }) {
 }
 
 function FinishFlag({ x, y, biome }: { x: number; y: number; biome: Biome }) {
+  const TX = MAP_TX;
   return (
     <g>
       <line x1={x} y1={y} x2={x} y2={y + 50} stroke={biome.glow} strokeWidth="2" />
       <polygon points={`${x},${y} ${x + 22},${y + 6} ${x},${y + 14}`} fill={biome.accent} />
       <text x={x + 32} y={y + 12} fontSize="11" fontWeight="700" fill={biome.glow}>
-        ACT {romanize(biome.act)} END
+        {TX.actEnd(romanize(biome.act))}
       </text>
     </g>
   );
 }
 
-const NAV_ITEMS = [
-  { href: '/game',        label: 'Play' },
-  { href: '/leaderboard', label: 'Leaderboard' },
-  { href: '/shop',        label: 'Shop' },
-  { href: '/how-to-play', label: 'Guide' },
-];
-
 function MobileTabBar({ biome }: { biome: Biome }) {
+  const TX = MAP_TX;
+  const navItems = [
+    { href: '/map', label: TX.navPlay        },
+    { href: '/',    label: TX.navHowItWorks  },
+  ];
   return (
     <div style={{
       flexShrink: 0,
-      padding: '10px 16px 16px',
-      background: 'rgba(8,8,22,0.96)', backdropFilter: 'blur(16px)',
-      borderTop: `1px solid ${biome.accent}33`,
+      padding: '8px 16px 14px',
+      background: DS.bgPanel, backdropFilter: DS.blur,
+      borderTop: `1px solid ${DS.border}`,
       display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+      fontFamily: DS.font,
     }}>
-      {NAV_ITEMS.map((item) => (
-        <Link key={item.href} href={item.href} style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-          padding: '7px 12px', borderRadius: 16,
-          background: item.href === '/game'
-            ? `linear-gradient(135deg, ${biome.accent}, ${biome.glow})`
-            : 'transparent',
-          color: item.href === '/game' ? '#0a0a14' : '#cbd5e1',
-          fontWeight: item.href === '/game' ? 800 : 500,
-          fontSize: 10, textDecoration: 'none',
-          boxShadow: item.href === '/game' ? `0 0 16px ${biome.accent}88` : 'none',
-        }}>
-          {item.label}
-        </Link>
-      ))}
+      {navItems.map((item) => {
+        const active = item.href === '/game';
+        return (
+          <Link key={item.href} href={item.href} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+            padding: '7px 16px', borderRadius: 12,
+            background: active ? `linear-gradient(135deg, ${biome.accent}dd, ${biome.glow}cc)` : 'transparent',
+            color: active ? '#0a0a14' : DS.textDim,
+            fontWeight: active ? 800 : 500,
+            fontSize: 11, textDecoration: 'none',
+            boxShadow: active ? `0 2px 14px ${biome.accent}66` : 'none',
+          }}>
+            {item.label}
+          </Link>
+        );
+      })}
     </div>
   );
 }
 
 function DesktopRail({
-  biome, username, tickets, gamesPlayed, tier, currentLevel, walletAddress,
+  biome, username, gamesPlayed, tier, currentLevel, walletAddress,
 }: {
-  biome: Biome; username: string; tickets: number;
+  biome: Biome; username: string;
   gamesPlayed: number; tier: string; currentLevel: number; walletAddress?: string;
 }) {
+  const TX = MAP_TX;
+  const navItems = [
+    { href: '/map', label: TX.navPlay        },
+    { href: '/',    label: TX.navHowItWorks  },
+  ];
   const cfg = levelConfig(currentLevel);
   const displayName = walletAddress
-    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+    ? `${walletAddress.slice(0, 6)}…${walletAddress.slice(-4)}`
     : username;
+
   return (
     <div style={{
-      width: 240, flexShrink: 0, padding: 24,
-      background: 'rgba(8,8,22,0.55)', backdropFilter: 'blur(16px)',
-      borderRight: `1px solid ${biome.accent}33`,
-      display: 'flex', flexDirection: 'column', gap: 6,
-      height: '100%',
-      position: 'relative', zIndex: 2,
+      width: 160, flexShrink: 0,
+      background: DS.bgPanel, backdropFilter: DS.blur,
+      borderRight: `1px solid ${DS.border}`,
+      display: 'flex', flexDirection: 'column',
+      height: '100%', position: 'relative', zIndex: 2,
+      fontFamily: DS.font,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-        <Avatar biome={biome} small />
-        <div>
-          <div style={{ fontSize: 10, letterSpacing: 1.5, color: biome.glow }}>{tier.toUpperCase()}</div>
-          <div style={{ fontSize: 13, fontWeight: 700 }}>{displayName}</div>
-          <div style={{ fontSize: 10, opacity: 0.55, color: '#94a3b8' }}>{gamesPlayed} games played</div>
+
+      {/* ── Player ── */}
+      <div style={{ padding: '14px 12px 10px', borderBottom: `1px solid ${DS.borderSub}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Avatar biome={biome} small />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 8, letterSpacing: 2, fontWeight: 700, color: DS.accent, textTransform: 'uppercase', marginBottom: 1 }}>
+              {tier}
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: DS.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+              {displayName}
+            </div>
+            <div style={{ fontSize: 9, color: DS.textDim, marginTop: 1 }}>
+              {gamesPlayed} {TX.played}
+            </div>
+          </div>
         </div>
       </div>
-      {NAV_ITEMS.map((item) => (
-        <Link key={item.href} href={item.href} style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '12px 14px', borderRadius: 10,
-          background: item.href === '/game' ? `${biome.accent}22` : 'transparent',
-          border: item.href === '/game' ? `1px solid ${biome.accent}55` : '1px solid transparent',
-          color: item.href === '/game' ? biome.glow : '#cbd5e1',
-          fontSize: 14, fontWeight: item.href === '/game' ? 700 : 500,
-          textDecoration: 'none',
-        }}>
-          {item.label}
-        </Link>
-      ))}
-      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+      {/* ── Nav ── */}
+      <nav style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {navItems.map((item) => {
+          const active = item.href === '/game';
+          return (
+            <Link key={item.href} href={item.href} style={{
+              display: 'block',
+              padding: '8px 10px',
+              borderRadius: 8,
+              borderLeft: `2px solid ${active ? DS.accent : 'transparent'}`,
+              background: active ? T.accentA1 : 'transparent',
+              color: active ? DS.accentDk : DS.textDim,
+              fontSize: 12, fontWeight: active ? 700 : 400,
+              textDecoration: 'none', fontFamily: DS.font,
+              transition: 'color 0.15s, background 0.15s',
+              letterSpacing: active ? 0.2 : 0,
+            }}>
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* ── Stats + Wallet — compact single row ── */}
+      <div style={{
+        marginTop: 'auto',
+        padding: '10px 10px 12px',
+        borderTop: `1px solid ${DS.borderSub}`,
+        display: 'flex', flexDirection: 'column', gap: 6,
+      }}>
+        {/* Single-row reward stat */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          padding: '6px 10px', borderRadius: 14,
-          background: 'rgba(0,0,0,0.45)', border: `1px solid ${biome.glow}55`,
-          fontSize: 13, fontWeight: 700, color: '#fff', width: '100%',
+          padding: '5px 8px', borderRadius: 8,
+          background: DS.surface, border: `1px solid ${DS.borderSub}`,
+          fontSize: 11, color: DS.text,
         }}>
-          <span style={{ color: biome.glow }}>◆</span> {cfg.reward} / level
+          <span style={{ color: biome.glow, fontSize: 11, lineHeight: 1 }}>&#9670;</span>
+          <span style={{ fontWeight: 600 }}>{cfg.reward}</span>
+          <span style={{ color: DS.textDim, fontSize: 9 }}>{TX.rewardLbl}</span>
         </div>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          padding: '6px 10px', borderRadius: 14,
-          background: 'rgba(0,0,0,0.45)', border: '1px solid #fde04755',
-          fontSize: 13, fontWeight: 700, color: '#fff', width: '100%',
-        }}>
-          <span style={{ color: '#fde047', fontWeight: 900, fontSize: 10 }}>TKT</span>
-          {tickets} ticket{tickets !== 1 ? 's' : ''}
-        </div>
+        <CustomWalletButton />
       </div>
     </div>
   );
@@ -405,20 +469,22 @@ function DesktopRail({
 function TopHeader({ biome, layout, username, tier }: {
   biome: Biome; layout: Layout; username: string; tier: string;
 }) {
-  const pad = layout === 'mobile' ? 14 : 22;
+  const TX = MAP_TX;
+  const pad = layout === 'mobile' ? 14 : 20;
   return (
     <div style={{
       padding: `${pad}px ${pad}px 10px`,
       display: 'flex', alignItems: 'center', gap: 12,
-      background: 'linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%)',
+      background: `linear-gradient(180deg, ${T.bg} 0%, transparent 100%)`,
       position: 'relative', zIndex: 2, flexShrink: 0,
+      fontFamily: DS.font,
     }}>
       <Avatar biome={biome} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 10, letterSpacing: 2, color: biome.glow, opacity: 0.8 }}>
-          ACT {romanize(biome.act)} · {biome.cohort} · {tier.toUpperCase()}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ ...DS.kicker, marginBottom: 3 }}>
+          {TX.act} {romanize(biome.act)} · {biome.cohort} · {tier}
         </div>
-        <div style={{ fontSize: layout === 'mobile' ? 18 : 24, fontWeight: 800, lineHeight: 1.1 }}>
+        <div style={{ fontSize: layout === 'mobile' ? 16 : 22, fontWeight: 800, color: DS.text, lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {username}
         </div>
       </div>
@@ -427,125 +493,165 @@ function TopHeader({ biome, layout, username, tier }: {
 }
 
 function SideCards({
-  biome, level, layout, onEnterLevel, prizePool,
+  biome, level, layout, onEnterLevel,
 }: {
   biome: Biome; level: number; layout: Layout;
-  onEnterLevel: (l: number) => void; prizePool: number;
+  onEnterLevel: (l: number) => void;
 }) {
+  const TX = MAP_TX;
   const cfg = levelConfig(level);
-  return (
-    <div style={{
-      width: layout === 'desktop' ? 360 : 280, padding: 20,
-      background: 'rgba(8,8,22,0.65)', backdropFilter: 'blur(12px)',
-      borderLeft: `1px solid ${biome.accent}33`,
-      display: 'flex', flexDirection: 'column', gap: 14,
-      overflowY: 'auto',
-    }}>
-      <div style={{ fontSize: 11, letterSpacing: 2, color: biome.glow }}>ONGOING JOURNEY</div>
-      <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.1 }}>
-        Level {level}:<br />
-        <span style={{ color: biome.glow }}>{cfg.title}</span>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <Pill label="DIFFICULTY" value={cfg.rarity}          biome={biome} />
-        <Pill label="REWARD"     value={`◆ ${cfg.reward}`}   biome={biome} />
-        <Pill label="GOAL"       value={`${cfg.goal} blocks`} biome={biome} small />
-        <Pill label="MOVES"      value={cfg.moves}            biome={biome} small />
-      </div>
-      <button
-        onClick={() => onEnterLevel(level)}
-        style={{
-          marginTop: 6, padding: '14px 20px', borderRadius: 14,
-          background: `linear-gradient(135deg, ${biome.accent}, ${biome.glow})`,
-          color: '#0a0a14', fontWeight: 900, fontSize: 16, border: 'none',
-          boxShadow: `0 0 24px ${biome.accent}77`, cursor: 'pointer',
-        }}
-      >
-        START EXPEDITION
-      </button>
-      <div style={{
-        marginTop: 'auto', padding: 14, borderRadius: 14,
-        background: 'rgba(0,0,0,0.4)', border: `1px solid ${biome.accent}33`,
-      }}>
-        <div style={{ fontSize: 10, letterSpacing: 1.5, color: biome.glow, opacity: 0.8 }}>
-          PRIZE POOL · ON-CHAIN
-        </div>
-        <div style={{ fontSize: 22, fontWeight: 800, marginTop: 4 }}>
-          {prizePool.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-          <span style={{ fontSize: 11, opacity: 0.7, marginLeft: 6 }}>USDC</span>
-        </div>
-        <div style={{ fontSize: 10, color: biome.glow, opacity: 0.55, marginTop: 2 }}>
-          devnet · live on-chain balance
-        </div>
-      </div>
-    </div>
-  );
-}
+  const statRows = [
+    { label: TX.diff,   value: cfg.rarity },
+    { label: TX.reward, value: `◆ ${cfg.reward}` },
+    { label: TX.goal,   value: TX.blocks(cfg.goal) },
+    { label: TX.moves,  value: String(cfg.moves) },
+  ];
 
-function BottomCard({
-  biome, level, onEnterLevel, prizePool,
-}: {
-  biome: Biome; level: number;
-  onEnterLevel: (l: number) => void; prizePool: number;
-}) {
-  const cfg = levelConfig(level);
   return (
     <div style={{
-      padding: '16px 16px 0',
-      background: 'rgba(8,8,22,0.85)', backdropFilter: 'blur(14px)',
-      borderTop: `1px solid ${biome.accent}44`,
+      width: layout === 'desktop' ? 260 : 220,
       flexShrink: 0,
+      background: DS.bgPanel, backdropFilter: DS.blur,
+      borderLeft: `1px solid ${DS.border}`,
+      display: 'flex', flexDirection: 'column',
+      overflowY: 'auto', fontFamily: DS.font,
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <div style={{ fontSize: 10, letterSpacing: 2, color: biome.glow }}>ONGOING JOURNEY</div>
-          <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.1, marginTop: 4 }}>
-            Level {level}: <span style={{ color: biome.glow }}>{cfg.title}</span>
-          </div>
+
+      {/* ── Level header ── */}
+      <div style={{ padding: '16px 14px 12px', borderBottom: `1px solid ${DS.borderSub}` }}>
+        <div style={{ fontSize: 8, letterSpacing: 2.5, fontWeight: 700, color: DS.accent, textTransform: 'uppercase', marginBottom: 8 }}>
+          {TX.ongoingJourney}
         </div>
-        <div style={{ textAlign: 'right', paddingLeft: 8 }}>
-          <div style={{ fontSize: 9, letterSpacing: 1, color: biome.glow, opacity: 0.7 }}>PRIZE POOL</div>
-          <div style={{ fontSize: 15, fontWeight: 800 }}>
-            {prizePool.toLocaleString()}<span style={{ fontSize: 9, opacity: 0.6 }}> USDC</span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 3 }}>
+          <span style={{ fontSize: 10, fontWeight: 600, color: DS.textDim }}>{TX.levelLabel}</span>
+          <span style={{ fontSize: 22, fontWeight: 900, color: DS.text, lineHeight: 1 }}>{level}</span>
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: biome.glow, lineHeight: 1.2 }}>
+          {cfg.title}
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, margin: '12px 0', alignItems: 'center' }}>
-        <Pill label="DIFFICULTY" value={cfg.rarity}        biome={biome} small />
-        <Pill label="REWARD"     value={`◆ ${cfg.reward}`} biome={biome} small />
-        <Pill label="MOVES"      value={cfg.moves}          biome={biome} small />
+
+      {/* ── Stats — single table card ── */}
+      <div style={{ padding: '10px 12px' }}>
+        <div style={{
+          background: DS.surface,
+          border: `1px solid ${DS.borderSub}`,
+          borderRadius: 10, overflow: 'hidden',
+        }}>
+          {statRows.map((row, i) => (
+            <div key={i} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '7px 12px',
+              borderBottom: i < statRows.length - 1 ? `1px solid ${DS.borderSub}` : 'none',
+            }}>
+              <span style={{ fontSize: 8, fontWeight: 700, color: DS.textDim, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                {row.label}
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: DS.text }}>
+                {row.value}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── CTA ── */}
+      <div style={{ padding: '4px 12px 16px', marginTop: 'auto' }}>
         <button
           onClick={() => onEnterLevel(level)}
           style={{
-            marginLeft: 'auto', padding: '10px 20px', borderRadius: 999, flexShrink: 0,
-            background: `linear-gradient(135deg, ${biome.accent}, ${biome.glow})`,
-            color: '#0a0a14', fontWeight: 900, fontSize: 13, border: 'none',
-            boxShadow: `0 0 16px ${biome.accent}88`, cursor: 'pointer',
+            width: '100%', padding: '12px', borderRadius: 10,
+            background: `linear-gradient(135deg, ${biome.accent}f0, ${biome.glow}e0)`,
+            color: '#0a0a14', fontWeight: 900, fontSize: 12,
+            border: 'none', fontFamily: DS.font, letterSpacing: 1.5,
+            boxShadow: `0 4px 18px ${biome.accent}44`,
+            cursor: 'pointer', transition: 'transform 0.12s, box-shadow 0.12s',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+            (e.currentTarget as HTMLElement).style.boxShadow = `0 6px 26px ${biome.accent}66`;
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLElement).style.transform = '';
+            (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 18px ${biome.accent}44`;
           }}
         >
-          PLAY
+          {TX.startExpedition}
         </button>
       </div>
     </div>
   );
 }
 
-export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAddress }: Props) {
+function BottomCard({
+  biome, level, onEnterLevel,
+}: {
+  biome: Biome; level: number;
+  onEnterLevel: (l: number) => void;
+}) {
+  const TX = MAP_TX;
+  const cfg = levelConfig(level);
+  return (
+    <div style={{
+      padding: '14px 14px 0',
+      background: DS.bgPanel, backdropFilter: DS.blur,
+      borderTop: `1px solid ${DS.border}`,
+      flexShrink: 0, fontFamily: DS.font,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div>
+          <div style={{ ...DS.kicker, marginBottom: 2 }}>{TX.ongoingJourney}</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: DS.text, lineHeight: 1.2 }}>
+            Lv.{level} <span style={{ color: biome.glow }}>{cfg.title}</span>
+          </div>
+        </div>
+        <button
+          onClick={() => onEnterLevel(level)}
+          style={{
+            padding: '9px 18px', borderRadius: 10, flexShrink: 0,
+            background: `linear-gradient(135deg, ${biome.accent}dd, ${biome.glow}cc)`,
+            color: '#0a0a14', fontWeight: 900, fontSize: 12,
+            border: 'none', fontFamily: DS.font, letterSpacing: 0.5,
+            boxShadow: `0 2px 14px ${biome.accent}66`, cursor: 'pointer',
+          }}
+        >
+          {TX.playBtn}
+        </button>
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        <Pill label={TX.diff2}  value={cfg.rarity}                biome={biome} small />
+        <Pill label={TX.reward} value={`◆ ${cfg.reward}`}    biome={biome} small />
+        <Pill label={TX.moves}  value={cfg.moves}                  biome={biome} small />
+      </div>
+    </div>
+  );
+}
+
+export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAddress, topOffset = 0, maxLevel, campaignId }: Props) {
+  const TX = MAP_TX;
   const player    = usePlayerData(currentLevel);
-  const prizePool = usePrizePool();
   const scrollRef = useRef<HTMLDivElement>(null);
   const Art       = ART[biome.id];
 
-  // One node per level. 5000 levels → 5000 nodes (virtualized at render time).
-  const totalLevels = biome.range[1] - biome.range[0] + 1;
+  // In campaign mode, cap the range at maxLevel levels from range[0].
+  // Free-play: full 5000-level act.
+  const effectiveEnd = maxLevel != null
+    ? biome.range[0] + maxLevel - 1
+    : biome.range[1];
+
+  // Show verification success screen when all campaign levels are done.
+  const allLevelsDone = maxLevel != null && currentLevel > effectiveEnd;
+
+  // One node per level. Virtualized at render time.
+  const totalLevels = effectiveEnd - biome.range[0] + 1;
   const SVG_H = totalLevels * NODE_DY + SVG_MARGIN * 2;
 
   const allNodes = React.useMemo(
-    () => generateLongNodes(biome.range[0], biome.range[1], NODE_DY, SVG_W, SVG_MARGIN, SVG_H),
-    [biome.range[0], biome.range[1], SVG_H],
+    () => generateLongNodes(biome.range[0], effectiveEnd, NODE_DY, SVG_W, SVG_MARGIN, SVG_H),
+    [biome.range[0], effectiveEnd, SVG_H],
   );
 
-  const clampedLevel = Math.max(biome.range[0], Math.min(biome.range[1], currentLevel));
+  const clampedLevel = Math.max(biome.range[0], Math.min(effectiveEnd, currentLevel));
   const activeIdx = clampedLevel - biome.range[0];
   // Locked nodes within REVEAL_AHEAD of active are visible but greyed; beyond that they're dimmed.
   const revealCutoff = activeIdx + REVEAL_AHEAD;
@@ -637,18 +743,95 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
     : player.username;
 
-  // Active level expressed as 0–1 within this act, fed to the 3D scene so
-  // the camera and player marker track the player's progress along the path.
+  // Active level expressed as 0–1 within this act (or campaign range).
   const progress = Math.max(
     0,
-    Math.min(1, (currentLevel - biome.range[0]) / Math.max(1, biome.range[1] - biome.range[0])),
+    Math.min(1, (currentLevel - biome.range[0]) / Math.max(1, effectiveEnd - biome.range[0])),
   );
+
+  // ── Verification success screen (campaign mode only) ──────────────────────
+  if (allLevelsDone) {
+    return (
+      <div style={{
+        width: '100%', height: `calc(100vh - ${topOffset}px)`,
+        marginTop: topOffset,
+        background: biome.sky,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: T.serif,
+      }}>
+        <div style={{
+          maxWidth: 480, width: '100%', margin: '0 20px',
+          padding: '48px 36px', borderRadius: 24, textAlign: 'center',
+          background: DS.bgPanel,
+          border: `1.5px solid ${biome.glow}55`,
+          boxShadow: `0 0 60px ${biome.accent}18`,
+        }}>
+          {/* Celebration icon */}
+          <div style={{
+            width: 80, height: 80, borderRadius: '50%', margin: '0 auto 24px',
+            background: `radial-gradient(circle at 35% 35%, ${biome.glow}, ${biome.accent})`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 36, boxShadow: `0 0 40px ${biome.accent}55`,
+          }}>&#10022;</div>
+
+          <div style={{
+            fontSize: 10, letterSpacing: '3px', fontWeight: 800,
+            color: biome.glow, textTransform: 'uppercase', marginBottom: 12,
+          }}>
+            {TX.gameVerif}
+          </div>
+          <h2 style={{
+            fontSize: 28, fontWeight: 900, color: DS.text,
+            margin: '0 0 8px', lineHeight: 1.2,
+          }}>
+            {TX.verifSuccess}
+          </h2>
+          <p style={{
+            fontSize: 15, color: biome.glow, fontWeight: 700,
+            margin: '0 0 16px',
+          }}>
+            {TX.thanksHuman}
+          </p>
+          <p style={{
+            fontSize: 13, color: DS.textDim, lineHeight: 1.7,
+            margin: '0 0 32px',
+          }}>
+            {TX.verifDesc(maxLevel ?? 0)}
+          </p>
+
+          {/* Claim button */}
+          <Link
+            href={campaignId ? `/campaigns/${campaignId}` : '/campaigns'}
+            style={{
+              display: 'inline-block', padding: '14px 36px', borderRadius: 12,
+              background: `linear-gradient(135deg, ${biome.accent}, ${biome.glow})`,
+              color: '#0a0a14', fontWeight: 900, fontSize: 15,
+              textDecoration: 'none',
+              boxShadow: `0 0 28px ${biome.accent}55`,
+              letterSpacing: '0.02em',
+            }}
+          >
+            {TX.claimTokens}
+          </Link>
+
+          <div style={{ marginTop: 20 }}>
+            <Link href="/map" style={{
+              fontSize: 12, color: DS.textDim, textDecoration: 'none',
+            }}>
+              {TX.backToMap}
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
-      width: '100%', height: '100vh',
-      background: biome.sky, color: '#fff',
-      fontFamily: '"Space Grotesk", system-ui, sans-serif',
+      width: '100%', height: `calc(100vh - ${topOffset}px)`,
+      marginTop: topOffset,
+      background: biome.sky, color: DS.text,
+      fontFamily: T.serif,
       display: 'flex',
       flexDirection: isDesktop ? 'row' : 'column',
       overflow: 'hidden',
@@ -672,7 +855,6 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
         <DesktopRail
           biome={biome}
           username={player.username}
-          tickets={player.tickets}
           gamesPlayed={player.gamesPlayed}
           tier={player.tier}
           currentLevel={currentLevel}
@@ -736,8 +918,8 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
           {/* Full-width — no clamp. SVG fills the available column and scales.
               Removed the rotateX(14deg) perspective tilt: it was a CSS hack
               that made the top of the SVG appear smaller/distant — perceived
-              by users as "the map is shrinking." Real depth now comes from
-              BiomeScene3D (WebGL) sitting behind the SVG nodes. */}
+              by users as "the map is shrinking." The SVG node layout
+              (per-biome art tiles) is rich enough on its own. */}
           <div style={{
             width: '100%',
           }}>
@@ -810,20 +992,23 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
               <rect width={SVG_W} height={SVG_H} fill="url(#bb-fog-depth)" />
               <rect width={SVG_W} height={SVG_H} fill="url(#bb-spotlight)" />
 
-              {/* TOP label = end-of-act gateway (level endLevel sits up here) */}
+              {/* TOP label — campaign mode shows "FINAL LEVEL", free-play shows act gateway */}
               <text
                 x={SVG_W / 2} y={70}
                 textAnchor="middle" fontSize="22" fontWeight="900"
                 fill={biome.glow} opacity="0.7" letterSpacing="5"
               >
-                ACT {romanize(biome.act)} GATEWAY · LVL {biome.range[1].toLocaleString()}
+                {maxLevel != null
+                  ? TX.finalLevel(effectiveEnd.toLocaleString())
+                  : TX.actGateway(romanize(biome.act), biome.range[1].toLocaleString())
+                }
               </text>
               <text
                 x={SVG_W / 2} y={96}
                 textAnchor="middle" fontSize="12" fontWeight="600"
                 fill="#fff" opacity="0.45" letterSpacing="3"
               >
-                ▲ HIGHER LEVELS ▲
+                {TX.higherLevels}
               </text>
 
               {/* Candy path — shadow base */}
@@ -896,14 +1081,14 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
                 textAnchor="middle" fontSize="14" fontWeight="700"
                 fill="#fff" opacity="0.45" letterSpacing="3"
               >
-                ▼ JOURNEY START ▼
+                {TX.journeyStart}
               </text>
               <text
                 x={SVG_W / 2} y={SVG_H - 30}
                 textAnchor="middle" fontSize="16" fontWeight="800"
                 fill={biome.glow} opacity="0.6" letterSpacing="3"
               >
-                ACT {romanize(biome.act)} · LVL {biome.range[0].toLocaleString()}
+                {TX.actStart(romanize(biome.act), biome.range[0].toLocaleString())}
               </text>
             </svg>
           </div>
@@ -915,14 +1100,12 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
             level={currentLevel}
             layout={layout}
             onEnterLevel={onEnterLevel}
-            prizePool={prizePool}
           />
         ) : (
           <BottomCard
             biome={biome}
             level={currentLevel}
             onEnterLevel={onEnterLevel}
-            prizePool={prizePool}
           />
         )}
       </div>
@@ -930,16 +1113,16 @@ export function MapScreen({ biome, currentLevel, layout, onEnterLevel, walletAdd
 
       {isMobile && <MobileTabBar biome={biome} />}
 
-      {/* Deploy verification badge — proves which build is rendered. */}
+      {/* Deploy verification badge */}
       <div style={{
-        position: 'fixed', right: 10, bottom: 10, zIndex: 9999,
-        padding: '6px 10px', borderRadius: 8,
-        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
-        border: `1px solid ${biome.glow}66`,
-        color: biome.glow, fontSize: 10, fontWeight: 700, letterSpacing: 1,
-        fontFamily: 'monospace', pointerEvents: 'none',
+        position: 'fixed', right: 12, bottom: 12, zIndex: 9999,
+        padding: '5px 10px', borderRadius: 8,
+        background: DS.bgPanel, backdropFilter: 'blur(12px)',
+        border: `1px solid ${DS.border}`,
+        color: DS.textDim, fontSize: 9, fontWeight: 700, letterSpacing: 1.5,
+        fontFamily: DS.fontMono, pointerEvents: 'none',
       }}>
-        MAP v2 · CANDY · {new Date().toISOString().slice(0,10)}
+        MAP v2 · {new Date().toISOString().slice(0,10)}
       </div>
     </div>
   );

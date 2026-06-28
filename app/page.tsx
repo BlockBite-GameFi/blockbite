@@ -1,36 +1,30 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { getAllStreams } from '@/lib/anchor/vesting-client';
 import Navbar from '@/components/Navbar';
 
-// ─── Design System V4 — Vestra/Solana standard ────────────────────────────────
+// ─── Design Tokens (unchanged content references) ─────────────────────────────
 const DS = {
-  bg0:      '#03000A',   // Vestra bg-void
-  bg1:      '#0A0714',   // Vestra bg-surface
-  bg2:      '#110E1F',   // Vestra bg-elevated
-  accent:   '#9945FF',   // Solana purple (official)
-  accentDk: '#7733CC',   // darker purple
-  gold:     '#f5c66a',
-  green:    '#14F195',   // Solana green (official)
-  red:      '#ff3b6b',
-  blue:     '#00C2FF',   // Solana blue (official)
-  ember:    '#ff7a3a',
-  muted:    'rgba(160,154,191,.80)',  // Vestra text-secondary
-  border:   'rgba(153,69,255,.20)',   // purple-tinted border
-  card:     'rgba(153,69,255,.07)',   // purple glass card
-  cinzel:   "'Montserrat', 'Nunito', 'Syne', system-ui, sans-serif",
-  sora:     "'Montserrat', 'Nunito', 'DM Sans', system-ui, sans-serif",
-  mono:     "'JetBrains Mono', monospace",
+  bg0:      '#020008',
+  bg1:      '#08050F',
+  bg2:      '#0F0A1A',
+  accent:   '#9945FF',
+  accentDk: '#6B2FBF',
+  green:    '#14F195',
+  red:      '#FF3B6B',
+  blue:     '#00C2FF',
+  gold:     '#F5C66A',
+  ember:    '#FF7A3A',
+  muted:    'rgba(168,160,210,.70)',
+  border:   'rgba(153,69,255,.18)',
+  card:     'rgba(153,69,255,.06)',
 };
-
-// STATS are fetched live from on-chain (getAllStreams) in the component below.
 
 const VERIFY_METHODS = [
   {
-    icon: '⬡',
     color: DS.blue,
     title: 'Automated',
     sub: 'Always On',
@@ -38,7 +32,6 @@ const VERIFY_METHODS = [
     badge: 'Fully Automated',
   },
   {
-    icon: '◈',
     color: '#c084fc',
     title: 'Game',
     sub: 'Play to Unlock',
@@ -46,7 +39,6 @@ const VERIFY_METHODS = [
     badge: 'Sybil-Resistant',
   },
   {
-    icon: '⬡',
     color: DS.accent,
     title: 'Oracle',
     sub: 'On-Chain Data',
@@ -54,7 +46,6 @@ const VERIFY_METHODS = [
     badge: 'Data-Driven',
   },
   {
-    icon: '✦',
     color: DS.green,
     title: 'Manual',
     sub: 'Creator Signs',
@@ -69,26 +60,28 @@ const VESTING_MODELS = [
     icon: '∿',
     color: DS.blue,
     desc: 'Tokens unlock at a constant rate from start to end date. Ideal for team, advisor, and contributor allocations.',
+    barWidth: '100%',
   },
   {
     title: 'Cliff',
     icon: '⌐',
     color: DS.accent,
     desc: 'Zero tokens release until the cliff date. Hard time-lock enforced on-chain — no early withdrawals, no exceptions.',
+    barWidth: '65%',
   },
   {
     title: 'Milestone',
     icon: '◎',
     color: DS.gold,
     desc: 'Tokens unlock in tranches as project milestones are verified. Choose any verification method to match your workflow.',
+    barWidth: '80%',
   },
 ];
-
 
 const HOW_IT_WORKS = [
   {
     num: '01',
-    color: '#ff7a3a',
+    color: DS.ember,
     title: 'Connect & Import Data',
     desc: 'Connect your wallet and upload your recipient list via CSV or manual entry in seconds.',
   },
@@ -122,14 +115,45 @@ const COMPARISON = [
   { feature: 'Anti-dump by Default',  bb: true,  sablier: false, superfluid: false, streamflow: false },
 ];
 
+const FAQ_ITEMS = [
+  {
+    q: 'What is BlockBite TDP?',
+    a: 'BlockBite TDP is a token distribution protocol on Solana. It lets project teams create vesting streams for team members, investors, and contributors — directly on-chain, with no intermediary.',
+  },
+  {
+    q: 'Who controls the locked tokens?',
+    a: 'Nobody. Tokens are locked in a PDA-controlled vault — a program-derived address with no private key. Only the on-chain program can release tokens, and only when the vesting schedule allows it.',
+  },
+  {
+    q: 'What vesting schedules are supported?',
+    a: 'Cliff vesting (all tokens at a single date), linear vesting (gradual release over time), and milestone-gated tranches. All schedules support an optional cliff period before linear release begins.',
+  },
+  {
+    q: 'What is the game verification layer?',
+    a: "Recipients can earn milestone unlocks by playing the BlockBite puzzle game. It's gamified, sybil-resistant, and the result is fully verifiable on-chain — no one can fake a score.",
+  },
+  {
+    q: 'What happens if a stream is cancelled?',
+    a: 'Vesting freezes immediately. The recipient keeps everything already vested and can claim it at any time. Unvested tokens are returned to the stream creator.',
+  },
+  {
+    q: 'What wallets are supported?',
+    a: 'Phantom and Solflare are fully supported via Solana wallet-adapter. Any wallet compatible with the adapter standard will work.',
+  },
+];
+
 interface LiveStats { streams: number; active: number; locked: string; distributed: string; }
 
 export default function Home() {
   const { connection } = useConnection();
   const cvs = useRef<HTMLCanvasElement>(null);
+  const cursorGlow = useRef<HTMLDivElement>(null);
   const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
   const [faqOpen, setFaqOpen] = useState<boolean[]>(Array(6).fill(false));
-  // Live on-chain stats
+  const [waitlistEmail, setWaitlistEmail] = useState('');
+  const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
+
+  // ── Live on-chain stats ─────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     getAllStreams(connection).then(all => {
@@ -149,32 +173,35 @@ export default function Home() {
              : m.toString();
       };
       setLiveStats({ streams: all.length, active, locked: fmt(locked), distributed: fmt(distributed) });
-    }).catch(() => {}); // fail silently — landing page still renders
+    }).catch(() => {});
     return () => { cancelled = true; };
   }, [connection]);
 
-
-  // Floating particles background
+  // ── Particle canvas ─────────────────────────────────────────────────────────
   useEffect(() => {
     const c = cvs.current; if (!c) return;
     const ctx = c.getContext('2d'); if (!ctx) return;
     let raf: number;
     const resize = () => { c.width = window.innerWidth; c.height = window.innerHeight; };
     resize(); window.addEventListener('resize', resize);
-    const COLORS = [DS.accent, DS.blue, DS.green, DS.accentDk];
-    const pts = Array.from({ length: 28 }, () => ({
+    const COLORS = [DS.accent, DS.blue, DS.green, DS.gold, DS.ember];
+    const pts = Array.from({ length: 45 }, (_, i) => ({
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
-      r: 1 + Math.random() * 2.5,
-      spd: 0.12 + Math.random() * 0.22,
+      r: 0.8 + Math.random() * 2.2,
+      spd: 0.08 + Math.random() * 0.18,
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      op: 0.06 + Math.random() * 0.14,
+      op: 0.04 + Math.random() * 0.12,
+      dx: (Math.random() - 0.5) * 0.3,
     }));
     const draw = () => {
       ctx.clearRect(0, 0, c.width, c.height);
       pts.forEach(p => {
         p.y -= p.spd;
+        p.x += p.dx;
         if (p.y < -10) { p.y = c.height + 10; p.x = Math.random() * c.width; }
+        if (p.x < -10) { p.x = c.width + 10; }
+        if (p.x > c.width + 10) { p.x = -10; }
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
@@ -182,191 +209,194 @@ export default function Home() {
         ctx.fill();
       });
       ctx.globalAlpha = 1;
+      // Draw faint connection lines between close particles
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const dx = pts[i].x - pts[j].x;
+          const dy = pts[i].y - pts[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(pts[i].x, pts[i].y);
+            ctx.lineTo(pts[j].x, pts[j].y);
+            ctx.strokeStyle = DS.accent;
+            ctx.globalAlpha = (1 - dist / 120) * 0.05;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.globalAlpha = 1;
       raf = requestAnimationFrame(draw);
     };
     draw();
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
   }, []);
 
-  return (
-    <div style={{ minHeight: '100vh', background: DS.bg0, color: '#F8F6FF', fontFamily: DS.sora, overflowX: 'hidden' }}>
-      {/* Warp-speed canvas particles */}
-      <canvas ref={cvs} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.55 }} />
+  // ── Cursor glow follower ────────────────────────────────────────────────────
+  useEffect(() => {
+    const el = cursorGlow.current; if (!el) return;
+    const onMove = (e: MouseEvent) => {
+      el.style.left = e.clientX + 'px';
+      el.style.top  = e.clientY + 'px';
+    };
+    window.addEventListener('mousemove', onMove);
+    return () => window.removeEventListener('mousemove', onMove);
+  }, []);
 
+  // ── 3D Holographic card tilt ────────────────────────────────────────────────
+  const handleCardTilt = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const rotateX = ((y - cy) / cy) * -10;
+    const rotateY = ((x - cx) / cx) * 10;
+    card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-8px)`;
+  }, []);
+
+  const handleCardReset = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.transform = '';
+  }, []);
+
+  // ── Scroll reveal ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const el = entry.target as HTMLElement;
+            const delay = el.dataset.delay ? parseFloat(el.dataset.delay) : 0;
+            setTimeout(() => el.classList.add('visible'), delay * 1000);
+            observer.unobserve(el);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
+    );
+    document.querySelectorAll('.bb-reveal, .bb-reveal-left, .bb-reveal-right, .bb-reveal-scale').forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  // ── Waitlist form ─────────────────────────────────────────────────────────────
+  const handleWaitlist = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (waitlistEmail) setWaitlistSubmitted(true);
+  };
+
+  return (
+    <div className="bb-lp">
+      {/* Cursor glow */}
+      <div ref={cursorGlow} className="bb-cursor-glow" />
+
+      {/* Ambient background */}
+      <div className="bb-grid-bg" />
+      <div className="bb-orb bb-orb-1" />
+      <div className="bb-orb bb-orb-2" />
+      <div className="bb-orb bb-orb-3" />
+      <div className="bb-orb bb-orb-4" />
+
+      {/* Particle canvas */}
+      <canvas ref={cvs} className="bb-canvas" />
+
+      {/* Navbar (unchanged) */}
       <Navbar />
 
-      {/* ─── HERO ──────────────────────────────────────────────────────────────── */}
-      <section style={{
-        position: 'relative', zIndex: 1,
-        minHeight: '100vh',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: '140px 24px 100px', textAlign: 'center', gap: 32,
-        background: [
-          'radial-gradient(ellipse 80% 55% at 50% 20%, rgba(153,69,255,0.18) 0%, transparent 65%)',
-          'radial-gradient(ellipse 50% 35% at 80% 80%, rgba(0,194,255,0.10) 0%, transparent 60%)',
-          'radial-gradient(ellipse 40% 30% at 20% 70%, rgba(20,241,149,0.07) 0%, transparent 55%)',
-        ].join(','),
-      }}>
-        {/* Top glow orb */}
-        <div style={{
-          position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-          width: 700, height: 400, borderRadius: '50%',
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(153,69,255,0.22) 0%, transparent 70%)',
-          pointerEvents: 'none', zIndex: 0,
-        }} />
-
-        {/* Badge */}
-        <div style={{
-          position: 'relative', zIndex: 1,
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '8px 20px', borderRadius: 999,
-          border: '1px solid rgba(20,241,149,.40)',
-          background: 'rgba(20,241,149,.10)',
-          fontSize: 11, fontWeight: 800,
-          color: DS.green,
-          letterSpacing: '2.5px', fontFamily: DS.sora,
-          boxShadow: '0 0 20px rgba(20,241,149,.15)',
-        }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: DS.green, display: 'inline-block', animation: 'pulse 2s infinite', boxShadow: '0 0 8px rgba(20,241,149,.8)' }} />
-          POWERED BY SOLANA
+      {/* ═══ HERO ═══════════════════════════════════════════════════════════════ */}
+      <section className="bb-hero">
+        {/* Floating geometric decorations */}
+        <div className="bb-geo-objects">
+          <div className="bb-geo bb-geo-1" />
+          <div className="bb-geo bb-geo-2" />
+          <div className="bb-geo bb-geo-3" />
+          <div className="bb-geo-dot bb-dot-1" />
+          <div className="bb-geo-dot bb-dot-2" />
+          <div className="bb-geo-dot bb-dot-3" />
         </div>
 
-        {/* Logo */}
-        <img
-          src="/logo.png"
-          alt="BlockBite"
-          style={{ position: 'relative', zIndex: 1, width: 88, height: 88, objectFit: 'contain', filter: 'drop-shadow(0 0 36px rgba(153,69,255,0.70))' }}
-        />
+        <div className="bb-hero-scene">
+          {/* Badge */}
+          <div className="bb-hero-badge">
+            <span className="bb-badge-dot" />
+            <span className="bb-badge-dot-ring" />
+            POWERED BY SOLANA
+          </div>
 
-        {/* Kicker */}
-        <p style={{
-          position: 'relative', zIndex: 1,
-          fontFamily: DS.cinzel,
-          fontSize: 'clamp(10px,1.1vw,12px)',
-          fontWeight: 800,
-          color: 'rgba(160,154,191,.65)',
-          letterSpacing: '.30em',
-          textTransform: 'uppercase',
-          margin: 0,
-        }}>
-          THE UNIFIED TOKEN DISTRIBUTION PROTOCOL
-        </p>
+          {/* Logo */}
+          <img
+            src="/logo.png"
+            alt="BlockBite"
+            className="bb-hero-logo"
+          />
 
-        {/* Headline */}
-        <h1 style={{
-          position: 'relative', zIndex: 1,
-          fontFamily: DS.cinzel,
-          fontSize: 'clamp(40px,7vw,80px)',
-          fontWeight: 900,
-          lineHeight: 1.02,
-          letterSpacing: '-2px',
-          margin: 0,
-          maxWidth: 860,
-          color: '#F8F6FF',
-          textShadow: '0 0 80px rgba(153,69,255,0.25)',
-        }}>
-          Stop Distributing{' '}
-          <span style={{
-            background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 50%, #14F195 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            filter: 'drop-shadow(0 0 24px rgba(153,69,255,0.5))',
-          }}>Tokens Blindly.</span>
-        </h1>
+          {/* Kicker */}
+          <p className="bb-hero-kicker">THE UNIFIED TOKEN DISTRIBUTION PROTOCOL</p>
 
-        {/* Sub-headline */}
-        <p style={{
-          position: 'relative', zIndex: 1,
-          fontFamily: DS.sora,
-          fontSize: 'clamp(15px,1.6vw,18px)',
-          color: 'rgba(160,154,191,.85)',
-          maxWidth: 600,
-          lineHeight: 1.80,
-          margin: 0,
-          fontWeight: 400,
-        }}>
-          The unified engine for automated token logistics. Effortlessly manage your entire
-          lifecycle from secure vesting to real-time streaming with built-in validation layers.
-        </p>
+          {/* Headline */}
+          <h1 className="bb-hero-h1">
+            <span className="bb-hero-h1-split">
+              <span style={{ animationDelay: '0.55s' }}>Stop Distributing</span>
+            </span>
+            {' '}
+            <span className="bb-gradient-text">Tokens Blindly.</span>
+          </h1>
 
-        {/* CTAs */}
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Link href="/waitlist" style={{
-            padding: '16px 40px', borderRadius: 9999,
-            background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 100%)',
-            color: '#fff', fontWeight: 800, fontSize: 16,
-            textDecoration: 'none', letterSpacing: '.04em',
-            boxShadow: '0 0 40px rgba(153,69,255,.55), 0 4px 24px rgba(0,0,0,.4)',
-            fontFamily: DS.cinzel,
-            transition: 'transform .2s, box-shadow .2s',
-            display: 'inline-block',
-          }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.04)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 60px rgba(153,69,255,.70), 0 4px 24px rgba(0,0,0,.4)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 40px rgba(153,69,255,.55), 0 4px 24px rgba(0,0,0,.4)'; }}
-          >
-            Secure Your Spot Now!
-          </Link>
-          <Link href="/streams/new" style={{
-            padding: '16px 32px', borderRadius: 9999,
-            background: 'rgba(153,69,255,.08)',
-            border: '1px solid rgba(153,69,255,.45)',
-            color: '#F8F6FF', fontWeight: 600, fontSize: 16,
-            textDecoration: 'none', letterSpacing: '.02em',
-            fontFamily: DS.sora,
-            backdropFilter: 'blur(12px)',
-            display: 'inline-block',
-          }}>
-            Launch App →
-          </Link>
+          {/* Sub-headline */}
+          <p className="bb-hero-sub">
+            The unified engine for automated token logistics. Effortlessly manage your entire
+            lifecycle from secure vesting to real-time streaming with built-in validation layers.
+          </p>
+
+          {/* CTAs */}
+          <div className="bb-cta-row">
+            <Link href="/waitlist" className="bb-btn-primary">
+              Secure Your Spot Now!
+            </Link>
+            <Link href="/streams/new" className="bb-btn-secondary">
+              Launch App →
+            </Link>
+          </div>
+
+          {/* Live Stats */}
+          <div className="bb-stats-row">
+            {([
+              { label: 'Total Streams',     val: liveStats ? liveStats.streams.toLocaleString() : '0' },
+              { label: 'Active Streams',    val: liveStats ? liveStats.active.toLocaleString()  : '0' },
+              { label: 'Total Distributed', val: liveStats ? liveStats.distributed + ' tokens'  : '0 tokens' },
+            ]).map((s, i) => (
+              <div key={i} className="bb-stat-item">
+                <p className="bb-stat-label">{s.label}</p>
+                <p className="bb-stat-val bb-number-counter">{s.val}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Stats */}
-        <div style={{
-          position: 'relative', zIndex: 1,
-          display: 'grid', gridTemplateColumns: 'repeat(3,1fr)',
-          gap: '24px 40px',
-          marginTop: 48, paddingTop: 44,
-          borderTop: '1px solid rgba(153,69,255,.22)',
-          maxWidth: 680, width: '100%',
-        }}>
-          {([
-            { label: 'Total Streams',     val: liveStats ? liveStats.streams.toLocaleString() : '0' },
-            { label: 'Active Streams',    val: liveStats ? liveStats.active.toLocaleString()  : '0' },
-            { label: 'Total Distributed', val: liveStats ? liveStats.distributed + ' tokens'  : '0 tokens' },
-          ]).map((s, i) => (
-            <div key={i} style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(160,154,191,.6)', letterSpacing: '2.5px', textTransform: 'uppercase', margin: '0 0 10px' }}>{s.label}</p>
-              <p style={{
-                fontFamily: DS.cinzel, fontWeight: 900, fontSize: 'clamp(24px,3vw,34px)',
-                margin: 0,
-                background: 'linear-gradient(90deg, #9945FF, #00C2FF)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}>{s.val}</p>
-            </div>
-          ))}
+        {/* Scroll hint */}
+        <div className="bb-scroll-hint">
+          <div className="bb-scroll-mouse">
+            <div className="bb-scroll-wheel" />
+          </div>
         </div>
       </section>
 
-      {/* ─── FEATURES ──────────────────────────────────────────────────────────── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '96px 24px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: DS.green, letterSpacing: '3px', textTransform: 'uppercase', marginBottom: 16, fontFamily: DS.sora }}>
-              FEATURES
-            </p>
-            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(26px,3.5vw,42px)', fontWeight: 700, color: '#F8F6FF', margin: 0 }}>
-              Everything a token distribution needs.{' '}
-              <span style={{
-                fontStyle: 'italic',
-                background: 'linear-gradient(90deg, #9945FF, #14F195)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-              }}>Nothing it doesn&apos;t.</span>
+      {/* ═══ FEATURES ═══════════════════════════════════════════════════════════ */}
+      <section className="bb-section bb-alt-bg" id="product">
+        <div className="bb-section-center">
+          <div className="bb-section-hdr bb-reveal">
+            <p className="bb-kicker">PROTOCOL FEATURES</p>
+            <h2 className="bb-section-h2">
+              Everything a token campaign needs.{' '}
+              <span className="bb-gradient-text">Nothing it doesn&apos;t.</span>
             </h2>
+            <p className="bb-section-sub">
+              From modular verification to automated clawbacks — all the tools a token distribution needs, built into one trustless protocol.
+            </p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+
+          <div className="bb-features-grid">
             {([
               {
                 icon: '◎', color: DS.accent,
@@ -386,206 +416,206 @@ export default function Home() {
                 desc: 'Hard time locks and milestone gates prevent immediate sell pressure. Align your community around long-term growth.',
                 tags: ['Creator-controlled', 'Fair to recipients'],
               },
-            ] as const).map((f, i) => (
-              <div key={i} style={{
-                borderRadius: 18, padding: 1,
-                background: 'linear-gradient(135deg, rgba(153,69,255,0.30), rgba(20,241,149,0.20))',
-                transition: 'transform .25s',
-              }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; }}
+            ]).map((f, i) => (
+              <div
+                key={i}
+                className="bb-feature-card bb-holo-card bb-reveal"
+                data-delay={String(i * 0.12)}
+                onMouseMove={handleCardTilt}
+                onMouseLeave={handleCardReset}
               >
-                <div style={{
-                  borderRadius: 17, background: DS.bg1,
-                  padding: '28px 28px 24px',
-                  height: '100%', boxSizing: 'border-box',
-                  display: 'flex', flexDirection: 'column', gap: 16,
-                }}>
-                  <div style={{
-                    width: 48, height: 48, borderRadius: 14,
-                    background: `linear-gradient(135deg, ${f.color}22, ${f.color}10)`,
-                    border: `1px solid ${f.color}44`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 22, color: f.color,
-                  }}>{f.icon}</div>
-                  <h3 style={{ fontFamily: DS.cinzel, fontSize: 19, fontWeight: 700, color: '#F8F6FF', margin: 0 }}>{f.title}</h3>
-                  <p style={{ fontFamily: DS.sora, fontSize: 13.5, color: DS.muted, lineHeight: 1.72, margin: 0, flex: 1 }}>{f.desc}</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <div className="bb-feature-card-inner">
+                  <div
+                    className="bb-feature-icon-wrap"
+                    style={{
+                      background: `linear-gradient(135deg, ${f.color}22, ${f.color}10)`,
+                      border: `1px solid ${f.color}44`,
+                      color: f.color,
+                    }}
+                  >
+                    {f.icon}
+                  </div>
+                  <h3 className="bb-feature-h3">{f.title}</h3>
+                  <p className="bb-feature-p">{f.desc}</p>
+                  <div className="bb-tags">
                     {f.tags.map(tag => (
-                      <span key={tag} style={{
-                        fontSize: 11, padding: '4px 12px', borderRadius: 999,
-                        background: DS.bg2, border: `1px solid ${DS.border}`,
-                        color: DS.muted, fontFamily: DS.sora, fontWeight: 500,
-                      }}>{tag}</span>
+                      <span key={tag} className="bb-tag">{tag}</span>
                     ))}
                   </div>
                 </div>
               </div>
             ))}
           </div>
+
+          {/* Vesting models */}
+          <div className="bb-vesting-grid bb-reveal" style={{ marginTop: 56 }}>
+            {VESTING_MODELS.map((v, i) => (
+              <div key={i} className="bb-vesting-card bb-reveal" data-delay={String(i * 0.1)}>
+                <span className="bb-vesting-icon" style={{ color: v.color }}>{v.icon}</span>
+                <div className="bb-vesting-title" style={{ color: v.color }}>{v.title}</div>
+                <p className="bb-vesting-desc">{v.desc}</p>
+                <div className="bb-vesting-bar">
+                  <div
+                    className="bb-vesting-bar-fill"
+                    style={{
+                      width: v.barWidth,
+                      background: `linear-gradient(90deg, ${v.color}88, ${v.color})`,
+                      color: v.color,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ─── HOW IT WORKS ──────────────────────────────────────────────────────── */}
-      <section style={{
-        position: 'relative', zIndex: 1,
-        padding: '96px 24px',
-        background: DS.bg1,
-        borderTop: `1px solid ${DS.border}`,
-        borderBottom: `1px solid ${DS.border}`,
-      }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 64 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: DS.green, letterSpacing: '3px', textTransform: 'uppercase', marginBottom: 16, fontFamily: DS.sora }}>
-              HOW IT WORKS
-            </p>
-            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(26px,3.5vw,42px)', fontWeight: 700, color: '#F8F6FF', margin: 0 }}>
-              Four steps.{' '}
-              <span style={{
-                fontStyle: 'italic',
-                background: 'linear-gradient(90deg, #9945FF, #14F195)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-              }}>From setup to claim.</span>
+      {/* ═══ HOW IT WORKS ═══════════════════════════════════════════════════════ */}
+      <section
+        className="bb-section"
+        id="how"
+        style={{
+          background: DS.bg1,
+          borderTop: `1px solid ${DS.border}`,
+          borderBottom: `1px solid ${DS.border}`,
+        }}
+      >
+        <div className="bb-section-center">
+          <div className="bb-section-hdr bb-reveal">
+            <p className="bb-kicker kicker-purple">HOW IT WORKS</p>
+            <h2 className="bb-section-h2">
+              Four moves.{' '}
+              <span className="bb-gradient-text">From setup to claim.</span>
             </h2>
-          </div>
-
-          {/* 4-column symmetric grid — Vestra standard */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24, position: 'relative', marginBottom: 72 }}>
-            {/* Connector line — runs between badge centers */}
-            <div style={{
-              position: 'absolute', top: 20, left: '14%', right: '14%', height: 1,
-              background: 'linear-gradient(90deg, rgba(153,69,255,0.35), rgba(20,241,149,0.35))',
-              pointerEvents: 'none',
-            }} />
-
-            {HOW_IT_WORKS.map((h, i) => (
-              <div key={i} style={{ position: 'relative' }}>
-                {/* Ghost large number */}
-                <span style={{
-                  position: 'absolute', top: -10, left: -8,
-                  fontFamily: DS.cinzel, fontSize: 72, fontWeight: 900, lineHeight: 1,
-                  background: 'linear-gradient(135deg, #9945FF, #14F195)',
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                  opacity: 0.10, userSelect: 'none', pointerEvents: 'none',
-                }}>{h.num}</span>
-
-                {/* Gradient badge */}
-                <div style={{
-                  position: 'relative', zIndex: 1,
-                  width: 40, height: 40, borderRadius: 12,
-                  background: 'linear-gradient(135deg, #9945FF, #14F195)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  marginBottom: 20,
-                  boxShadow: '0 0 20px rgba(153,69,255,0.35)',
-                }}>
-                  <span style={{ fontFamily: DS.cinzel, fontWeight: 800, fontSize: 13, color: DS.bg0 }}>{h.num}</span>
-                </div>
-
-                <h3 style={{ fontFamily: DS.cinzel, fontSize: 17, fontWeight: 700, color: '#F8F6FF', margin: '0 0 12px' }}>{h.title}</h3>
-                <p style={{ fontFamily: DS.sora, fontSize: 13, color: DS.muted, lineHeight: 1.72, margin: 0 }}>{h.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Verification layer — 4-column to match step grid */}
-          <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: DS.muted, letterSpacing: '2.5px', textTransform: 'uppercase', margin: 0 }}>
-              CHOOSE YOUR VERIFICATION LAYER
+            <p className="bb-section-sub">
+              Upload recipients, choose how tokens unlock, and let each wallet claim on schedule.
             </p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 64 }}>
-            {VERIFY_METHODS.map((m, i) => (
-              <div key={i} style={{
-                padding: '20px 18px', borderRadius: 14,
-                background: `${m.color}07`, border: `1px solid ${m.color}22`,
-                transition: 'border-color .2s, transform .2s',
-              }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = m.color + '50'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = m.color + '22'; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
-              >
-                <div style={{ fontSize: 10, color: m.color, fontWeight: 700, letterSpacing: '1.5px', marginBottom: 6 }}>{m.title.toUpperCase()}</div>
-                <div style={{ fontFamily: DS.cinzel, fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#F8F6FF' }}>{m.sub}</div>
-                <p style={{ fontSize: 12, color: DS.muted, lineHeight: 1.6, margin: 0 }}>{m.desc}</p>
-                <div style={{
-                  marginTop: 10, display: 'inline-block',
-                  padding: '2px 8px', borderRadius: 99, fontSize: 9, fontWeight: 700,
-                  background: `${m.color}15`, color: m.color, letterSpacing: '1px',
-                }}>{m.badge}</div>
+
+          {/* Steps */}
+          <div className="bb-steps-grid">
+            <div className="bb-steps-connector" />
+            {HOW_IT_WORKS.map((h, i) => (
+              <div key={i} className="bb-step bb-reveal" data-delay={String(i * 0.12)}>
+                <span className="bb-step-ghost">{h.num}</span>
+                <div
+                  className="bb-step-num-badge"
+                  style={{ background: `linear-gradient(135deg, ${h.color}, ${DS.green})` }}
+                >
+                  {h.num}
+                </div>
+                <h3 className="bb-step-title">{h.title}</h3>
+                <p className="bb-step-desc">{h.desc}</p>
               </div>
             ))}
           </div>
 
-          {/* ── Comparison table — inside HOW IT WORKS ── */}
-          <div style={{ borderTop: `1px solid ${DS.border}`, paddingTop: 56 }}>
-            <div style={{ textAlign: 'center', marginBottom: 40 }}>
-              <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
-                WHY BLOCKBITE
+          {/* Verification layer */}
+          <div className="bb-section-hdr bb-reveal" style={{ marginBottom: 24 }}>
+            <p className="bb-kicker" style={{ color: DS.muted }}>CHOOSE YOUR VERIFICATION LAYER</p>
+          </div>
+          <div className="bb-verify-grid">
+            {VERIFY_METHODS.map((m, i) => (
+              <div
+                key={i}
+                className="bb-verify-card bb-reveal"
+                data-delay={String(i * 0.1)}
+                style={{
+                  background: `${m.color}07`,
+                  border: `1px solid ${m.color}22`,
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = m.color + '50';
+                  (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 32px ${m.color}18`;
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = m.color + '22';
+                  (e.currentTarget as HTMLElement).style.boxShadow = '';
+                }}
+              >
+                <div className="bb-verify-title" style={{ color: m.color }}>{m.title}</div>
+                <div className="bb-verify-sub">{m.sub}</div>
+                <p className="bb-verify-desc">{m.desc}</p>
+                <span
+                  className="bb-verify-badge"
+                  style={{ background: `${m.color}15`, color: m.color }}
+                >{m.badge}</span>
               </div>
-              <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(22px,3vw,36px)', fontWeight: 700, color: '#F8F6FF', margin: 0 }}>
-                Built different from day one.
-              </h2>
-            </div>
+            ))}
+          </div>
 
-            <div style={{ maxWidth: 900, margin: '0 auto', borderRadius: 20, overflow: 'hidden', border: `1px solid ${DS.border}` }}>
-              {/* Header row */}
-              <div style={{
-                display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-                background: DS.bg2, padding: '14px 20px',
-                borderBottom: `1px solid ${DS.border}`,
-              }}>
-                {['Feature', 'BlockBite TDP', 'Sablier v2', 'Superfluid', 'Streamflow'].map((h, i) => (
-                  <div key={i} style={{
-                    fontSize: 10.5, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase',
-                    color: i === 1 ? DS.accent : DS.muted,
-                    textAlign: i === 0 ? 'left' : 'center',
-                    fontFamily: DS.sora,
-                  }}>{h}</div>
-                ))}
-              </div>
-              {/* Rows */}
-              {COMPARISON.map((row, i) => (
-                <div key={i} style={{
-                  display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-                  padding: '13px 20px',
-                  background: i % 2 === 0 ? DS.card : 'transparent',
-                  borderBottom: i < COMPARISON.length - 1 ? `1px solid ${DS.border}` : 'none',
-                  alignItems: 'center',
-                }}>
-                  <div style={{ fontSize: 13, color: '#F8F6FF', fontWeight: 500 }}>{row.feature}</div>
-                  {[row.bb, row.sablier, row.superfluid, row.streamflow].map((val, j) => (
-                    <div key={j} style={{ textAlign: 'center' }}>
-                      {val
-                        ? <span style={{ color: j === 0 ? DS.green : 'rgba(95,208,122,.5)', fontSize: 16 }}>✓</span>
-                        : <span style={{ color: 'rgba(255,59,107,.4)', fontSize: 16 }}>✗</span>
-                      }
-                    </div>
-                  ))}
-                </div>
+          {/* Comparison table */}
+          <div className="bb-why-hdr bb-reveal">
+            <span className="bb-why-label">WHY BLOCKBITE</span>
+            <h2 className="bb-why-h2">Built different from day one.</h2>
+          </div>
+          <div className="bb-table-wrap bb-reveal">
+            <div className="bb-table-hdr">
+              {['Feature', 'BlockBite TDP', 'Sablier v2', 'Superfluid', 'Streamflow'].map((h, i) => (
+                <div key={i} className={`bb-table-hdr-cell${i === 1 ? ' highlight' : ''}`}>{h}</div>
               ))}
             </div>
+            {COMPARISON.map((row, i) => (
+              <div key={i} className={`bb-table-row${i % 2 === 0 ? ' even' : ''}`}>
+                <div className="bb-table-feature">{row.feature}</div>
+                {[row.bb, row.sablier, row.superfluid, row.streamflow].map((val, j) => (
+                  <div key={j} className="bb-table-cell">
+                    {val
+                      ? <span className={`bb-check${j > 0 ? ' dim' : ''}`}>✓</span>
+                      : <span className="bb-cross">✗</span>
+                    }
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ─── WHO USES IT ───────────────────────────────────────────────────────── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
-              USE CASES
+      {/* ═══ DEMO ═══════════════════════════════════════════════════════════════ */}
+      <section className="bb-section" id="demo">
+        <div className="bb-section-center">
+          <div className="bb-section-hdr bb-reveal">
+            <p className="bb-kicker">SEE IT IN ACTION</p>
+            <h2 className="bb-section-h2">
+              See how a campaign{' '}
+              <span className="bb-gradient-text">comes together.</span>
+            </h2>
+            <p className="bb-section-sub">
+              A short walkthrough of campaign setup, vesting configuration, and recipient claims is on the way.
+            </p>
+          </div>
+          <div className="bb-reveal" style={{ maxWidth: 880, margin: '0 auto' }}>
+            <div style={{
+              borderRadius: 20,
+              overflow: 'hidden',
+              border: `1px solid ${DS.border}`,
+              boxShadow: '0 16px 64px rgba(0,0,0,0.5)',
+              position: 'relative',
+            }}>
+              <div className="bb-scan" />
+              <video
+                src="/walkthrough.mp4"
+                poster="/walkthrough-poster.jpg"
+                autoPlay muted loop playsInline controls preload="metadata"
+                style={{ width: '100%', display: 'block' }}
+              />
             </div>
-            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: '#F8F6FF', margin: 0 }}>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ WHO USES IT ═══════════════════════════════════════════════════════ */}
+      <section className="bb-section bb-alt-bg">
+        <div className="bb-section-center">
+          <div className="bb-section-hdr bb-reveal">
+            <p className="bb-kicker kicker-purple">USE CASES</p>
+            <h2 className="bb-section-h2">
               Who uses{' '}
-              <span style={{
-                fontStyle: 'italic',
-                background: 'linear-gradient(90deg, #9945FF, #14F195)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}>BlockBite TDP.</span>
+              <span className="bb-gradient-text">BlockBite TDP.</span>
             </h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 24 }}>
+          <div className="bb-usecases-grid">
             {([
               {
                 audience: 'TEAMS',
@@ -606,22 +636,18 @@ export default function Home() {
                 example: 'Custom schedule per recipient',
               },
             ] as const).map((uc, i) => (
-              <div key={i} style={{
-                borderRadius: 18, padding: 1,
-                background: 'linear-gradient(135deg, rgba(153,69,255,0.25), rgba(20,241,149,0.12))',
-              }}>
-                <div style={{
-                  borderRadius: 17, background: DS.bg1,
-                  padding: '28px 28px 24px',
-                  height: '100%', boxSizing: 'border-box',
-                  display: 'flex', flexDirection: 'column', gap: 16,
-                }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: DS.accent, letterSpacing: '2.5px', textTransform: 'uppercase', margin: 0 }}>{uc.audience}</p>
-                  <h3 style={{ fontFamily: DS.cinzel, fontSize: 20, fontWeight: 700, color: '#F8F6FF', whiteSpace: 'pre-line', lineHeight: 1.3, margin: 0 }}>{uc.headline}</h3>
-                  <p style={{ fontFamily: DS.sora, fontSize: 13.5, color: DS.muted, lineHeight: 1.72, margin: 0, flex: 1 }}>{uc.body}</p>
-                  <div style={{ borderTop: `1px solid ${DS.border}`, paddingTop: 14 }}>
-                    <p style={{ fontFamily: DS.mono, fontSize: 11, color: DS.muted, margin: 0 }}>{uc.example}</p>
-                  </div>
+              <div
+                key={i}
+                className="bb-usecase-card bb-reveal"
+                data-delay={String(i * 0.12)}
+                onMouseMove={handleCardTilt}
+                onMouseLeave={handleCardReset}
+              >
+                <div className="bb-usecase-card-inner">
+                  <p className="bb-usecase-audience">{uc.audience}</p>
+                  <h3 className="bb-usecase-headline">{uc.headline}</h3>
+                  <p className="bb-usecase-body">{uc.body}</p>
+                  <p className="bb-usecase-example">{uc.example}</p>
                 </div>
               </div>
             ))}
@@ -629,145 +655,131 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── FAQ ───────────────────────────────────────────────────────────────── */}
-      <section id="faq" style={{ position: 'relative', zIndex: 1, padding: '80px 24px' }}>
-        <div style={{ maxWidth: 720, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <div style={{ fontSize: 11, letterSpacing: '2px', color: DS.accent, fontWeight: 700, marginBottom: 12 }}>
-              FAQ
-            </div>
-            <h2 style={{ fontFamily: DS.cinzel, fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: '#F8F6FF', margin: 0 }}>
+      {/* ═══ FAQ ════════════════════════════════════════════════════════════════ */}
+      <section className="bb-section" id="faq">
+        <div className="bb-section-center">
+          <div className="bb-section-hdr bb-reveal">
+            <p className="bb-kicker">FAQ</p>
+            <h2 className="bb-section-h2">
               Questions,{' '}
-              <span style={{
-                fontStyle: 'italic',
-                background: 'linear-gradient(90deg, #9945FF, #14F195)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}>answered.</span>
+              <span className="bb-gradient-text">answered.</span>
             </h2>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {([
-              {
-                q: 'What is BlockBite TDP?',
-                a: 'BlockBite TDP is a token distribution protocol on Solana. It lets project teams create vesting streams for team members, investors, and contributors — directly on-chain, with no intermediary.',
-              },
-              {
-                q: 'Who controls the locked tokens?',
-                a: 'Nobody. Tokens are locked in a PDA-controlled vault — a program-derived address with no private key. Only the on-chain program can release tokens, and only when the vesting schedule allows it.',
-              },
-              {
-                q: 'What vesting schedules are supported?',
-                a: 'Cliff vesting (all tokens at a single date), linear vesting (gradual release over time), and milestone-gated tranches. All schedules support an optional cliff period before linear release begins.',
-              },
-              {
-                q: 'What is the game verification layer?',
-                a: 'Recipients can earn milestone unlocks by playing the BlockBite puzzle game. It\'s gamified, sybil-resistant, and the result is fully verifiable on-chain — no one can fake a score.',
-              },
-              {
-                q: 'What happens if a stream is cancelled?',
-                a: 'Vesting freezes immediately. The recipient keeps everything already vested and can claim it at any time. Unvested tokens are returned to the stream creator.',
-              },
-              {
-                q: 'What wallets are supported?',
-                a: 'Phantom and Solflare are fully supported via Solana wallet-adapter. Any wallet compatible with the adapter standard will work.',
-              },
-            ] as const).map((item, i) => (
-              <div key={i} style={{
-                borderRadius: 14, overflow: 'hidden',
-                border: `1px solid ${faqOpen[i] ? 'rgba(153,69,255,0.45)' : DS.border}`,
-                transition: 'border-color .2s',
-              }}>
+          <div className="bb-faq-list">
+            {FAQ_ITEMS.map((item, i) => (
+              <div
+                key={i}
+                className={`bb-faq-item bb-reveal${faqOpen[i] ? ' open' : ''}`}
+                data-delay={String(i * 0.07)}
+              >
                 <button
+                  className="bb-faq-q"
                   onClick={() => setFaqOpen(prev => prev.map((v, idx) => idx === i ? !v : v))}
-                  style={{
-                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '16px 20px', textAlign: 'left',
-                    background: faqOpen[i] ? DS.bg2 : 'transparent',
-                    border: 'none', cursor: 'pointer',
-                    color: '#F8F6FF', fontFamily: DS.sora, fontSize: 14.5, fontWeight: 600,
-                    transition: 'background .2s',
-                  }}
                 >
                   <span>{item.q}</span>
-                  <span style={{
-                    fontSize: 18, color: DS.muted, flexShrink: 0, marginLeft: 16,
-                    transform: faqOpen[i] ? 'rotate(180deg)' : 'none',
-                    transition: 'transform .2s',
-                    display: 'inline-block',
-                  }}>⌄</span>
+                  <span className="bb-faq-chevron">⌄</span>
                 </button>
-                {faqOpen[i] && (
-                  <div style={{ padding: '0 20px 16px', fontFamily: DS.sora, fontSize: 13.5, color: DS.muted, lineHeight: 1.75 }}>
-                    {item.a}
-                  </div>
-                )}
+                <div className="bb-faq-ans">
+                  <div className="bb-faq-ans-inner">{item.a}</div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── FINAL CTA ─────────────────────────────────────────────────────────── */}
-      <section style={{
-        position: 'relative', zIndex: 1,
-        padding: '100px 24px 120px', textAlign: 'center',
-        background: 'radial-gradient(ellipse 60% 70% at 50% 50%, rgba(153,69,255,.12) 0%, transparent 70%)',
-      }}>
-        <h2 style={{
-          fontFamily: DS.cinzel,
-          fontSize: 'clamp(26px,4vw,44px)', fontWeight: 800,
-          marginBottom: 16, color: '#F8F6FF',
-        }}>
-          Ready to distribute tokens responsibly?
-        </h2>
-        <p style={{ fontSize: 15, color: DS.muted, maxWidth: 480, margin: '0 auto 36px', lineHeight: 1.7 }}>
+      {/* ═══ WAITLIST ═══════════════════════════════════════════════════════════ */}
+      <section className="bb-section" id="waitlist">
+        <div className="bb-waitlist-card bb-reveal-scale">
+          <div className="bb-waitlist-inner">
+            <p className="bb-kicker kicker-purple" style={{ marginBottom: 12 }}>EARLY ACCESS · LIMITED SPOTS</p>
+            <h2 className="bb-waitlist-title">
+              Be first on the{' '}
+              <span className="bb-gradient-text">mainnet rollout.</span>
+            </h2>
+            <p className="bb-waitlist-sub">
+              Leave your email. We&apos;ll let you know when live campaigns open, plus a personal onboarding session for the first 100 teams.
+            </p>
+            {!waitlistSubmitted ? (
+              <form className="bb-waitlist-form" onSubmit={handleWaitlist}>
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  className="bb-waitlist-input"
+                  required
+                  value={waitlistEmail}
+                  onChange={e => setWaitlistEmail(e.target.value)}
+                />
+                <button type="submit" className="bb-btn-primary" style={{ whiteSpace: 'nowrap' }}>
+                  Join Waitlist →
+                </button>
+              </form>
+            ) : (
+              <div style={{
+                padding: '16px 28px',
+                borderRadius: 14,
+                background: 'rgba(20,241,149,0.08)',
+                border: '1px solid rgba(20,241,149,0.35)',
+                color: DS.green,
+                fontWeight: 700,
+                fontSize: 14,
+                display: 'inline-block',
+                animation: 'bb-scale-in 0.5s var(--ease-spring) both',
+              }}>
+                You are on the list. We will reach out soon.
+              </div>
+            )}
+            <p className="bb-waitlist-note">No spam. Unsubscribe anytime.</p>
+            <div className="bb-access-badges">
+              <span className="bb-access-badge open">
+                <span className="bb-access-dot" />
+                Founding access open
+              </span>
+              <span className="bb-access-badge">Q3 2026 mainnet target</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ FINAL CTA ══════════════════════════════════════════════════════════ */}
+      <section className="bb-cta-section">
+        <h2 className="bb-cta-h2 bb-reveal">Ready to distribute tokens responsibly?</h2>
+        <p className="bb-cta-sub bb-reveal">
           Join the projects already streaming tokens with cliff, linear, and milestone vesting on Solana.
         </p>
-        <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/streams/new" style={{
-            padding: '15px 40px', borderRadius: 9999,
-            background: 'linear-gradient(90deg, #9945FF 0%, #00C2FF 100%)',
-            color: '#fff', fontWeight: 700, fontSize: 16, textDecoration: 'none',
-            boxShadow: '0 0 40px rgba(153,69,255,.40)',
-          }}>
-            Launch App →
-          </Link>
-          <Link href="/streams" style={{
-            padding: '15px 36px', borderRadius: 9999,
-            background: 'rgba(153,69,255,.06)',
-            border: '1px solid rgba(153,69,255,.35)',
-            color: '#F8F6FF', fontWeight: 600, fontSize: 16, textDecoration: 'none',
-          }}>
-            View Streams
+        <div className="bb-cta-row bb-reveal">
+          <Link href="/streams/new" className="bb-btn-primary">Launch App →</Link>
+          <Link
+            href="https://github.com/BlockBite-GameFi/blockbite-smart-contract/tree/main/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bb-btn-secondary"
+          >
+            Open docs
           </Link>
         </div>
       </section>
 
-      {/* ─── FOOTER ────────────────────────────────────────────────────────────── */}
-      <footer style={{
-        position: 'relative', zIndex: 1,
-        borderTop: `1px solid ${DS.border}`,
-        padding: '28px 24px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: 12,
-        fontSize: 12, color: DS.muted,
-        background: DS.bg1,
-        fontFamily: DS.sora,
-      }}>
-        <div>© 2026 BlockBite · Token Distribution Protocol on Solana</div>
-        <div style={{ display: 'flex', gap: 20 }}>
-          <a href="https://x.com/blockbite_gg" target="_blank" rel="noopener noreferrer" style={{ color: DS.muted, textDecoration: 'none' }}>Twitter / X</a>
-          <a href="https://discord.gg/blockbite" target="_blank" rel="noopener noreferrer" style={{ color: DS.muted, textDecoration: 'none' }}>Discord</a>
-          <a href="https://github.com/nayrbryanGaming/blockblast" target="_blank" rel="noopener noreferrer" style={{ color: DS.muted, textDecoration: 'none' }}>GitHub</a>
+      {/* ═══ FOOTER ═════════════════════════════════════════════════════════════ */}
+      <footer className="bb-footer">
+        <div className="bb-footer-inner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <img src="/logo.png" alt="BlockBite" style={{ width: 28, height: 28, objectFit: 'contain', filter: 'drop-shadow(0 0 12px rgba(153,69,255,0.6))' }} />
+            <div>
+              <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--bb-text)', fontFamily: 'var(--font-display)' }}>BlockBite</span>
+              <p style={{ margin: 0, fontSize: 11, color: 'var(--bb-muted)' }}>Solana-native token vesting and distribution. Fair, automatic, and cheap.</p>
+            </div>
+          </div>
+          <div className="bb-footer-links">
+            <a href="https://x.com/blockbite_gg" target="_blank" rel="noopener noreferrer" className="bb-footer-link">Twitter / X</a>
+            <a href="https://discord.gg/blockbite" target="_blank" rel="noopener noreferrer" className="bb-footer-link">Discord</a>
+            <a href="https://github.com/BlockBite-GameFi/blockbite-smart-contract" target="_blank" rel="noopener noreferrer" className="bb-footer-link">GitHub</a>
+          </div>
+        </div>
+        <div style={{ maxWidth: 1200, margin: '16px auto 0', padding: '16px 0 0', borderTop: '1px solid rgba(153,69,255,0.10)' }}>
+          <p className="bb-footer-copy" style={{ textAlign: 'center' }}>© 2026 BlockBite · Token Distribution Protocol on Solana</p>
         </div>
       </footer>
-
-      <style>{`
-        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(.65)} }
-        @keyframes heroGlow { 0%,100%{opacity:.18} 50%{opacity:.28} }
-      `}</style>
     </div>
   );
 }
